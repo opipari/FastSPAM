@@ -4,3 +4,6 @@
 [submodule "simulators/habitat-sim"]
 	path = simulators/habitat-sim
 	url = git@github.com:facebookresearch/habitat-sim.git
+[submodule "models/segment_anything"]
+	path = models/segment_anything
+	url = git@github.com:facebookresearch/segment-anything.git
