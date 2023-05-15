@@ -18,14 +18,14 @@ from PIL import Image
 import habitat_sim
 from habitat_sim.utils import common as utils
 from habitat_sim.utils import viz_utils as vut
-from habitat.utils.visualizations import maps
 
 
 def save_sample(index, scene_name, dest_dir, rgb_obs, semantic_obs=np.array([]), depth_obs=np.array([])):
     from habitat_sim.utils.common import d3_40_colors_rgb
 
     rgb_img = Image.fromarray(rgb_obs, mode="RGBA")
-    rgb_img.save(os.path.join(dest_dir, f'scene.{scene_name}.frame.{index:04}.color.png'))
+    rgb_img = rgb_img.convert('RGB')
+    rgb_img.save(os.path.join(dest_dir, f'scene.{scene_name}.frame.{index:04}.color.jpg'))
 
     if semantic_obs.size != 0:
         semantic_img = Image.new("P", (semantic_obs.shape[1], semantic_obs.shape[0]))
@@ -173,41 +173,6 @@ def do_sim(sim_ix, sim_settings, scene_name, num_paths=1):
 
             # Display trajectory (if found) on a topdown map of ground floor
             if found_path:
-                # meters_per_pixel = 0.025
-                # scene_bb = sim.get_active_scene_graph().get_root_node().cumulative_bb
-                # height = scene_bb.y().min
-
-                # top_down_map = maps.get_topdown_map(
-                #     sim.pathfinder, height, meters_per_pixel=meters_per_pixel
-                # )
-                # recolor_map = np.array(
-                #     [[255, 255, 255], [128, 128, 128], [0, 0, 0]], dtype=np.uint8
-                # )
-                # top_down_map = recolor_map[top_down_map]
-                # grid_dimensions = (top_down_map.shape[0], top_down_map.shape[1])
-                # # convert world trajectory points to maps module grid points
-                # trajectory = [
-                #     maps.to_grid(
-                #         path_point[2],
-                #         path_point[0],
-                #         grid_dimensions,
-                #         pathfinder=sim.pathfinder,
-                #     )
-                #     for path_point in path_points
-                # ]
-                # grid_tangent = mn.Vector2(
-                #     trajectory[1][1] - trajectory[0][1], trajectory[1][0] - trajectory[0][0]
-                # )
-                # path_initial_tangent = grid_tangent / grid_tangent.length()
-                # initial_angle = math.atan2(path_initial_tangent[0], path_initial_tangent[1])
-                # # draw the agent and trajectory on the map
-                # maps.draw_path(top_down_map, trajectory)
-                # maps.draw_agent(
-                #     top_down_map, trajectory[0], initial_angle, agent_radius_px=8
-                # )
-                # print("saving map...")
-                # save_map(dest_dir, top_down_map)
-
                 # Place agent and render images at trajectory points (if found).
                 print("Rendering observations at path points:")
                 tangent = path_points[1] - path_points[0]
@@ -245,20 +210,17 @@ if __name__ == "__main__":
     parser.add_argument("--source-dataset", dest="source_dataset")
     parser.add_argument("--source-split", dest="source_split")
     parser.add_argument("--dest-dir", dest="dest_dir")
-
-    # parser.add_argument("")
-
-    # parser.set_defaults(source_dataset="/media/mytre/0CD418EB76995EEF/SegmentationProject/datasets/matterport/HM3D/val/00800-TEEsavR23oF/TEEsavR23oF.basis.glb",    
-    #                 test_scene_dataset="/media/mytre/0CD418EB76995EEF/SegmentationProject/datasets/matterport/HM3D/hm3d_annotated_val_basis.scene_dataset_config.json",
-    #                 dest_dir="/media/mytre/0CD418EB76995EEF/SegmentationProject/datasets/test/")
-
-    parser.set_defaults(source_dataset="/media/mytre/0CD418EB76995EEF/SegmentationProject/datasets/matterport/HM3D/",    
+    parser.add_argument("--sim-height", dest="sim_height")
+    parser.set_defaults(source_dataset="./zeroshot_rgbd/datasets/matterport/HM3D/",    
                         source_split="val",
-                        dest_dir="/media/mytre/0CD418EB76995EEF/SegmentationProject/datasets/VaryingPerspectiveDataset/data/")
+                        dest_dir="./zeroshot_rgbd/datasets/VaryingPerspectiveDataset/data_1.65m/",
+                        sim_height=1.65)
     args, _ = parser.parse_known_args()
+
     source_dataset = args.source_dataset
     source_split = args.source_split
     dest_dir = args.dest_dir
+    sim_height = float(args.sim_height)
 
     if not os.path.isdir(dest_dir):
         os.makedirs(dest_dir)
@@ -284,7 +246,7 @@ if __name__ == "__main__":
             "scene": scene_path,  # Scene path
             "scene_dataset": test_scene_dataset,  # the scene dataset configuration files
             "default_agent": 0,
-            "sensor_height": 0.1,  # Height of sensors in meters
+            "sensor_height": sim_height,  # Height of sensors in meters
             "color_sensor": True,  # RGB sensor
             "depth_sensor": True,  # Depth sensor
             "semantic_sensor": True,  # Semantic sensor
