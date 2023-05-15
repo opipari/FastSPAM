@@ -38,6 +38,7 @@ def save_anns(prefix, dest_dir, img, anns):
     fig.canvas.draw()
     res = Image.frombytes('RGB', fig.canvas.get_width_height(), fig.canvas.tostring_rgb())
     res.save(os.path.join(dest_dir, str(prefix)+".SAM.jpg"))
+    plt.close()
 
 def show_anns(img, anns):
     fig = plt.figure(figsize=(20,20))
@@ -154,7 +155,7 @@ if __name__ == "__main__":
         label = np.transpose(label, axes=(2,0,1))
         pred = np.transpose(pred, axes=(2,0,1))
 
-        intersection, precision_denom, recall_denom = metrics(label,pred)
+        intersection, precision_denom, recall_denom = metrics(pred, label)
         
         precision_img = intersection / precision_denom
         recall_img = intersection / recall_denom
