@@ -284,7 +284,7 @@ if __name__ == "__main__":
             "scene": scene_path,  # Scene path
             "scene_dataset": test_scene_dataset,  # the scene dataset configuration files
             "default_agent": 0,
-            "sensor_height": 1.65,  # Height of sensors in meters
+            "sensor_height": 0.1,  # Height of sensors in meters
             "color_sensor": True,  # RGB sensor
             "depth_sensor": True,  # Depth sensor
             "semantic_sensor": True,  # Semantic sensor

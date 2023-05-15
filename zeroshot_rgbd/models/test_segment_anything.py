@@ -10,6 +10,8 @@ from PIL import Image
 import sys
 from segment_anything import sam_model_registry, SamAutomaticMaskGenerator, SamPredictor
 
+from ..datasets.VaryingPerspectiveDataset import VaryingPerspectiveDataset
+
 
 def save_anns(index, dest_dir, img, anns):
     fig = plt.figure(figsize=(20,20))
@@ -40,8 +42,8 @@ if __name__ == "__main__":
     parser.add_argument("--dest-dir", dest="dest_dir")
     parser.add_argument("--sam-checkpoint", dest="sam_checkpoint")
     parser.add_argument("--model-type", dest="model_type")
-    parser.set_defaults(img_dir="/media/mytre/0CD418EB76995EEF/SegmentationProject/simulators/test/",
-                    dest_dir="/media/mytre/0CD418EB76995EEF/SegmentationProject/simulators/test/",
+    parser.set_defaults(img_dir="/media/mytre/0CD418EB76995EEF/SegmentationProject/datasets/VaryingPerspectiveDataset/data/",
+                    dest_dir="/media/mytre/0CD418EB76995EEF/SegmentationProject/models/output/",
                     sam_checkpoint="/media/mytre/0CD418EB76995EEF/SegmentationProject/models/segment_anything/checkpoints/sam_vit_h_4b8939.pth",
                     model_type="vit_h")
     args, _ = parser.parse_known_args()
@@ -62,6 +64,13 @@ if __name__ == "__main__":
 
     mask_generator = SamAutomaticMaskGenerator(sam)
 
+
+    dataset = VaryingPerspectiveDataset(root_dir=img_dir)
+
+    for idx in range(len(dataset)):
+        image, label = dataset[idx]
+        plt.imshow(image)
+        plt.show()
 
 
     for fl in os.listdir(img_dir):
