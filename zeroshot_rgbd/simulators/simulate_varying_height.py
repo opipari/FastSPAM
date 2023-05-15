@@ -28,6 +28,7 @@ def save_sample(index, scene_name, dest_dir, rgb_obs, semantic_obs=np.array([]),
     rgb_img.save(os.path.join(dest_dir, f'scene.{scene_name}.frame.{index:04}.color.jpg'))
 
     if semantic_obs.size != 0:
+        np.save(os.path.join(dest_dir, f'scene.{scene_name}.frame.{index:04}.semantic.npy'), semantic_obs)
         semantic_img = Image.new("P", (semantic_obs.shape[1], semantic_obs.shape[0]))
         semantic_img.putpalette(d3_40_colors_rgb.flatten())
         semantic_img.putdata((semantic_obs.flatten() % 40).astype(np.uint8))
@@ -36,6 +37,7 @@ def save_sample(index, scene_name, dest_dir, rgb_obs, semantic_obs=np.array([]),
 
 
     if depth_obs.size != 0:
+        np.save(os.path.join(dest_dir, f'scene.{scene_name}.frame.{index:04}.depth.npy'), depth_obs)
         depth_img = Image.fromarray((depth_obs / 10 * 255).astype(np.uint8), mode="L")
         depth_img.save(os.path.join(dest_dir, f'scene.{scene_name}.frame.{index:04}.depth.png'))
 

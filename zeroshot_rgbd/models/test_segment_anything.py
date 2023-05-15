@@ -7,16 +7,20 @@ import matplotlib.pyplot as plt
 import cv2
 from PIL import Image
 
+from scipy.optimize import linear_sum_assignment
+
 import sys
 from segment_anything import sam_model_registry, SamAutomaticMaskGenerator, SamPredictor
 
 from zeroshot_rgbd.datasets.VaryingPerspectiveDataset import VaryingPerspectiveDataset
+from habitat_sim.utils.common import d3_40_colors_rgb
 
 
-def save_anns(index, dest_dir, img, anns):
+
+def save_anns(prefix, dest_dir, img, anns):
     fig = plt.figure(figsize=(20,20))
     plt.axis('off')
-    plt.imshow(image)
+    plt.imshow(img)
 
     if len(anns) > 0:
         sorted_anns = sorted(anns, key=(lambda x: x['area']), reverse=True)
@@ -30,9 +34,72 @@ def save_anns(index, dest_dir, img, anns):
             color_mask = np.concatenate([np.random.random(3), [0.35]])
             img[m] = color_mask
         ax.imshow(img)
-    plt.savefig(os.path.join(dest_dir, str(index)+"_SAM.png"))
-    Image.frombytes('RGB', fig.canvas.get_width_height(), fig.canvas.tostring_rgb())
+    #plt.savefig(os.path.join(dest_dir, str(prefix)+".SAM.jpg"))
+    fig.canvas.draw()
+    res = Image.frombytes('RGB', fig.canvas.get_width_height(), fig.canvas.tostring_rgb())
+    res.save(os.path.join(dest_dir, str(prefix)+".SAM.jpg"))
 
+def show_anns(img, anns):
+    fig = plt.figure(figsize=(20,20))
+    plt.axis('off')
+    plt.imshow(img)
+
+    if len(anns) > 0:
+        
+        sorted_anns = sorted(anns, key=(lambda x: x['area']), reverse=True)
+        ax = plt.gca()
+        ax.set_autoscale_on(False)
+
+        img = np.ones((sorted_anns[0]['segmentation'].shape[0], sorted_anns[0]['segmentation'].shape[1], 4))
+        img[:,:,3] = 0
+        for ann in sorted_anns:
+            m = ann['segmentation']
+            color_mask = np.concatenate([np.random.random(3), [0.35]])
+            img[m] = color_mask
+        ax.imshow(img)
+    plt.show()
+
+
+def metrics(pred_img, label_img, eps=1e-10):
+
+    num_gt = len(label_img)
+    num_pred = len(pred_img)
+    #print("num gt:", num_gt)
+    #print("num pred:", num_pred)
+
+    # confusion matrix (pred x gt)
+    intersection_mat = np.zeros((num_pred, num_gt))
+    precision_denom = np.sum(pred_img, axis=(1,2)).reshape(num_pred, 1)
+    recall_denom = np.sum(label_img, axis=(1,2)).reshape(1, num_gt)
+    #precision_mat = np.zeros((num_pred, num_gt))
+    #recall_mat = np.zeros((num_pred, num_gt))
+
+
+    for pred_idx in range(num_pred):
+        pred_mask = pred_img[pred_idx]
+
+        for gt_idx in range(num_gt):
+            gt_mask = label_img[gt_idx]
+            
+            intersection_mat[pred_idx][gt_idx] = np.sum(gt_mask * pred_mask) + eps
+            #precision_mat[pred_idx][gt_idx] = intersection / np.sum(pred_mask)
+            #recall_mat[pred_idx][gt_idx] = intersection / np.sum(gt_mask)
+
+    precision_mat = intersection_mat / precision_denom
+    recall_mat = intersection_mat / recall_denom
+    F_mat = (2*precision_mat*recall_mat) / (precision_mat + recall_mat)
+
+    assignment = linear_sum_assignment(-F_mat)
+
+    intersection_total = 0
+    precision_denom_total = 0
+    recall_denom_total = 0
+    for pred_idx, gt_idx in zip(*assignment):
+        intersection_total += intersection_mat[pred_idx][gt_idx]
+        precision_denom_total += precision_denom[pred_idx][0]
+        recall_denom_total += recall_denom[0][gt_idx]
+
+    return intersection_total, precision_denom_total, recall_denom_total
 
 if __name__ == "__main__":
     import argparse
@@ -59,32 +126,49 @@ if __name__ == "__main__":
         os.makedirs(dest_dir)
 
     
-    # sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
-    # sam.to(device=device)
-
-    # mask_generator = SamAutomaticMaskGenerator(sam)
+    sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
+    sam.to(device=device)
+    mask_generator = SamAutomaticMaskGenerator(sam)
 
 
     dataset = VaryingPerspectiveDataset(root_dir=img_dir)
 
+
+    intersection_total = 0
+    precision_denom_total = 0 
+    recall_denom_total = 0
+
     for idx in range(len(dataset)):
         image, label = dataset[idx]
-        plt.imshow(image)
-        plt.show()
-        print(image.shape)
+        image = image.permute(1,2,0).numpy()
+        label = label.permute(1,2,0).numpy()
+        
+        masks = mask_generator.generate(image)
+        save_anns(dataset.prefixes[idx], dest_dir, image, masks)
 
+        if len(masks)>0:
+            pred = np.stack([ann['segmentation'] for ann in masks], axis=-1)
+        else:
+            pred = np.ones(label.shape[:2]+(1,))
+        
+        label = np.transpose(label, axes=(2,0,1))
+        pred = np.transpose(pred, axes=(2,0,1))
 
-    # for fl in os.listdir(img_dir):
-    #     if fl.endswith("_rgb.png"):
-    #         index = fl.split("_")[0]
-    #         image = cv2.imread(os.path.join(img_dir, fl))
-    #         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    #         masks = mask_generator.generate(image)
-    #         save_anns(index, dest_dir, image, masks)
+        intersection, precision_denom, recall_denom = metrics(label,pred)
+        
+
+        intersection_total += intersection
+        precision_denom_total += precision_denom
+        recall_denom_total += recall_denom
+
+        if idx%10==0:
+            precision = intersection_total / precision_denom_total
+            recall = intersection_total / recall_denom_total
+            F_score = (2*precision*recall) / (precision + recall)
+            print(f'Iter: {idx}/{len(dataset)}, Precision: {precision}, Recall: {recall}, F-Score: {F_score}')
             
-
             
-
-            
-
-            
+    precision = intersection_total / precision_denom_total
+    recall = intersection_total / recall_denom_total
+    F_score = (2*precision*recall) / (precision + recall)
+    print(f'Final Result: Precision: {precision}, Recall: {recall}, F-Score: {F_score}')
