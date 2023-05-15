@@ -156,6 +156,13 @@ if __name__ == "__main__":
 
         intersection, precision_denom, recall_denom = metrics(label,pred)
         
+        precision_img = intersection / precision_denom
+        recall_img = intersection / recall_denom
+        F_score_img = (2*precision_img*recall_img) / (precision_img + recall_img)
+        with open(os.path.join(dest_dir, dataset.prefixes[idx]+'.SAM.txt'), 'w') as f:
+            f.write(f'Iter: {idx}/{len(dataset)}, Precision: {precision_img}, Recall: {recall_img}, F-Score: {F_score_img}\n')
+
+
 
         intersection_total += intersection
         precision_denom_total += precision_denom
@@ -167,8 +174,11 @@ if __name__ == "__main__":
             F_score = (2*precision*recall) / (precision + recall)
             print(f'Iter: {idx}/{len(dataset)}, Precision: {precision}, Recall: {recall}, F-Score: {F_score}')
             
-            
+
     precision = intersection_total / precision_denom_total
     recall = intersection_total / recall_denom_total
     F_score = (2*precision*recall) / (precision + recall)
     print(f'Final Result: Precision: {precision}, Recall: {recall}, F-Score: {F_score}')
+
+    with open(os.path.join(dest_dir,'final.SAM.txt'), 'w') as f:
+        f.write(f'Final Result: Precision: {precision}, Recall: {recall}, F-Score: {F_score}\n')
