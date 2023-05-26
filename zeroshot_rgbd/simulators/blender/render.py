@@ -3,7 +3,6 @@ import math
 import numpy as np
 import itertools, functools, operator
 
-import matplotlib.pyplot as plt
 
 import bpy
 from mathutils import Vector, Euler
@@ -210,8 +209,224 @@ def add_object_to_collection(object, collection):
         coll.objects.unlink(object)
     collection.objects.link(object)
 
-SCENE_FILE = '/Users/top/Downloads/hm3d-example-glb-v0.2/00337-CFVBbU9Rsyb/CFVBbU9Rsyb.glb'
-OUTPUT_DIR = '/Users/top/Downloads/hm3d-example-glb-v0.2/renders'
+
+
+def render_scene_images(SCENE_FILE, SCENE_NAME, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_GRID=False, RENDER_IMAGES=True):
+
+
+    if RENDER_IMAGES:
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    print()
+    print("********************")
+    print("RESETTING SCENE")
+
+
+    general_collection = bpy.data.collections.get("Collection")
+    if general_collection is None:
+        general_collection = bpy.data.collections.new("Collection")
+        bpy.context.scene.collection.children.link(general_collection)
+
+    delete_object(bpy.data.objects.get("Camera"))
+    camera = bpy.data.cameras.new("Camera")
+    camera.lens = 15
+    camera.clip_start = 1e-5
+    camera_obj = bpy.data.objects.new("Camera", camera)
+    camera_obj.location = Vector((0,0,0))
+    camera_obj.rotation_mode = 'ZXY'
+    camera_obj.rotation_euler = Euler((0,0,math.pi))
+    add_object_to_collection(camera_obj, general_collection)
+    bpy.context.scene.camera = camera_obj
+
+    delete_object(bpy.data.objects.get("Spot_Light"))
+    spot_light = bpy.data.lights.new(name="Spot_Light", type='SPOT')
+    spot_light.energy = 5
+    spot_light.spot_size = math.pi
+    spot_light.distance = 25
+    spot_light_obj = bpy.data.objects.new(name="Spot_Light", object_data=spot_light)
+    spot_light_obj.location = Vector((0,0,0))
+    spot_light_obj.parent = camera_obj
+    add_object_to_collection(spot_light_obj, general_collection)
+
+
+
+    building_collection = bpy.data.collections.get("Building")
+    delete_collection(building_collection)
+
+    delete_object(bpy.data.objects.get("Building_Box"))
+
+    initial_sample_collection = bpy.data.collections.get("Initial_Sample_Grid")
+    delete_collection(initial_sample_collection)
+
+    grid_post_coll = bpy.data.collections.get("Accepted_Sample_Grid")
+    delete_collection(grid_post_coll)
+
+    print("DONE RESETTING SCENE")
+    print("********************")
+    print()
+
+
+
+
+    if INITIALIZE_SCENE:
+        print()
+        print("***********************")
+        print("INITIALIZING SCENE")
+        
+        bpy.ops.import_scene.gltf(filepath=SCENE_FILE)
+
+        building_collection = bpy.data.collections.get("Building")
+        if building_collection is None:
+            building_collection = bpy.data.collections.new("Building")
+            bpy.context.scene.collection.children.link(building_collection)
+        
+        bpy.ops.object.select_all(action='DESELECT')
+        
+        for obj in bpy.data.objects:
+            if obj.type=="MESH":
+                add_object_to_collection(obj, building_collection)
+                for mat in obj.data.materials:
+                    mat.use_backface_culling = False
+                obj.select_set(True)
+                bpy.context.view_layer.objects.active = obj
+        #bpy.ops.object.join()
+        
+        print()
+        print("***********************")
+        print("DONE INITIALIZING SCENE")
+
+
+        
+
+    num_building_meshes = len(building_collection.all_objects)
+    building_aabb = get_collection_aabb(building_collection)
+    building_box = bounding_box("Building_Box", building_aabb, edges=[(0,1),(0,2),(1,3),(2,3),(4,5),(4,6),(5,7),(6,7),(0,4),(1,5),(2,6),(3,7)])
+    building_collection.objects.link(building_box)
+
+
+    grid_x, grid_y, grid_z = get_grid_points(building_aabb, samples_per_meter=1)
+    num_pos_samples = functools.reduce(operator.mul, map(len, (grid_x, grid_y, grid_z)), 1)
+
+    grid_roll, grid_pitch, grid_yaw = get_grid_euler()
+    num_rot_samples = functools.reduce(operator.mul, map(len, (grid_roll, grid_pitch, grid_yaw)), 1)
+
+
+    if VISUALIZE_GRID:
+        sphere_mat = bpy.data.materials.get("Sphere_Material")
+        if sphere_mat is None:
+            sphere_mat = bpy.data.materials.new(name="Sphere_Material")
+            
+        # Create collection for initial and post-rejection grid
+        
+        initial_sample_collection = bpy.data.collections.get("Initial_Sample_Grid")
+        if initial_sample_collection is None:
+            initial_sample_collection = bpy.data.collections.new("Initial_Sample_Grid")
+            bpy.context.scene.collection.children.link(initial_sample_collection)
+        
+        grid_post_collection = bpy.data.collections.get("Accepted_Sample_Grid")
+        if grid_post_collection is None:
+            grid_post_collection = bpy.data.collections.new("Accepted_Sample_Grid")
+            bpy.context.scene.collection.children.link(grid_post_collection)
+        
+        for x,y,z in itertools.product(grid_x, grid_y, grid_z):
+            sphere_obj = get_sphere((x,y,z), mat=sphere_mat)
+            bpy.context.collection.objects.link(sphere_obj)
+            add_object_to_collection(sphere_obj, initial_sample_collection)
+            
+        
+            
+        
+        
+
+
+    bpy.context.scene.render.film_transparent = True
+    bpy.context.scene.render.image_settings.color_mode = 'RGBA'
+    bpy.context.scene.render.resolution_x = 1280
+    bpy.context.scene.render.resolution_y = 960
+
+    if RENDER_IMAGES:
+        meta_file = open(os.path.join(OUTPUT_DIR, f"meta_{SCENE_NAME}.csv"),"w")
+
+
+
+    img_i = 0
+
+    
+            
+            
+    for pos_i, (x,y,z) in enumerate(itertools.product(grid_x, grid_y, grid_z)):
+        has_valid_view = False
+        camera_obj.location = Vector((x,y,z))
+        for rot_i,(roll,pitch,yaw) in enumerate(itertools.product(grid_roll, grid_pitch, grid_yaw)):
+            camera_obj.rotation_euler = Euler((pitch,yaw,roll))
+            bpy.context.view_layer.update()
+            
+            camera_loc = camera_obj.location
+            camera_view_dir = ((camera_obj.matrix_world @ Vector((0,0,-1))) - camera_loc).normalized()
+            camera_corner_dirs = [camera_view_dir]+[((camera_obj.matrix_world @ corner) - camera_loc).normalized() for corner in camera_obj.data.view_frame(scene=bpy.context.scene)]
+            
+            #res, loc, normal, face_i, object, matrix = bpy.context.scene.ray_cast(bpy.context.view_layer.depsgraph, camera_loc, camera_view_dir)
+            #camera_view_normal_dot = camera_view_dir.dot(normal.normalized())
+            camera_corner_ray_casts = [bpy.context.scene.ray_cast(bpy.context.view_layer.depsgraph, camera_loc, corner_dir) for corner_dir in camera_corner_dirs]
+            camera_corner_normal_dots = [corner_dir.dot(ray_cast[2].normalized()) for corner_dir,ray_cast in zip(camera_corner_dirs,camera_corner_ray_casts)]
+            
+            # Valid view if at least one rotation sample looks directly at a surface facing camera
+            if all([dot<0 for dot in camera_corner_normal_dots]) and all([ray_cast[0] for ray_cast in camera_corner_ray_casts]):
+                has_valid_view = True
+                
+                
+                
+                if RENDER_IMAGES:
+                    for light in [None,5,10,25,50,100,200]:
+                        if light is None:
+                            bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[0].default_value[:3] = (1,1,1)
+                            bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[1].default_value = 1
+                            spot_light.energy = 0
+                        else:
+                            bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[0].default_value[:3] = (0,0,0)
+                            bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[1].default_value = 0
+                            spot_light.energy = light
+                        
+                        bpy.context.scene.render.filepath = os.path.join(OUTPUT_DIR, f'{SCENE_NAME}_{img_i:010}_{light}_{pos_i:05}_{rot_i:05}_RGB.png')
+                        bpy.ops.render.render(write_still = True)
+                        meta_file.write(f'{img_i:010},{light},{pos_i:05},{rot_i:05},{x},{y},{z},{roll},{pitch},{yaw}\n')
+                        meta_file.flush()
+                        img_i += 1
+                
+            if has_valid_view and rot_i%10==0:
+                print(f'    {rot_i}/{num_rot_samples} rotation samples finished rendering')
+                
+        if VISUALIZE_GRID and has_valid_view:
+            sphere_obj = get_sphere((x,y,z), name="Accept", mat=sphere_mat)
+            bpy.context.collection.objects.link(sphere_obj)
+            add_object_to_collection(sphere_obj, grid_post_collection)
+            
+        if pos_i%10==0:
+            print(f'{pos_i}/{num_pos_samples} position samples finished rendering')
+            
+    if RENDER_IMAGES:       
+        meta_file.close()
+
+
+    for block in bpy.data.meshes:
+        if block.users == 0:
+            bpy.data.meshes.remove(block)
+
+    for block in bpy.data.materials:
+        if block.users == 0:
+            bpy.data.materials.remove(block)
+
+    for block in bpy.data.textures:
+        if block.users == 0:
+            bpy.data.textures.remove(block)
+
+    for block in bpy.data.images:
+        if block.users == 0:
+            bpy.data.images.remove(block)
+            
+SCENE_FILE = '/media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/00861-GLAQ4DNUx5U/GLAQ4DNUx5U.glb'
+SCENE_NAME = 'GLAQ4DNUx5U'
+OUTPUT_DIR = '/media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders'
 
 
 
@@ -222,201 +437,4 @@ INITIALIZE_SCENE = True
 VISUALIZE_GRID = False
 RENDER_IMAGES = True
 
-
-if RENDER_IMAGES:
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-print()
-print("********************")
-print("RESETTING SCENE")
-
-
-general_collection = bpy.data.collections.get("Collection")
-if general_collection is None:
-    general_collection = bpy.data.collections.new("Collection")
-    bpy.context.scene.collection.children.link(general_collection)
-
-delete_object(bpy.data.objects.get("Camera"))
-camera = bpy.data.cameras.new("Camera")
-camera.lens = 15
-camera.clip_start = 1e-6
-camera_obj = bpy.data.objects.new("Camera", camera)
-camera_obj.location = Vector((0,0,0))
-camera_obj.rotation_mode = 'ZXY'
-camera_obj.rotation_euler = Euler((0,0,math.pi))
-add_object_to_collection(camera_obj, general_collection)
-bpy.context.scene.camera = camera_obj
-
-delete_object(bpy.data.objects.get("Spot_Light"))
-spot_light = bpy.data.lights.new(name="Spot_Light", type='SPOT')
-spot_light.energy = 50
-spot_light.spot_size = math.pi
-spot_light.distance = 25
-spot_light_obj = bpy.data.objects.new(name="Spot_Light", object_data=spot_light)
-spot_light_obj.location = Vector((0,0,0))
-spot_light_obj.parent = camera_obj
-add_object_to_collection(spot_light_obj, general_collection)
-
-
-
-building_collection = bpy.data.collections.get("Building")
-delete_collection(building_collection)
-
-delete_object(bpy.data.objects.get("Building_Box"))
-
-initial_sample_collection = bpy.data.collections.get("Initial_Sample_Grid")
-delete_collection(initial_sample_collection)
-
-grid_post_coll = bpy.data.collections.get("Accepted_Sample_Grid")
-delete_collection(grid_post_coll)
-
-print("DONE RESETTING SCENE")
-print("********************")
-print()
-
-
-
-
-if INITIALIZE_SCENE:
-    print()
-    print("***********************")
-    print("INITIALIZING SCENE")
-    
-    bpy.ops.import_scene.gltf(filepath=SCENE_FILE)
-
-    building_collection = bpy.data.collections.get("Building")
-    if building_collection is None:
-        building_collection = bpy.data.collections.new("Building")
-        bpy.context.scene.collection.children.link(building_collection)
-    
-    bpy.ops.object.select_all(action='DESELECT')
-    
-    for obj in bpy.data.objects:
-        if obj.type=="MESH":
-            add_object_to_collection(obj, building_collection)
-            for mat in obj.data.materials:
-                mat.use_backface_culling = False 
-            obj.select_set(True)
-            bpy.context.view_layer.objects.active = obj
-    bpy.ops.object.join()
-    
-    print()
-    print("***********************")
-    print("DONE INITIALIZING SCENE")
-
-
-    
-
-num_building_meshes = len(building_collection.all_objects)
-building_aabb = get_collection_aabb(building_collection)
-building_box = bounding_box("Building_Box", building_aabb, edges=[(0,1),(0,2),(1,3),(2,3),(4,5),(4,6),(5,7),(6,7),(0,4),(1,5),(2,6),(3,7)])
-building_collection.objects.link(building_box)
-
-
-grid_x, grid_y, grid_z = get_grid_points(building_aabb, samples_per_meter=1)
-num_pos_samples = functools.reduce(operator.mul, map(len, (grid_x, grid_y, grid_z)), 1)
-
-grid_roll, grid_pitch, grid_yaw = get_grid_euler()
-num_rot_samples = functools.reduce(operator.mul, map(len, (grid_roll, grid_pitch, grid_yaw)), 1)
-
-
-if VISUALIZE_GRID:
-    sphere_mat = bpy.data.materials.get("Sphere_Material")
-    if sphere_mat is None:
-        sphere_mat = bpy.data.materials.new(name="Sphere_Material")
-        
-    # Create collection for initial and post-rejection grid
-    
-    initial_sample_collection = bpy.data.collections.get("Initial_Sample_Grid")
-    if initial_sample_collection is None:
-        initial_sample_collection = bpy.data.collections.new("Initial_Sample_Grid")
-        bpy.context.scene.collection.children.link(initial_sample_collection)
-    
-    grid_post_collection = bpy.data.collections.get("Accepted_Sample_Grid")
-    if grid_post_collection is None:
-        grid_post_collection = bpy.data.collections.new("Accepted_Sample_Grid")
-        bpy.context.scene.collection.children.link(grid_post_collection)
-    
-    for x,y,z in itertools.product(grid_x, grid_y, grid_z):
-        sphere_obj = get_sphere((x,y,z), mat=sphere_mat)
-        bpy.context.collection.objects.link(sphere_obj)
-        add_object_to_collection(sphere_obj, initial_sample_collection)
-        
-    
-        
-    
-    
-
-
-
-bpy.context.scene.render.resolution_x = 640
-bpy.context.scene.render.resolution_y = 480
-
-if RENDER_IMAGES:
-    meta_file = open(os.path.join(OUTPUT_DIR,"meta.csv"),"w")
-
-
-
-img_i = 0
-
-for light in [5,10,25,50,100,200]:
-    spot_light.energy = light
-    for pos_i, (x,y,z) in enumerate(itertools.product(grid_x, grid_y, grid_z)):
-        if pos_i<67:
-            continue
-        if pos_i>67:
-            break
-        has_valid_view = False
-        camera_obj.location = Vector((x,y,z))
-        for rot_i,(roll,pitch,yaw) in enumerate(itertools.product(grid_roll, grid_pitch, grid_yaw)):
-            camera_obj.rotation_euler = Euler((pitch,yaw,roll))
-            
-            camera_loc = camera_obj.location
-            camera_view_dir = camera_obj.matrix_world @ Vector((0,0,-1)) - camera_loc
-            camera_view_dir = camera_view_dir.normalized()
-            
-            res, loc, normal, face_i, object, matrix = bpy.context.scene.ray_cast(bpy.context.view_layer, camera_loc, camera_view_dir)
-            normal_dot = camera_view_dir.dot(normal.normalized())
-            
-            # Valid view if at least one rotation sample looks directly at a surface facing camera
-            if normal_dot<0:
-                has_valid_view = True
-                
-                if RENDER_IMAGES:
-                    bpy.context.scene.render.filepath = os.path.join(OUTPUT_DIR, f'{scene}_{img_i:05}_{light:05}_{pos_i:05}_{rot_i:05}_RGB.jpg')
-                    bpy.ops.render.render(write_still = True)
-                    meta_file.write(f'{img_i:05},{light},{pos_i:05},{rot_i:05},{x},{y},{z},{roll},{pitch},{yaw}\n')
-                    meta_file.flush()
-                    
-            if rot_i%10==0:
-                print(f'    {rot_i}/{num_rot_samples} rotation samples finished rendering')
-                
-        if VISUALIZE_GRID and has_valid_view:
-            sphere_obj = get_sphere((x,y,z), name="Accept", mat=sphere_mat)
-            bpy.context.collection.objects.link(sphere_obj)
-            add_object_to_collection(sphere_obj, grid_post_collection)
-            
-        if pos_i%10==0:
-            print(f'{pos_i}/{num_pos_samples} position samples finished rendering')
-        
-if RENDER_IMAGES:       
-    meta_file.close()
-
-
-for block in bpy.data.meshes:
-    if block.users == 0:
-        bpy.data.meshes.remove(block)
-
-for block in bpy.data.materials:
-    if block.users == 0:
-        bpy.data.materials.remove(block)
-
-for block in bpy.data.textures:
-    if block.users == 0:
-        bpy.data.textures.remove(block)
-
-for block in bpy.data.images:
-    if block.users == 0:
-        bpy.data.images.remove(block)
-        
-        
+render_scene_images(SCENE_FILE, SCENE_NAME, OUTPUT_DIR, INITIALIZE_SCENE, VISUALIZE_GRID, RENDER_IMAGES)
