@@ -211,9 +211,14 @@ def add_object_to_collection(object, collection):
 
 
 
-def render_scene_images(SCENE_FILE, SCENE_NAME, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_GRID=False, RENDER_IMAGES=True):
-
-
+def render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_GRID=False, RENDER_IMAGES=True):
+    
+    SCENE_NAME = SCENE_DIR.split('/')[-1].split('-')[-1]+'.glb'
+    SEMANTIC_SCENE_NAME = SCENE_NAME.split('.')[0]+'.semantic.glb'
+    
+    print(SCENE_NAME)
+    print(SEMANTIC_SCENE_NAME)
+    
     if RENDER_IMAGES:
         os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -252,6 +257,9 @@ def render_scene_images(SCENE_FILE, SCENE_NAME, OUTPUT_DIR, INITIALIZE_SCENE=Tru
 
     building_collection = bpy.data.collections.get("Building")
     delete_collection(building_collection)
+    
+    semantic_building_collection = bpy.data.collections.get("Semantic_Building")
+    delete_collection(semantic_building_collection)
 
     delete_object(bpy.data.objects.get("Building_Box"))
 
@@ -273,12 +281,17 @@ def render_scene_images(SCENE_FILE, SCENE_NAME, OUTPUT_DIR, INITIALIZE_SCENE=Tru
         print("***********************")
         print("INITIALIZING SCENE")
         
-        bpy.ops.import_scene.gltf(filepath=SCENE_FILE)
+        bpy.ops.import_scene.gltf(filepath=os.path.join(SCENE_DIR,SCENE_NAME))
 
         building_collection = bpy.data.collections.get("Building")
         if building_collection is None:
             building_collection = bpy.data.collections.new("Building")
             bpy.context.scene.collection.children.link(building_collection)
+            
+        semantic_building_collection = bpy.data.collections.get("Semantic_Building")
+        if semantic_building_collection is None:
+            semantic_building_collection = bpy.data.collections.new("Semantic_Building")
+            bpy.context.scene.collection.children.link(semantic_building_collection)
         
         bpy.ops.object.select_all(action='DESELECT')
         
@@ -288,8 +301,18 @@ def render_scene_images(SCENE_FILE, SCENE_NAME, OUTPUT_DIR, INITIALIZE_SCENE=Tru
                 for mat in obj.data.materials:
                     mat.use_backface_culling = False
                 obj.select_set(True)
-                bpy.context.view_layer.objects.active = obj
+                #bpy.context.view_layer.objects.active = obj
         #bpy.ops.object.join()
+        
+        bpy.ops.import_scene.gltf(filepath=os.path.join(SCENE_DIR,SEMANTIC_SCENE_NAME))
+        
+        for obj in bpy.data.objects:
+            if obj.type=="MESH" and building_collection not in obj.users_collection:
+                add_object_to_collection(obj, semantic_building_collection)
+                for mat in obj.data.materials:
+                    mat.use_backface_culling = False
+                obj.select_set(True)
+                #bpy.context.view_layer.objects.active = obj
         
         print()
         print("***********************")
@@ -297,7 +320,8 @@ def render_scene_images(SCENE_FILE, SCENE_NAME, OUTPUT_DIR, INITIALIZE_SCENE=Tru
 
 
         
-
+    
+    
     num_building_meshes = len(building_collection.all_objects)
     building_aabb = get_collection_aabb(building_collection)
     building_box = bounding_box("Building_Box", building_aabb, edges=[(0,1),(0,2),(1,3),(2,3),(4,5),(4,6),(5,7),(6,7),(0,4),(1,5),(2,6),(3,7)])
@@ -377,6 +401,10 @@ def render_scene_images(SCENE_FILE, SCENE_NAME, OUTPUT_DIR, INITIALIZE_SCENE=Tru
                 
                 
                 if RENDER_IMAGES:
+                    semantic_building_collection.hide_render=True
+                    building_collection.hide_render=False
+                    bpy.context.scene.render.engine = 'BLENDER_EEVEE'
+                    
                     for light in [None,5,10,25,50,100,200]:
                         if light is None:
                             bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[0].default_value[:3] = (1,1,1)
@@ -392,6 +420,17 @@ def render_scene_images(SCENE_FILE, SCENE_NAME, OUTPUT_DIR, INITIALIZE_SCENE=Tru
                         meta_file.write(f'{img_i:010},{light},{pos_i:05},{rot_i:05},{x},{y},{z},{roll},{pitch},{yaw}\n')
                         meta_file.flush()
                         img_i += 1
+                        
+                        
+                    semantic_building_collection.hide_render=False
+                    building_collection.hide_render=True
+                    bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
+                    bpy.context.scene.display.shading.light = 'FLAT'
+                    bpy.context.scene.display.shading.color_type = 'TEXTURE'
+                    bpy.context.scene.render.filepath = os.path.join(OUTPUT_DIR, f'{SCENE_NAME}_{img_i:010}_{light}_{pos_i:05}_{rot_i:05}_SEM.png')
+                    bpy.ops.render.render(write_still = True)
+                    img_i += 1
+                    
                 
             if has_valid_view and rot_i%10==0:
                 print(f'    {rot_i}/{num_rot_samples} rotation samples finished rendering')
@@ -424,8 +463,7 @@ def render_scene_images(SCENE_FILE, SCENE_NAME, OUTPUT_DIR, INITIALIZE_SCENE=Tru
         if block.users == 0:
             bpy.data.images.remove(block)
             
-SCENE_FILE = '/media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/00861-GLAQ4DNUx5U/GLAQ4DNUx5U.glb'
-SCENE_NAME = 'GLAQ4DNUx5U'
+SCENE_DIR = '/media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/00861-GLAQ4DNUx5U'
 OUTPUT_DIR = '/media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders'
 
 
@@ -437,4 +475,4 @@ INITIALIZE_SCENE = True
 VISUALIZE_GRID = False
 RENDER_IMAGES = True
 
-render_scene_images(SCENE_FILE, SCENE_NAME, OUTPUT_DIR, INITIALIZE_SCENE, VISUALIZE_GRID, RENDER_IMAGES)
+render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE, VISUALIZE_GRID, RENDER_IMAGES)
