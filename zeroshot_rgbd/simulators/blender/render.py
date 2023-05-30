@@ -328,7 +328,7 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_
     building_collection.objects.link(building_box)
 
 
-    grid_x, grid_y, grid_z = get_grid_points(building_aabb, samples_per_meter=1)
+    grid_x, grid_y, grid_z = get_grid_points(building_aabb, samples_per_meter=0.5)
     num_pos_samples = functools.reduce(operator.mul, map(len, (grid_x, grid_y, grid_z)), 1)
 
     grid_roll, grid_pitch, grid_yaw = get_grid_euler()
@@ -365,23 +365,23 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_
 
     bpy.context.scene.render.film_transparent = True
     bpy.context.scene.render.image_settings.color_mode = 'RGBA'
-    bpy.context.scene.render.resolution_x = 1280
-    bpy.context.scene.render.resolution_y = 960
+    bpy.context.scene.render.resolution_x = 960
+    bpy.context.scene.render.resolution_y = 720
 
     if RENDER_IMAGES:
         meta_file = open(os.path.join(OUTPUT_DIR, f"meta_{SCENE_NAME}.csv"),"w")
-
-
-
-    img_i = 0
-
+            
     
-            
-            
+    img_i = 0
+    valid_poses = {}
     for pos_i, (x,y,z) in enumerate(itertools.product(grid_x, grid_y, grid_z)):
+        if img_i>=1000:
+            break
         has_valid_view = False
         camera_obj.location = Vector((x,y,z))
         for rot_i,(roll,pitch,yaw) in enumerate(itertools.product(grid_roll, grid_pitch, grid_yaw)):
+            if img_i>=1000:
+                break
             camera_obj.rotation_euler = Euler((pitch,yaw,roll))
             bpy.context.view_layer.update()
             
@@ -397,41 +397,11 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_
             # Valid view if at least one rotation sample looks directly at a surface facing camera
             if all([dot<0 for dot in camera_corner_normal_dots]) and all([ray_cast[0] for ray_cast in camera_corner_ray_casts]):
                 has_valid_view = True
-                
-                
-                
-                if RENDER_IMAGES:
-                    semantic_building_collection.hide_render=True
-                    building_collection.hide_render=False
-                    bpy.context.scene.render.engine = 'BLENDER_EEVEE'
+                img_i += 1
+                if pos_i not in valid_poses:
+                    valid_poses[pos_i] = []
+                valid_poses[pos_i].append(rot_i)
                     
-                    for light in [None,5,10,25,50,100,200]:
-                        if light is None:
-                            bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[0].default_value[:3] = (1,1,1)
-                            bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[1].default_value = 1
-                            spot_light.energy = 0
-                        else:
-                            bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[0].default_value[:3] = (0,0,0)
-                            bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[1].default_value = 0
-                            spot_light.energy = light
-                        
-                        bpy.context.scene.render.filepath = os.path.join(OUTPUT_DIR, f'{SCENE_NAME}_{img_i:010}_{light}_{pos_i:05}_{rot_i:05}_RGB.png')
-                        bpy.ops.render.render(write_still = True)
-                        meta_file.write(f'{img_i:010},{light},{pos_i:05},{rot_i:05},{x},{y},{z},{roll},{pitch},{yaw}\n')
-                        meta_file.flush()
-                        img_i += 1
-                        
-                        
-                    semantic_building_collection.hide_render=False
-                    building_collection.hide_render=True
-                    bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
-                    bpy.context.scene.display.shading.light = 'FLAT'
-                    bpy.context.scene.display.shading.color_type = 'TEXTURE'
-                    bpy.context.scene.render.filepath = os.path.join(OUTPUT_DIR, f'{SCENE_NAME}_{img_i:010}_{light}_{pos_i:05}_{rot_i:05}_SEM.png')
-                    bpy.ops.render.render(write_still = True)
-                    img_i += 1
-                    
-                
             if has_valid_view and rot_i%10==0:
                 print(f'    {rot_i}/{num_rot_samples} rotation samples finished rendering')
                 
@@ -443,7 +413,61 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_
         if pos_i%10==0:
             print(f'{pos_i}/{num_pos_samples} position samples finished rendering')
             
-    if RENDER_IMAGES:       
+    if RENDER_IMAGES:
+        grid_pos_idx = list(itertools.product(grid_x, grid_y, grid_z))
+        grid_rot_idx = list(itertools.product(grid_roll, grid_pitch, grid_yaw))
+        
+        semantic_building_collection.hide_render=False
+        building_collection.hide_render=True
+        bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
+        bpy.context.scene.display.shading.light = 'FLAT'
+        bpy.context.scene.display.shading.color_type = 'TEXTURE'
+        bpy.context.scene.render.dither_intensity = 0.0
+        bpy.context.scene.display.render_aa = 'OFF'
+        img_i = 0
+        for pos_i in sorted(valid_poses.keys()):
+            x,y,z = grid_pos_idx[pos_i]
+            camera_obj.location = Vector((x,y,z))
+            for rot_i in valid_poses[pos_i]:
+                roll,pitch,yaw = grid_rot_idx[rot_i]
+                
+                camera_obj.rotation_euler = Euler((pitch,yaw,roll))
+                bpy.context.view_layer.update()
+                
+                bpy.context.scene.render.filepath = os.path.join(OUTPUT_DIR, f'{SCENE_NAME.split(".")[0]}.{img_i:010}.{pos_i:05}.{rot_i:05}.SEM.png')
+                bpy.ops.render.render(write_still = True)
+                img_i += 1
+        
+        
+        semantic_building_collection.hide_render=True
+        building_collection.hide_render=False
+        bpy.context.scene.render.engine = 'BLENDER_EEVEE'
+        bpy.context.scene.render.dither_intensity = 1.0
+        img_i = 0
+        for pos_i in sorted(valid_poses.keys()):
+            x,y,z = grid_pos_idx[pos_i]
+            camera_obj.location = Vector((x,y,z))
+            for rot_i in valid_poses[pos_i]:
+                roll,pitch,yaw = grid_rot_idx[rot_i]
+                
+                camera_obj.rotation_euler = Euler((pitch,yaw,roll))
+                bpy.context.view_layer.update()
+                
+                for light in [None,5,10,25,50,100,200]:
+                    if light is None:
+                        bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[0].default_value[:3] = (1,1,1)
+                        bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[1].default_value = 1
+                        spot_light.energy = 0
+                    else:
+                        bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[0].default_value[:3] = (0,0,0)
+                        bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[1].default_value = 0
+                        spot_light.energy = light
+                    
+                    bpy.context.scene.render.filepath = os.path.join(OUTPUT_DIR, f'{SCENE_NAME.split(".")[0]}.{img_i:010}.{pos_i:05}.{rot_i:05}.{light}.RGB.png')
+                    bpy.ops.render.render(write_still = True)
+                    meta_file.write(f'{img_i:010},{pos_i:05},{rot_i:05},{x},{y},{z},{roll},{pitch},{yaw},{light}\n')
+                    meta_file.flush()
+                img_i += 1
         meta_file.close()
 
 

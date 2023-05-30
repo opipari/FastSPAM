@@ -12,8 +12,9 @@ from scipy.optimize import linear_sum_assignment
 import sys
 from segment_anything import sam_model_registry, SamAutomaticMaskGenerator, SamPredictor
 
-from zeroshot_rgbd.datasets.VaryingPerspectiveDataset import VaryingPerspectiveDataset
-from habitat_sim.utils.common import d3_40_colors_rgb
+#from zeroshot_rgbd.datasets.VaryingPerspectiveDataset import VaryingPerspectiveDataset
+from zeroshot_rgbd.datasets.ActiveIlluminationDataset import ActiveIlluminationDataset
+#from habitat_sim.utils.common import d3_40_colors_rgb
 
 
 
@@ -110,7 +111,7 @@ if __name__ == "__main__":
     parser.add_argument("--dest-dir", dest="dest_dir")
     parser.add_argument("--sam-checkpoint", dest="sam_checkpoint")
     parser.add_argument("--model-type", dest="model_type")
-    parser.set_defaults(img_dir="./zeroshot_rgbd/datasets/VaryingPerspectiveDataset/data/",
+    parser.set_defaults(img_dir="./zeroshot_rgbd/datasets/renders/",
                     dest_dir="./zeroshot_rgbd/models/output/",
                     sam_checkpoint="./zeroshot_rgbd/models/segment_anything/checkpoints/sam_vit_h_4b8939.pth",
                     model_type="vit_h")
@@ -132,54 +133,60 @@ if __name__ == "__main__":
     mask_generator = SamAutomaticMaskGenerator(sam)
 
 
-    dataset = VaryingPerspectiveDataset(root_dir=img_dir)
+    for illumination in [None,5,10,25,50,100,200]:
+        dest_dir="./zeroshot_rgbd/models/output_"+str(illumination)
+        if not os.path.isdir(dest_dir):
+            os.makedirs(dest_dir)
+        dataset = ActiveIlluminationDataset(root_dir=img_dir, illumination=illumination)
 
 
-    intersection_total = 0
-    precision_denom_total = 0 
-    recall_denom_total = 0
+        intersection_total = 0
+        precision_denom_total = 0 
+        recall_denom_total = 0
 
-    for idx in range(len(dataset)):
-        image, label = dataset[idx]
-        image = image.permute(1,2,0).numpy()
-        label = label.permute(1,2,0).numpy()
-        
-        masks = mask_generator.generate(image)
-        save_anns(dataset.prefixes[idx], dest_dir, image, masks)
-
-        if len(masks)>0:
-            pred = np.stack([ann['segmentation'] for ann in masks], axis=-1)
-        else:
-            pred = np.ones(label.shape[:2]+(1,))
-        
-        label = np.transpose(label, axes=(2,0,1))
-        pred = np.transpose(pred, axes=(2,0,1))
-
-        intersection, precision_denom, recall_denom = metrics(pred, label)
-        
-        precision_img = intersection / precision_denom
-        recall_img = intersection / recall_denom
-        F_score_img = (2*precision_img*recall_img) / (precision_img + recall_img)
-        with open(os.path.join(dest_dir, dataset.prefixes[idx]+'.SAM.txt'), 'w') as f:
-            f.write(f'Iter: {idx}/{len(dataset)}, Precision: {precision_img}, Recall: {recall_img}, F-Score: {F_score_img}\n')
-
-
-
-        intersection_total += intersection
-        precision_denom_total += precision_denom
-        recall_denom_total += recall_denom
-
-        if idx%10==0:
-            precision = intersection_total / precision_denom_total
-            recall = intersection_total / recall_denom_total
-            F_score = (2*precision*recall) / (precision + recall)
-            print(f'Iter: {idx}/{len(dataset)}, Precision: {precision}, Recall: {recall}, F-Score: {F_score}')
+        for idx in range(len(dataset)):
+            if idx>10:
+                break
+            image, label = dataset[idx]
+            image = image.permute(1,2,0).numpy()
+            #label = label.permute(1,2,0).numpy()
             
+            masks = mask_generator.generate(image)
+            save_anns('.'.join(dataset.prefixes[idx]+[str(illumination)]), dest_dir, image, masks)
 
-    precision = intersection_total / precision_denom_total
-    recall = intersection_total / recall_denom_total
-    F_score = (2*precision*recall) / (precision + recall)
-    print(f'Final Result: Precision: {precision}, Recall: {recall}, F-Score: {F_score}')
+            # if len(masks)>0:
+            #     pred = np.stack([ann['segmentation'] for ann in masks], axis=-1)
+            # else:
+            #     pred = np.ones(label.shape[:2]+(1,))
+            
+            # label = np.transpose(label, axes=(2,0,1))
+            # pred = np.transpose(pred, axes=(2,0,1))
 
-    with open(os.path.join(dest_dir,'final.SAM.txt'), 'w') as f:
-        f.write(f'Final Result: Precision: {precision}, Recall: {recall}, F-Score: {F_score}\n')
+            # intersection, precision_denom, recall_denom = metrics(pred, label)
+            
+            # precision_img = intersection / precision_denom
+            # recall_img = intersection / recall_denom
+            # F_score_img = (2*precision_img*recall_img) / (precision_img + recall_img)
+            # with open(os.path.join(dest_dir, dataset.prefixes[idx]+'.SAM.txt'), 'w') as f:
+            #     f.write(f'Iter: {idx}/{len(dataset)}, Precision: {precision_img}, Recall: {recall_img}, F-Score: {F_score_img}\n')
+
+
+
+            # intersection_total += intersection
+            # precision_denom_total += precision_denom
+            # recall_denom_total += recall_denom
+
+            # if idx%10==0:
+            #     precision = intersection_total / precision_denom_total
+            #     recall = intersection_total / recall_denom_total
+            #     F_score = (2*precision*recall) / (precision + recall)
+            #     print(f'Iter: {idx}/{len(dataset)}, Precision: {precision}, Recall: {recall}, F-Score: {F_score}')
+                
+
+        # precision = intersection_total / precision_denom_total
+        # recall = intersection_total / recall_denom_total
+        # F_score = (2*precision*recall) / (precision + recall)
+        # print(f'Final Result: Precision: {precision}, Recall: {recall}, F-Score: {F_score}')
+
+        # with open(os.path.join(dest_dir,'final.SAM.txt'), 'w') as f:
+        #     f.write(f'Final Result: Precision: {precision}, Recall: {recall}, F-Score: {F_score}\n')
