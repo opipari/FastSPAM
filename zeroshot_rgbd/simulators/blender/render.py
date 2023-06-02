@@ -5,6 +5,7 @@ import itertools, functools, operator
 
 
 import bpy
+import bmesh
 from mathutils import Vector, Euler
 
 
@@ -169,9 +170,9 @@ def get_grid_euler(roll_bounds=(math.radians(145),math.radians(225)), roll_sampl
     yaw_samples -- samples per degree in yaw (Y)
     """
     
-    return np.arange(roll_bounds[0], roll_bounds[1]+1e-10, (max(roll_bounds)-min(roll_bounds))/(roll_samples-1)), \
-            np.arange(pitch_bounds[0], pitch_bounds[1]+1e-10, (max(pitch_bounds)-min(pitch_bounds))/(pitch_samples-1)), \
-            np.arange(yaw_bounds[0], yaw_bounds[1]+1e-10, (max(yaw_bounds)-min(yaw_bounds))/(yaw_samples-1))
+    return np.arange(roll_bounds[0], roll_bounds[1]+1e-10, (max(roll_bounds)-min(roll_bounds)+1e-9)/max(1,roll_samples-1)), \
+            np.arange(pitch_bounds[0], pitch_bounds[1]+1e-10, (max(pitch_bounds)-min(pitch_bounds)+1e-9)/max(1,pitch_samples-1)), \
+            np.arange(yaw_bounds[0], yaw_bounds[1]+1e-10, (max(yaw_bounds)-min(yaw_bounds)+1e-9)/max(1,yaw_samples-1))
             
 def euclidean_distance(v1, v2):
     """Calculate euclidean distance between vectors.
@@ -185,14 +186,49 @@ def euclidean_distance(v1, v2):
 
 
 
-def get_sphere(pos, name='Basic_Sphere', mat=None):
-    sphere_mesh = bpy.data.meshes.new(name)
+def get_sphere(pos, rot, name='Basic_Sphere', mat=None):
+    sphere_mesh = bpy.data.meshes.get(name)
+    if sphere_mesh is None:
+        sphere_mesh = bpy.data.meshes.new(name)
+        
+        bm = bmesh.new()
+        bmesh.ops.create_uvsphere(bm, u_segments=32, v_segments=16, radius=0.1)
+        bm.to_mesh(sphere_mesh)
+        bm.free()
+        
+        
     sphere_obj = bpy.data.objects.new(name, sphere_mesh)
     sphere_obj.location = Vector(pos)
-    sphere_obj.scale = Vector((0.1,0.1,0.1))
+    sphere_obj.rotation_mode = 'ZXY'
+    sphere_obj.rotation_euler = Euler(rot)
+    sphere_obj.scale = Vector((1,1,1))
     if mat is not None:
-        sphere_obj.data.materials.append(sphere_mat)
+        sphere_obj.data.materials.append(mat)
+    
+    bpy.context.collection.objects.link(sphere_obj)
+    
+    bpy.ops.object.select_all(action='DESELECT')
+    bpy.context.view_layer.objects.active = sphere_obj
+    sphere_obj.select_set(True)
+    bpy.ops.object.modifier_add(type='SUBSURF')
+    bpy.ops.object.shade_smooth()
+    
     return sphere_obj
+
+def get_camera(pos, rot, name="Camera_Sample", lens=15, clip_start=1e-5, scale=(1,1,1)):
+    camera = bpy.data.cameras.get(name)
+    if camera is None:
+        camera = bpy.data.cameras.new(name)
+        camera.lens = lens
+        camera.clip_start = clip_start
+    camera_sample_obj = bpy.data.objects.new("Camera", camera)
+    camera_sample_obj.location = Vector(pos)
+    camera_sample_obj.rotation_mode = 'ZXY'
+    camera_sample_obj.rotation_euler = Euler(rot)
+    camera_sample_obj.scale = scale
+    bpy.context.collection.objects.link(camera_sample_obj)
+    print("added camera")
+    return camera_sample_obj
 
 def delete_object(obj):
     if obj is not None:
@@ -331,10 +367,14 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_
     grid_x, grid_y, grid_z = get_grid_points(building_aabb, samples_per_meter=0.5)
     num_pos_samples = functools.reduce(operator.mul, map(len, (grid_x, grid_y, grid_z)), 1)
 
-    grid_roll, grid_pitch, grid_yaw = get_grid_euler()
+    grid_roll, grid_pitch, grid_yaw = get_grid_euler(roll_bounds=(math.radians(180),math.radians(180)), roll_samples=1, 
+                                                       pitch_bounds=(math.radians(-20),math.radians(20)), pitch_samples=5, 
+                                                       yaw_bounds=(0,2*math.pi-(2*math.pi/8)), yaw_samples=8)
     num_rot_samples = functools.reduce(operator.mul, map(len, (grid_roll, grid_pitch, grid_yaw)), 1)
-
-
+    print(grid_roll)
+    print(grid_pitch)
+    print(grid_yaw)
+    
     if VISUALIZE_GRID:
         sphere_mat = bpy.data.materials.get("Sphere_Material")
         if sphere_mat is None:
@@ -352,12 +392,13 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_
             grid_post_collection = bpy.data.collections.new("Accepted_Sample_Grid")
             bpy.context.scene.collection.children.link(grid_post_collection)
         
+        
         for x,y,z in itertools.product(grid_x, grid_y, grid_z):
-            sphere_obj = get_sphere((x,y,z), mat=sphere_mat)
-            bpy.context.collection.objects.link(sphere_obj)
+            #for roll,pitch,yaw in itertools.product(grid_roll, grid_pitch, grid_yaw):
+            
+            sphere_obj = get_sphere((x,y,z), (0,0,0), name="Initial_Sample", mat=sphere_mat)
             add_object_to_collection(sphere_obj, initial_sample_collection)
             
-        
             
         
         
@@ -401,18 +442,23 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_
                 if pos_i not in valid_poses:
                     valid_poses[pos_i] = []
                 valid_poses[pos_i].append(rot_i)
+                
+            if VISUALIZE_GRID:
+                camera_sample = get_camera((x,y,z), (pitch,yaw,roll), name="Accepted_Sample", scale=(0.5,0.5,0.5))
+                add_object_to_collection(camera_sample, grid_post_collection)
+        
+#                sphere_obj = get_sphere((x,y,z), (pitch,yaw,roll), name="Accept", mat=sphere_mat)
+#                add_object_to_collection(sphere_obj, grid_post_collection)
                     
             if has_valid_view and rot_i%10==0:
                 print(f'    {rot_i}/{num_rot_samples} rotation samples finished rendering')
                 
-        if VISUALIZE_GRID and has_valid_view:
-            sphere_obj = get_sphere((x,y,z), name="Accept", mat=sphere_mat)
-            bpy.context.collection.objects.link(sphere_obj)
-            add_object_to_collection(sphere_obj, grid_post_collection)
+            
             
         if pos_i%10==0:
             print(f'{pos_i}/{num_pos_samples} position samples finished rendering')
-            
+    print(img_i)
+    raise
     if RENDER_IMAGES:
         grid_pos_idx = list(itertools.product(grid_x, grid_y, grid_z))
         grid_rot_idx = list(itertools.product(grid_roll, grid_pitch, grid_yaw))
@@ -496,7 +542,7 @@ OUTPUT_DIR = '/media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd
 
 
 INITIALIZE_SCENE = True
-VISUALIZE_GRID = False
-RENDER_IMAGES = True
+VISUALIZE_GRID = True
+RENDER_IMAGES = False
 
 render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE, VISUALIZE_GRID, RENDER_IMAGES)
