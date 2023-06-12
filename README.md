@@ -1,5 +1,16 @@
 # ZeroShot_RGB_D
 
+## Repository Structure
+
+This repository is setup to contain a centralized python package, `ZeroShotRGBD`, that stores all code for data simulation, data processing, model training, and model evaluation. Correspondingly, the code for these core functions is spread across sub-directories.
+
+## Directory Structure
+
+1. `zeroshot_rgbd`: The central python package
+2. `zeroshot_rgbd/envs`: Directory containing virtualenvironment requirement and source files.
+3. `zeroshot_rgbd/simulators`: Directory containing source code for data simulationa and rendering.
+4. `zeroshot_rgbd/datasets`: Directory containing source code for dataset pre and post-processing as well as PyTorch Dataset Classes.
+5. `zeroshot_rgbd/models`: Directory containing source code for model development, training and evaluation.
 
 ## Setup
 
