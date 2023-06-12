@@ -145,8 +145,7 @@ if __name__ == "__main__":
         recall_denom_total = 0
 
         for idx in range(len(dataset)):
-            if idx>10:
-                break
+            print("processing",idx)
             image, label = dataset[idx]
             image = image.permute(1,2,0).numpy()
             #label = label.permute(1,2,0).numpy()
