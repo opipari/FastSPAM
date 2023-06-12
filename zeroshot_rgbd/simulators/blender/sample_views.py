@@ -217,7 +217,7 @@ def get_sphere(pos, rot, name='Basic_Sphere', mat=None):
     
     return sphere_obj
 
-def get_camera(pos, rot, name="Camera_Sample", lens=15, clip_start=1e-5, scale=(1,1,1)):
+def get_camera(pos, rot, name="Camera_Sample", lens=15, clip_start=1e-2, scale=(1,1,1)):
     camera = bpy.data.cameras.get(name)
     if camera is None:
         camera = bpy.data.cameras.new(name)
@@ -262,22 +262,52 @@ def camera_viewing_valid_surface(camera_obj, dist_threshold=0.25):
     
     return all_rays_hit_surface and all_rays_hit_inner_mesh and all_rays_hit_within_dist_threshold
 
-def render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_GRID=False, RENDER_IMAGES=True):
+
+
+def clear_scene():
     
-    SCENE_NAME = SCENE_DIR.split('/')[-1].split('-')[-1]+'.glb'
-    SEMANTIC_SCENE_NAME = SCENE_NAME.split('.')[0]+'.semantic.glb'
+    for c in bpy.context.scene.collection.children:
+        bpy.context.scene.collection.children.unlink(c)
     
-    print(SCENE_NAME)
-    print(SEMANTIC_SCENE_NAME)
+    for block in bpy.data.meshes:
+        if block.users == 0:
+            bpy.data.meshes.remove(block)
+
+    for block in bpy.data.materials:
+        if block.users == 0:
+            bpy.data.materials.remove(block)
+
+    for block in bpy.data.textures:
+        if block.users == 0:
+            bpy.data.textures.remove(block)
+
+    for block in bpy.data.images:
+        if block.users == 0:
+            bpy.data.images.remove(block)
+
+
+            
+def render_scene_images(SCENE_DIR, OUTPUT_DIR):
     
-    if RENDER_IMAGES:
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
+    SCENE_NAME = SCENE_DIR.split('/')[-1].split('-')[-1]
+    SCENE_FILE = SCENE_NAME+'.glb'
+    SEMANTIC_SCENE_FILE = SCENE_NAME+'.semantic.glb'
+    
+    print()
+    print("********************")
+    print(f"SAMPLING VIEWS FOR SCENE: {SCENE_NAME}")
+    print("********************")
+    print()
+
+    
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     print()
     print("********************")
     print("RESETTING SCENE")
 
-
+    clear_scene()
+    
     general_collection = bpy.data.collections.get("Collection")
     if general_collection is None:
         general_collection = bpy.data.collections.new("Collection")
@@ -286,24 +316,13 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_
     delete_object(bpy.data.objects.get("Camera"))
     camera = bpy.data.cameras.new("Camera")
     camera.lens = 15
-    camera.clip_start = 1e-5
+    camera.clip_start = 1e-2
     camera_obj = bpy.data.objects.new("Camera", camera)
     camera_obj.location = Vector((0,0,0))
     camera_obj.rotation_mode = 'ZXY'
     camera_obj.rotation_euler = Euler((0,0,math.pi))
     add_object_to_collection(camera_obj, general_collection)
     bpy.context.scene.camera = camera_obj
-
-    delete_object(bpy.data.objects.get("Spot_Light"))
-    spot_light = bpy.data.lights.new(name="Spot_Light", type='SPOT')
-    spot_light.energy = 5
-    spot_light.spot_size = math.pi
-    spot_light.distance = 25
-    spot_light_obj = bpy.data.objects.new(name="Spot_Light", object_data=spot_light)
-    spot_light_obj.location = Vector((0,0,0))
-    spot_light_obj.parent = camera_obj
-    add_object_to_collection(spot_light_obj, general_collection)
-
 
 
     building_collection = bpy.data.collections.get("Building")
@@ -327,56 +346,48 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_
 
 
 
-    if INITIALIZE_SCENE:
-        print()
-        print("***********************")
-        print("INITIALIZING SCENE")
-        
-        bpy.ops.import_scene.gltf(filepath=os.path.join(SCENE_DIR,SCENE_NAME))
+    print()
+    print("***********************")
+    print("INITIALIZING SCENE")
+    
+    bpy.ops.import_scene.gltf(filepath=os.path.join(SCENE_DIR,SCENE_FILE))
 
-        building_collection = bpy.data.collections.get("Building")
-        if building_collection is None:
-            building_collection = bpy.data.collections.new("Building")
-            bpy.context.scene.collection.children.link(building_collection)
-            
-        semantic_building_collection = bpy.data.collections.get("Semantic_Building")
-        if semantic_building_collection is None:
-            semantic_building_collection = bpy.data.collections.new("Semantic_Building")
-            bpy.context.scene.collection.children.link(semantic_building_collection)
-        
-        bpy.ops.object.select_all(action='DESELECT')
-        
-        for obj in bpy.data.objects:
-            if obj.type=="MESH":
-                add_object_to_collection(obj, building_collection)
-                for mat in obj.data.materials:
-                    mat.use_backface_culling = False
-                obj.select_set(True)
-                #bpy.context.view_layer.objects.active = obj
-        #bpy.ops.object.join()
-        
-        bpy.ops.import_scene.gltf(filepath=os.path.join(SCENE_DIR,SEMANTIC_SCENE_NAME))
-        
-        for obj in bpy.data.objects:
-            if obj.type=="MESH" and building_collection not in obj.users_collection:
-                add_object_to_collection(obj, semantic_building_collection)
-                for mat in obj.data.materials:
-                    mat.use_backface_culling = False
-                obj.select_set(True)
-                #bpy.context.view_layer.objects.active = obj
-        
-        print()
-        print("***********************")
-        print("DONE INITIALIZING SCENE")
+    building_collection = bpy.data.collections.get("Building")
+    if building_collection is None:
+        building_collection = bpy.data.collections.new("Building")
+        bpy.context.scene.collection.children.link(building_collection)
+    
+    bpy.ops.object.select_all(action='DESELECT')
+    
+    for obj in bpy.data.objects:
+        if obj.type=="MESH":
+            add_object_to_collection(obj, building_collection)
+            for mat in obj.data.materials:
+                mat.use_backface_culling = False
+    
+
+    bpy.ops.import_scene.gltf(filepath=os.path.join(SCENE_DIR,SEMANTIC_SCENE_FILE))
+    
+    semantic_building_collection = bpy.data.collections.get("Semantic_Building")
+    if semantic_building_collection is None:
+        semantic_building_collection = bpy.data.collections.new("Semantic_Building")
+        bpy.context.scene.collection.children.link(semantic_building_collection)
+
+    for obj in bpy.data.objects:
+        if obj.type=="MESH" and building_collection not in obj.users_collection:
+            add_object_to_collection(obj, semantic_building_collection)
+            for mat in obj.data.materials:
+                mat.use_backface_culling = False
+    
+    print("DONE INITIALIZING SCENE")
+    print("***********************")
+    print()
 
 
         
     
     
-    num_building_meshes = len(building_collection.all_objects)
     building_aabb = get_collection_aabb(building_collection)
-    building_box = bounding_box("Building_Box", building_aabb, edges=[(0,1),(0,2),(1,3),(2,3),(4,5),(4,6),(5,7),(6,7),(0,4),(1,5),(2,6),(3,7)])
-    building_collection.objects.link(building_box)
 
 
     grid_x, grid_y, grid_z = get_grid_points(building_aabb, samples_per_meter=0.5)
@@ -387,7 +398,6 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_
                                                        yaw_bounds=(0,2*math.pi-(2*math.pi/8)), yaw_samples=8)
     num_rot_samples = functools.reduce(operator.mul, map(len, (grid_roll, grid_pitch, grid_yaw)), 1)
     
-    
 
     bpy.context.scene.render.film_transparent = True
     bpy.context.scene.render.image_settings.color_mode = 'RGBA'
@@ -395,46 +405,44 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_
     bpy.context.scene.render.resolution_y = 720
 
     
-
-    meta_file = open(os.path.join(OUTPUT_DIR, f"meta_{SCENE_NAME}.csv"),"w")
+    meta_file = open(os.path.join(OUTPUT_DIR, f"{SCENE_NAME}_meta.csv"),"w")
             
     
+    img_i = 0
+
+    # Iterate over uniform grid of positions within scene bounding box
     for pos_i, (x,y,z) in enumerate(itertools.product(grid_x, grid_y, grid_z)):
+        
+        # Set camera position
         camera_obj.location = Vector((x,y,z))
+        
+        # Iterate over uniform grid of rotations
         for rot_i,(roll,pitch,yaw) in enumerate(itertools.product(grid_roll, grid_pitch, grid_yaw)):
+
+            # Set camera rotation
             camera_obj.rotation_euler = Euler((pitch,yaw,roll))
+
+            # Update scene view layer to recalculate camera extrensic matrix
             bpy.context.view_layer.update()
             
-            
-            if camera_viewing_valid_surface(camera_obj):
-                if pos_i not in valid_poses:
-                    valid_poses[pos_i] = []
-                valid_poses[pos_i].append(rot_i)
-
-                meta_file.write(f'{img_i:010},{pos_i:05},{rot_i:05},{x},{y},{z},{roll},{pitch},{yaw},{light}\n')
+            # Determine if rejection sampling criteria is met
+            # Valid view defined as one where corner and center rays view inner mesh surface and at least 0.25m from camera origin
+            if camera_viewing_valid_surface(camera_obj, dist_threshold=0.25):
+                meta_file.write(f'{img_i:010},{pos_i:010},{rot_i:010},{x},{y},{z},{roll},{pitch},{yaw}\n')
                 meta_file.flush()
                 
-        if pos_i%100==0:
+                img_i += 1
+
+            if rot_i%10==0:
+                print(f'    {rot_i}/{num_rot_samples} rotation samples finished rendering')
+            
+        if pos_i%10==0:
             print(f'{pos_i}/{num_pos_samples} position samples finished rendering')
     
     meta_file.close()
 
 
-    for block in bpy.data.meshes:
-        if block.users == 0:
-            bpy.data.meshes.remove(block)
 
-    for block in bpy.data.materials:
-        if block.users == 0:
-            bpy.data.materials.remove(block)
-
-    for block in bpy.data.textures:
-        if block.users == 0:
-            bpy.data.textures.remove(block)
-
-    for block in bpy.data.images:
-        if block.users == 0:
-            bpy.data.images.remove(block)
             
 SCENE_DIR = '/media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/00861-GLAQ4DNUx5U'
 OUTPUT_DIR = '/media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders'
@@ -444,8 +452,7 @@ OUTPUT_DIR = '/media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd
 
 
 
-INITIALIZE_SCENE = True
-VISUALIZE_GRID = True
-RENDER_IMAGES = False
 
-render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE, VISUALIZE_GRID, RENDER_IMAGES)
+render_scene_images(SCENE_DIR, OUTPUT_DIR)
+
+
