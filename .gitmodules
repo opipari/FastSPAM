@@ -7,3 +7,6 @@
 [submodule "models/segment_anything"]
 	path = zeroshot_rgbd/models/segment_anything
 	url = git@github.com:facebookresearch/segment-anything.git
+[submodule "zeroshot_rgbd/models/panoptic-lifting"]
+	path = zeroshot_rgbd/models/panoptic-lifting
+	url = git@github.com:nihalsid/panoptic-lifting.git
