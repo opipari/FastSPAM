@@ -1,8 +1,15 @@
 # Blender Simulation Pipeline
 
 
-This folder contains all blender python scripts for rendering visual imagery and corresponding instance segmentation labels from the Matterport 3D Semantic dataset.
+This folder contains all blender python scripts for rendering visual imagery and corresponding instance segmentation labels from the [Matterport 3D Semantic dataset](https://aihabitat.org/datasets/hm3d-semantics/).
 
+## Prerequisites
+
+1. Install [Blender LTS](https://www.blender.org/download/releases/3-3/). This code was developed and tested with Blenderv3.3.7 on Ubuntu 20.04.
+2. Download and extract all scenes in the [Matterport 3D Semantic dataset](https://aihabitat.org/datasets/hm3d-semantics/)
+
+
+## Simulation Workflow
 
 1. Calculate valid camera views
   - Run a blender command line script (i.e. ./blender.exe --python script.py -- command line args) to sample valid views for each scene in the matterport dataset
@@ -22,3 +29,9 @@ This folder contains all blender python scripts for rendering visual imagery and
   - Run a blender command line script to render visual RGB images given valid view metadata
   - Input: meta data generated from step 1 and lighting parameters (i.e. spot light strength)
   - Output: one directory per scene containing semantic images in png format which are mappable by name to corresponding pose and light conditions
+
+
+## Simulation Debugging
+
+The blender python script in `./workbench.py` is intended for use in the interactive Blender GUI. This script allows visualization of the rejection sampling process used for view sampling and can be used for interactive script development.
+
