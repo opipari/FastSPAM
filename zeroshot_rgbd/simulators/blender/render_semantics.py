@@ -169,7 +169,7 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, ARGS):
             # Update scene view layer to recalculate camera extrensic matrix
             bpy.context.view_layer.update()
 
-            bpy.context.scene.render.filepath = os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{view_idx:010}.{pos_idx:05}.{rot_idx:05}.SEM.png')
+            bpy.context.scene.render.filepath = os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{view_idx:010}.{pos_idx:010}.{rot_idx:010}.SEM.png')
             bpy.ops.render.render(write_still = True)
 
         
