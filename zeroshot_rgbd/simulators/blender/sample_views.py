@@ -16,6 +16,120 @@ from mathutils import Vector, Euler
 
 
 
+##############################################################################
+#                             BLENDER UTILITIES                              #
+##############################################################################
+
+
+def get_sphere(pos, rot, name='Basic_Sphere', mat=None):
+    sphere_mesh = bpy.data.meshes.get(name)
+    if sphere_mesh is None:
+        sphere_mesh = bpy.data.meshes.new(name)
+        
+        bm = bmesh.new()
+        bmesh.ops.create_uvsphere(bm, u_segments=32, v_segments=16, radius=0.1)
+        bm.to_mesh(sphere_mesh)
+        bm.free()
+        
+        
+    sphere_obj = bpy.data.objects.new(name, sphere_mesh)
+    sphere_obj.location = Vector(pos)
+    sphere_obj.rotation_mode = 'ZXY'
+    sphere_obj.rotation_euler = Euler(rot)
+    sphere_obj.scale = Vector((1,1,1))
+    if mat is not None:
+        sphere_obj.data.materials.append(mat)
+    
+    bpy.context.collection.objects.link(sphere_obj)
+    
+#    bpy.ops.object.select_all(action='DESELECT')
+#    bpy.context.view_layer.objects.active = sphere_obj
+#    sphere_obj.select_set(True)
+#    bpy.ops.object.modifier_add(type='SUBSURF')
+#    bpy.ops.object.shade_smooth()
+    
+    return sphere_obj
+
+
+def get_camera(pos, rot, name="Camera_Sample", rot_mode='ZXY', lens=15, clip_start=1e-2, scale=(1,1,1)):
+    camera = bpy.data.cameras.get(name)
+    if camera is None:
+        camera = bpy.data.cameras.new(name)
+        camera.lens = lens
+        camera.clip_start = clip_start
+    
+    camera_sample_obj = bpy.data.objects.new("Camera", camera)
+    camera_sample_obj.location = Vector(pos)
+    camera_sample_obj.rotation_mode = rot_mode
+    camera_sample_obj.rotation_euler = Euler(rot)
+    camera_sample_obj.scale = scale
+
+    return camera_sample_obj
+
+
+def delete_object(obj):
+    if obj is not None:
+        bpy.ops.object.delete({"selected_objects": [obj]})
+
+
+def delete_collection(collection):
+    if collection is not None:
+        for obj in collection.objects:
+            bpy.data.objects.remove(obj, do_unlink=True)
+
+
+def add_object_to_collection(object, collection):
+    for coll in object.users_collection:
+        coll.objects.unlink(object)
+    collection.objects.link(object)
+
+
+def clear_scene():
+    
+    for c in bpy.context.scene.collection.children:
+        bpy.context.scene.collection.children.unlink(c)
+    
+    for block in bpy.data.meshes:
+        if block.users == 0:
+            bpy.data.meshes.remove(block)
+
+    for block in bpy.data.materials:
+        if block.users == 0:
+            bpy.data.materials.remove(block)
+
+    for block in bpy.data.textures:
+        if block.users == 0:
+            bpy.data.textures.remove(block)
+
+    for block in bpy.data.images:
+        if block.users == 0:
+            bpy.data.images.remove(block)
+
+
+##############################################################################
+#                         END OF BLENDER UTILITIES                           #
+##############################################################################
+
+
+
+
+
+
+##############################################################################
+#                             SPATIAL UTILITIES                              #
+##############################################################################
+
+
+def euclidean_distance(v1, v2):
+    """Calculate euclidean distance between vectors.
+
+    Keyword arguments:
+    v1 -- 3D Vector
+    v2 -- 3D Vector
+    """
+    diff = v1 - v2
+    return math.sqrt(diff.x**2 + diff.y**2 + diff.z**2)
+
 
 def bounding_box(ob_name, coords, edges=[], faces=[]):
     """Create mesh object representing object bounding boxes.
@@ -131,6 +245,18 @@ def get_collection_aabb(collection):
     return aabb
 
 
+##############################################################################
+#                         END OF SPATIAL UTILITIES                           #
+##############################################################################
+
+
+
+
+
+##############################################################################
+#                            SAMPLING UTILITIES                              #
+##############################################################################
+
 
 def get_grid_points(aabb_bounds, samples_per_meter=1, margin_pcnt=0.025):
     """Calculate uniform grid of 3D location samples.
@@ -159,6 +285,7 @@ def get_grid_points(aabb_bounds, samples_per_meter=1, margin_pcnt=0.025):
             np.linspace(bounds_min[1], bounds_max[1], num=num_samples[1], endpoint=True), \
             np.linspace(bounds_min[2], bounds_max[2], num=num_samples[2], endpoint=True)
 
+
 def get_grid_euler(roll_bounds=(math.radians(145),math.radians(225)), roll_samples=3, 
                    pitch_bounds=(math.radians(-20),math.radians(20)), pitch_samples=3, 
                    yaw_bounds=(0,2*math.pi-(2*math.pi/8)), yaw_samples=8):
@@ -179,79 +306,6 @@ def get_grid_euler(roll_bounds=(math.radians(145),math.radians(225)), roll_sampl
             np.linspace(pitch_bounds[0], pitch_bounds[1], num=pitch_samples, endpoint=True), \
             np.linspace(yaw_bounds[0], yaw_bounds[1], num=yaw_samples, endpoint=True)
             
-def euclidean_distance(v1, v2):
-    """Calculate euclidean distance between vectors.
-
-    Keyword arguments:
-    v1 -- 3D Vector
-    v2 -- 3D Vector
-    """
-    diff = v1 - v2
-    return math.sqrt(diff.x**2 + diff.y**2 + diff.z**2)
-
-
-
-def get_sphere(pos, rot, name='Basic_Sphere', mat=None):
-    sphere_mesh = bpy.data.meshes.get(name)
-    if sphere_mesh is None:
-        sphere_mesh = bpy.data.meshes.new(name)
-        
-        bm = bmesh.new()
-        bmesh.ops.create_uvsphere(bm, u_segments=32, v_segments=16, radius=0.1)
-        bm.to_mesh(sphere_mesh)
-        bm.free()
-        
-        
-    sphere_obj = bpy.data.objects.new(name, sphere_mesh)
-    sphere_obj.location = Vector(pos)
-    sphere_obj.rotation_mode = 'ZXY'
-    sphere_obj.rotation_euler = Euler(rot)
-    sphere_obj.scale = Vector((1,1,1))
-    if mat is not None:
-        sphere_obj.data.materials.append(mat)
-    
-    bpy.context.collection.objects.link(sphere_obj)
-    
-#    bpy.ops.object.select_all(action='DESELECT')
-#    bpy.context.view_layer.objects.active = sphere_obj
-#    sphere_obj.select_set(True)
-#    bpy.ops.object.modifier_add(type='SUBSURF')
-#    bpy.ops.object.shade_smooth()
-    
-    return sphere_obj
-
-def get_camera(pos, rot, name="Camera_Sample", rot_mode='ZXY', lens=15, clip_start=1e-2, scale=(1,1,1)):
-    camera = bpy.data.cameras.get(name)
-    if camera is None:
-        camera = bpy.data.cameras.new(name)
-        camera.lens = lens
-        camera.clip_start = clip_start
-    
-    camera_sample_obj = bpy.data.objects.new("Camera", camera)
-    camera_sample_obj.location = Vector(pos)
-    camera_sample_obj.rotation_mode = rot_mode
-    camera_sample_obj.rotation_euler = Euler(rot)
-    camera_sample_obj.scale = scale
-
-    return camera_sample_obj
-
-
-
-def delete_object(obj):
-    if obj is not None:
-        bpy.ops.object.delete({"selected_objects": [obj]})
-
-def delete_collection(collection):
-    if collection is not None:
-        for obj in collection.objects:
-            bpy.data.objects.remove(obj, do_unlink=True)
-
-
-def add_object_to_collection(object, collection):
-    for coll in object.users_collection:
-        coll.objects.unlink(object)
-    collection.objects.link(object)
-
 
 def camera_viewing_valid_surface(camera_obj, dist_threshold=0.25):
     camera_center_and_corner_dirs = [((camera_obj.matrix_world @ corner) - camera_obj.location).normalized() for corner in [Vector((0,0,-1))]+list(camera_obj.data.view_frame(scene=bpy.context.scene))]
@@ -268,27 +322,9 @@ def camera_viewing_valid_surface(camera_obj, dist_threshold=0.25):
     return all_rays_hit_surface and all_rays_hit_inner_mesh and all_rays_hit_within_dist_threshold
 
 
-
-def clear_scene():
-    
-    for c in bpy.context.scene.collection.children:
-        bpy.context.scene.collection.children.unlink(c)
-    
-    for block in bpy.data.meshes:
-        if block.users == 0:
-            bpy.data.meshes.remove(block)
-
-    for block in bpy.data.materials:
-        if block.users == 0:
-            bpy.data.materials.remove(block)
-
-    for block in bpy.data.textures:
-        if block.users == 0:
-            bpy.data.textures.remove(block)
-
-    for block in bpy.data.images:
-        if block.users == 0:
-            bpy.data.images.remove(block)
+##############################################################################
+#                         END OF SAMPLING UTILITIES                          #
+##############################################################################
 
 
             
@@ -312,13 +348,8 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
         print("********************")
         print("RESETTING SCENE")
 
-    clear_scene()
     
-    general_collection = bpy.data.collections.get("Collection")
-    if general_collection is None:
-        print("asdasd")
-        general_collection = bpy.data.collections.new("Collection")
-        bpy.context.scene.collection.children.link(general_collection)
+    general_collection = bpy.context.scene.collection
 
     delete_object(bpy.data.objects.get("Camera"))
     camera_obj = get_camera(pos=(0,0,0), rot=(0,0,math.pi), name="Camera", rot_mode='ZXY', lens=ARGS.camera_lens, clip_start=ARGS.camera_clip)
