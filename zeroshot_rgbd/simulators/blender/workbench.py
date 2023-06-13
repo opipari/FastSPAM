@@ -486,6 +486,7 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_
         bpy.context.scene.display.shading.color_type = 'TEXTURE'
         bpy.context.scene.render.dither_intensity = 0.0
         bpy.context.scene.display.render_aa = 'OFF'
+        bpy.context.scene.view_settings.view_transform = 'Standard'
         img_i = 0
         for pos_i in sorted(valid_poses.keys()):
             x,y,z = grid_pos_idx[pos_i]

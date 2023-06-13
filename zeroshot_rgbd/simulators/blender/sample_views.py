@@ -292,33 +292,36 @@ def clear_scene():
 
 
             
-def render_scene_images(SCENE_DIR, OUTPUT_DIR):
+def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
     
     SCENE_NAME = SCENE_DIR.split('/')[-1].split('-')[-1]
     SCENE_FILE = SCENE_NAME+'.glb'
     SEMANTIC_SCENE_FILE = SCENE_NAME+'.semantic.glb'
     
-    print()
-    print("********************")
-    print(f"SAMPLING VIEWS FOR SCENE: {SCENE_NAME}")
-    print("********************")
-    print()
+    if ARGS.verbose:
+        print()
+        print("********************")
+        print(f"SAMPLING VIEWS FOR SCENE: {SCENE_NAME}")
+        print("********************")
+        print()
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    print()
-    print("********************")
-    print("RESETTING SCENE")
+    if ARGS.verbose:
+        print()
+        print("********************")
+        print("RESETTING SCENE")
 
     clear_scene()
     
     general_collection = bpy.data.collections.get("Collection")
     if general_collection is None:
+        print("asdasd")
         general_collection = bpy.data.collections.new("Collection")
         bpy.context.scene.collection.children.link(general_collection)
 
     delete_object(bpy.data.objects.get("Camera"))
-    camera_obj = get_camera(pos=(0,0,0), rot=(0,0,math.pi), name="Camera", rot_mode='ZXY', lens=15, clip_start=1e-2)
+    camera_obj = get_camera(pos=(0,0,0), rot=(0,0,math.pi), name="Camera", rot_mode='ZXY', lens=ARGS.camera_lens, clip_start=ARGS.camera_clip)
     add_object_to_collection(camera_obj, general_collection)
     bpy.context.scene.camera = camera_obj
 
@@ -328,19 +331,20 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR):
 
     bpy.context.scene.render.film_transparent = True
     bpy.context.scene.render.image_settings.color_mode = 'RGBA'
-    bpy.context.scene.render.resolution_x = 960
-    bpy.context.scene.render.resolution_y = 720
+    bpy.context.scene.render.resolution_x = ARGS.camera_width
+    bpy.context.scene.render.resolution_y = ARGS.camera_height
 
-    print("DONE RESETTING SCENE")
-    print("********************")
-    print()
+    if ARGS.verbose:
+        print("DONE RESETTING SCENE")
+        print("********************")
+        print()
 
 
 
-
-    print()
-    print("***********************")
-    print("INITIALIZING SCENE")
+    if ARGS.verbose:
+        print()
+        print("***********************")
+        print("INITIALIZING SCENE")
     
     bpy.ops.import_scene.gltf(filepath=os.path.join(SCENE_DIR,SCENE_FILE))
 
@@ -357,9 +361,10 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR):
             for mat in obj.data.materials:
                 mat.use_backface_culling = False
     
-    print("DONE INITIALIZING SCENE")
-    print("***********************")
-    print()
+    if ARGS.verbose:
+        print("DONE INITIALIZING SCENE")
+        print("***********************")
+        print()
 
 
 
@@ -368,12 +373,12 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR):
 
     building_aabb = get_collection_aabb(building_collection)
 
-    grid_x, grid_y, grid_z = get_grid_points(building_aabb, samples_per_meter=0.5)
+    grid_x, grid_y, grid_z = get_grid_points(building_aabb, samples_per_meter=ARGS.position_samples_per_meter)
     num_pos_samples = functools.reduce(operator.mul, map(len, (grid_x, grid_y, grid_z)), 1)
 
-    grid_roll, grid_pitch, grid_yaw = get_grid_euler(roll_bounds=(math.radians(180),math.radians(180)), roll_samples=1, 
-                                                       pitch_bounds=(math.radians(-20),math.radians(20)), pitch_samples=3, 
-                                                       yaw_bounds=(0,2*math.pi-(2*math.pi/8)), yaw_samples=8)
+    grid_roll, grid_pitch, grid_yaw = get_grid_euler(roll_bounds=(ARGS.roll_samples_minimum, ARGS.roll_samples_maximum), roll_samples=ARGS.roll_samples_count, 
+                                                       pitch_bounds=(ARGS.pitch_samples_minimum, ARGS.pitch_samples_maximum), pitch_samples=ARGS.pitch_samples_count, 
+                                                       yaw_bounds=(ARGS.yaw_samples_minimum, ARGS.yaw_samples_maximum), yaw_samples=ARGS.yaw_samples_count)
     num_rot_samples = functools.reduce(operator.mul, map(len, (grid_roll, grid_pitch, grid_yaw)), 1)
     
 
@@ -388,10 +393,10 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR):
     accepted_view_file.write('Scene-ID,View-ID,Position-ID,Rotation-ID,X-Position,Y-Position,Z-Position,Roll-Z-EulerZXY,Pitch-X-EulerZXY,Yaw-Y-EulerZXY\n')
     accepted_view_file.flush()
     
-
-    print()
-    print("***********************")
-    print(f"INITIATING SIMULATION OF {num_pos_samples*num_rot_samples} VIEW SAMPLES")
+    if ARGS.verbose:
+        print()
+        print("***********************")
+        print(f"INITIATING SIMULATION OF {num_pos_samples*num_rot_samples} VIEW SAMPLES")
 
 
     valid_view_count = 0
@@ -435,24 +440,13 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR):
     all_view_file.close()
     accepted_view_file.close()
 
-
-    print()
-    print("***********************")
-    print(f"DONE SIMULATING {num_pos_samples*num_rot_samples} VIEW SAMPLES")
-    print(f"ACCEPTED {valid_view_count} VALID VIEWS")
-    print("***********************")
-    print()
+    if ARGS.verbose:
+        print("***********************")
+        print(f"DONE SIMULATING {num_pos_samples*num_rot_samples} VIEW SAMPLES")
+        print(f"ACCEPTED {valid_view_count} VALID VIEWS")
+        print("***********************")
+        print()
             
-
-SCENE_DIR = '/media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/00861-GLAQ4DNUx5U'
-OUTPUT_DIR = '/media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders'
-
-
-
-
-
-
-
 
 
 
@@ -462,7 +456,8 @@ if __name__ == "__main__":
     argv = sys.argv
 
     # Ignore Blender executable and Blender-specific command line arguments
-    argv = argv[argv.index("--") + 1:]
+    if "--" in argv:
+        argv = argv[argv.index("--") + 1:]
 
 
     parser = argparse.ArgumentParser(
@@ -474,28 +469,46 @@ if __name__ == "__main__":
 
     parser.add_argument('-data', '--dataset-dir', help='path to directory of Matterport semantic dataset directory formatted as one sub-directory per scene', type=str)
     parser.add_argument('-out', '--output-dir', help='path to directory where output dataset should be stored', type=str)
+    parser.add_argument('-v', '--verbose', help='whether verbose output printed to stdout', type=int, default=1)
 
-    parser.add_argument('-lens', '--camera-lens', help='float controling focal length of blender camera in (mm) units. default 15', type=float, default=15.0)
-    parser.add_argument('-clip', '--camera-clip', help='float controling distance of clip start of blender camera in (m) units. default 1e-2', type=float, default=1e-2)
-    parser.add_argument('-width', '--camera-width', help='int controling rendered image width in pixels. default 960', type=int, default=960)
-    parser.add_argument('-height', '--camera-height', help='int controling rendered image height in pixels. default 15', type=int, default=720)
+    parser.add_argument('-lens', '--camera-lens', help='float controlling focal length of blender camera in (mm) units. default 15', type=float, default=15.0)
+    parser.add_argument('-clip', '--camera-clip', help='float controlling distance of clip start of blender camera in (m) units. default 1e-2', type=float, default=1e-2)
+    parser.add_argument('-width', '--camera-width', help='int controlling rendered image width in pixels. default 960', type=int, default=960)
+    parser.add_argument('-height', '--camera-height', help='int controlling rendered image height in pixels. default 15', type=int, default=720)
 
-    parser.add_argument('-pos-density', '--position-samples-per-meter', help='float controling density of camera samples in 3D position. default 1 per meter', type=float, default=1)
+    parser.add_argument('-pos-density', '--position-samples-per-meter', help='float controlling density of camera samples in 3D position. default 1 per meter', type=float, default=1)
     
-    parser.add_argument('-roll-num', '--roll-samples-count', help='int controling number of rotation samples for roll rotation (about forward -Z direction). default 1', type=int, default=1)
-    parser.add_argument('-roll-min', '--roll-samples-minumum', help='float controling density of camera samples in 3D position. default 1 per meter', type=float, default=1)
-    parser.add_argument('-roll-max', '--roll-samples-maximum', help='float controling density of camera samples in 3D position. default 1 per meter', type=float, default=1)
+    parser.add_argument('-roll-num', '--roll-samples-count', help='int controlling number of rotation samples for roll rotation (about forward -Z direction). default 1', type=int, default=1)
+    parser.add_argument('-roll-min', '--roll-samples-minimum', help='float controlling minimum extent of roll samples for rotation. default math.radians(180)', type=float, default=math.radians(180))
+    parser.add_argument('-roll-max', '--roll-samples-maximum', help='float controlling maximum extent of roll samples for rotation. default math.radians(180)', type=float, default=math.radians(180))
 
-    parser.add_argument('-pitch-num', '--pitch-samples-per-meter', help='float controling density of camera samples in 3D position. default 1 per meter', type=float, default=1)
-    parser.add_argument('-pitch-min', '--position-samples-min', help='float controling density of camera samples in 3D position. default 1 per meter', type=float, default=1)
-    parser.add_argument('-pitch-max', '--position-samples-per-meter', help='float controling density of camera samples in 3D position. default 1 per meter', type=float, default=1)
+    parser.add_argument('-pitch-num', '--pitch-samples-count', help='int controlling number of rotation samples for pitch rotation (about sideways X direction). default 3', type=int, default=3)
+    parser.add_argument('-pitch-min', '--pitch-samples-minimum', help='float controlling minimum extent of pitch samples for rotation. default math.radians(-20)', type=float, default=math.radians(-20))
+    parser.add_argument('-pitch-max', '--pitch-samples-maximum', help='float controlling maximum extent of pitch samples for rotation. default math.radians(20)', type=float, default=math.radians(20))
     
-    parser.add_argument('-yaw-density', '--position-samples-per-meter', help='float controling density of camera samples in 3D position. default 1 per meter', type=float, default=1)
-    
+    parser.add_argument('-yaw-num', '--yaw-samples-count', help='int controlling number of rotation samples for yaw rotation (about vertical Y direction). default 8', type=int, default=8)
+    parser.add_argument('-yaw-min', '--yaw-samples-minimum', help='float controlling minimum extent of yaw samples for rotation. default math.radians(0)', type=float, default=0)
+    parser.add_argument('-yaw-max', '--yaw-samples-maximum', help='float controlling maximum extent of yaw samples for rotation. default math.radians(360)-(math.radians(360)/8)', type=float, default=math.radians(360)-(math.radians(360)/8))
 
     args = parser.parse_args(argv)
 
 
     SCENE_DIR = '/media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/00861-GLAQ4DNUx5U'
 
-    #render_scene_images(SCENE_DIR, OUTPUT_DIR)
+    print(args)
+
+
+
+    scene_directories = [path for path in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, path))]
+    for scene_dir in scene_directories:
+        scene_dir_path = os.path.join(args.dataset_dir, scene_dir)
+
+        scene_files = os.listdir(scene_dir_path)
+        scene_name = scene_files[0].split('.')[0]
+        assert scene_dir.endswith(scene_name)
+        scene_has_semantic_mesh = any([fl.endswith('.semantic.glb') for fl in scene_files])
+        scene_has_semantic_txt = any([fl.endswith('.semantic.txt') for fl in scene_files])
+        
+        if scene_has_semantic_mesh and scene_has_semantic_txt:
+            sample_scene_views(scene_dir_path, args.output_dir, args)
+            
