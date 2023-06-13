@@ -128,13 +128,6 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, ARGS):
                         if node.type == 'TEX_IMAGE':
                             node.interpolation = 'Closest'
 
-    if ARGS.verbose:
-        print("DONE INITIALIZING SCENE")
-        print("***********************")
-        print()
-
-        
-    
 
     semantic_building_collection.hide_render=False
     bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
@@ -143,6 +136,27 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, ARGS):
     bpy.context.scene.render.dither_intensity = 0.0
     bpy.context.scene.display.render_aa = 'OFF'
     bpy.context.scene.view_settings.view_transform = 'Standard'
+
+
+    if ARGS.verbose:
+        print("DONE INITIALIZING SCENE")
+        print("***********************")
+        print()
+
+        
+    
+
+    
+
+
+
+    if ARGS.verbose:
+        print()
+        print("***********************")
+        print(f"INITIATING RENDERING")
+
+
+    render_image_count = 0
 
     with open(SCENE_VIEWS_FILE, 'r') as csvfile:
 
@@ -172,9 +186,12 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, ARGS):
             bpy.context.scene.render.filepath = os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{view_idx:010}.{pos_idx:010}.{rot_idx:010}.SEM.png')
             bpy.ops.render.render(write_still = True)
 
-        
-        
-
+            render_image_count += 1
+    
+    if ARGS.verbose:
+        print(f"DONE RENDERING {render_image_count} VIEWS")
+        print("***********************")
+        print()
 
 
 if __name__ == "__main__":

@@ -155,6 +155,14 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, ARGS):
     bpy.context.scene.render.dither_intensity = 1.0
     bpy.context.scene.view_settings.view_transform = 'Standard'
 
+
+    if ARGS.verbose:
+        print()
+        print("***********************")
+        print(f"INITIATING RENDERING")
+
+    render_image_count = 0
+
     with open(SCENE_VIEWS_FILE, 'r') as csvfile:
 
         pose_reader = csv.reader(csvfile, delimiter=',')
@@ -180,11 +188,15 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, ARGS):
             # Update scene view layer to recalculate camera extrensic matrix
             bpy.context.view_layer.update()
 
-            bpy.context.scene.render.filepath = os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{view_idx:010}.{pos_idx:010}.{rot_idx:010}.{ARGS.spotlight_energy:010}.RGB.png')
+            bpy.context.scene.render.filepath = os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{view_idx:010}.{pos_idx:010}.{rot_idx:010}.RGB.{ARGS.spotlight_energy:010}.png')
             bpy.ops.render.render(write_still = True)
 
+            render_image_count += 1
         
-        
+    if ARGS.verbose:
+        print(f"DONE RENDERING {render_image_count} VIEWS")
+        print("***********************")
+        print()
 
 
 
@@ -209,7 +221,7 @@ if __name__ == "__main__":
     parser.add_argument('-out', '--output-dir', help='path to directory where output dataset should be stored', type=str)
     parser.add_argument('-v', '--verbose', help='whether verbose output printed to stdout', type=int, default=1)
 
-    parser.add_argument('-energy', '--spotlight-energy', help='int controlling strength of active illumination of blender spotlight in (W) units. default is 15. 0 for global illumination', type=int, default=15)
+    parser.add_argument('-energy', '--spotlight-energy', help='int controlling strength of active illumination of blender spotlight in (W) units. default is 0 for global illumination', type=int, default=0)
 
     parser.add_argument('-lens', '--camera-lens', help='float controlling focal length of blender camera in (mm) units. default 15', type=float, default=15.0)
     parser.add_argument('-clip', '--camera-clip', help='float controlling distance of clip start of blender camera in (m) units. default 1e-2', type=float, default=1e-2)

@@ -12,7 +12,7 @@ import bpy
 import bmesh
 from mathutils import Vector, Euler
 
-
+import matplotlib.pyplot as plt
 
 
 
@@ -52,12 +52,13 @@ def get_sphere(pos, rot, name='Basic_Sphere', mat=None):
     return sphere_obj
 
 
-def get_camera(pos, rot, name="Camera_Sample", rot_mode='ZXY', lens=15, clip_start=1e-2, scale=(1,1,1)):
+def get_camera(pos, rot, name="Camera_Sample", rot_mode='ZXY', lens=15, clip_start=1e-2, clip_end=1000, scale=(1,1,1)):
     camera = bpy.data.cameras.get(name)
     if camera is None:
         camera = bpy.data.cameras.new(name)
         camera.lens = lens
         camera.clip_start = clip_start
+        camera.clip_end = clip_end
     
     camera_sample_obj = bpy.data.objects.new("Camera", camera)
     camera_sample_obj.location = Vector(pos)
@@ -322,6 +323,18 @@ def camera_viewing_valid_surface(camera_obj, dist_threshold=0.25):
     
     return all_rays_hit_surface and all_rays_hit_inner_mesh and all_rays_hit_within_dist_threshold
 
+def render_depth():
+    # Render image for depth map
+    bpy.ops.render.render()
+    render_image = bpy.data.images['Viewer Node']
+    image_width, image_height = render_image.size[:]
+
+    depth_arr = np.array(render_image.pixels[:]).reshape((image_height, image_width, 4))[:,:,0]
+    min_depth = depth_arr.min()
+    
+    depth_arr[depth_arr>=bpy.context.scene.camera.data.clip_end] = 0
+
+    return min_depth, depth_arr
 
 ##############################################################################
 #                         END OF SAMPLING UTILITIES                          #
@@ -353,7 +366,7 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
     general_collection = bpy.context.scene.collection
 
     delete_object(bpy.data.objects.get("Camera"))
-    camera_obj = get_camera(pos=(0,0,0), rot=(0,0,math.pi), name="Camera", rot_mode='ZXY', lens=ARGS.camera_lens, clip_start=ARGS.camera_clip)
+    camera_obj = get_camera(pos=(0,0,0), rot=(0,0,math.pi), name="Camera", rot_mode='ZXY', lens=ARGS.camera_lens, clip_start=ARGS.camera_clip_start, clip_end=ARGS.camera_clip_end)
     add_object_to_collection(camera_obj, general_collection)
     bpy.context.scene.camera = camera_obj
 
@@ -365,6 +378,32 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
     bpy.context.scene.render.image_settings.color_mode = 'RGBA'
     bpy.context.scene.render.resolution_x = ARGS.camera_width
     bpy.context.scene.render.resolution_y = ARGS.camera_height
+    
+
+    # Add z pass to view layer for rendering depth
+    bpy.context.view_layer.use_pass_z = True
+
+    # Use compositing nodes for rendering depth
+    bpy.context.scene.use_nodes = True
+    node_tree = bpy.context.scene.node_tree
+
+    # Remove default nodes
+    for node in node_tree.nodes:
+        node_tree.nodes.remove(node)
+
+
+    render_layers = node_tree.nodes.new('CompositorNodeRLayers')
+    node_viewer = node_tree.nodes.new('CompositorNodeViewer')
+    node_viewer.use_alpha = False
+    node_viewer.select = True
+    bpy.context.scene.node_tree.nodes.active = node_viewer
+
+    # Link depth output from z_pass to node viewier Image input
+    node_tree.links.new(render_layers.outputs['Depth'], node_viewer.inputs['Image']) # link Z to output
+
+
+    
+
 
     if ARGS.verbose:
         print("DONE RESETTING SCENE")
@@ -447,17 +486,28 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
 
             # Update scene view layer to recalculate camera extrensic matrix
             bpy.context.view_layer.update()
+
             
             # Determine if rejection sampling criteria is met
             # Valid view defined as one where corner and center rays view inner mesh surface and at least 0.25m from camera origin
-            if camera_viewing_valid_surface(camera_obj, dist_threshold=0.25):
-                all_view_file.write(f'{SCENE_NAME},{(pos_i*num_rot_samples)+rot_i:010},{pos_i:010},{rot_i:010},{x},{y},{z},{roll},{pitch},{yaw},Y\n')
-                all_view_file.flush()
+            if camera_viewing_valid_surface(camera_obj, dist_threshold=ARGS.surface_distance_threshold):
 
-                accepted_view_file.write(f'{SCENE_NAME},{valid_view_count:010},{pos_i:010},{rot_i:010},{x},{y},{z},{roll},{pitch},{yaw}\n')
-                accepted_view_file.flush()
-                
-                valid_view_count += 1
+                min_depth, depth_arr = render_depth()
+                if min_depth>=ARGS.surface_distance_threshold:
+
+
+                    all_view_file.write(f'{SCENE_NAME},{(pos_i*num_rot_samples)+rot_i:010},{pos_i:010},{rot_i:010},{x},{y},{z},{roll},{pitch},{yaw},Y\n')
+                    all_view_file.flush()
+
+                    accepted_view_file.write(f'{SCENE_NAME},{valid_view_count:010},{pos_i:010},{rot_i:010},{x},{y},{z},{roll},{pitch},{yaw}\n')
+                    accepted_view_file.flush()
+
+                    valid_view_count += 1
+
+                else:
+                    raise
+                    all_view_file.write(f'{SCENE_NAME},{(pos_i*num_rot_samples)+rot_i:010},{pos_i:010},{rot_i:010},{x},{y},{z},{roll},{pitch},{yaw},N\n')
+                    all_view_file.flush()
             else:
                 all_view_file.write(f'{SCENE_NAME},{(pos_i*num_rot_samples)+rot_i:010},{pos_i:010},{rot_i:010},{x},{y},{z},{roll},{pitch},{yaw},N\n')
                 all_view_file.flush()
@@ -504,10 +554,12 @@ if __name__ == "__main__":
     parser.add_argument('-v', '--verbose', help='whether verbose output printed to stdout', type=int, default=1)
 
     parser.add_argument('-lens', '--camera-lens', help='float controlling focal length of blender camera in (mm) units. default 15', type=float, default=15.0)
-    parser.add_argument('-clip', '--camera-clip', help='float controlling distance of clip start of blender camera in (m) units. default 1e-2', type=float, default=1e-2)
+    parser.add_argument('-clip-start', '--camera-clip-start', help='float controlling distance of clip start of blender camera in (m) units. default 1e-2', type=float, default=1e-2)
+    parser.add_argument('-clip-end', '--camera-clip-end', help='float controlling distance of clip end of blender camera in (m) units. default 1000', type=float, default=1000)
     parser.add_argument('-width', '--camera-width', help='int controlling rendered image width in pixels. default 960', type=int, default=960)
     parser.add_argument('-height', '--camera-height', help='int controlling rendered image height in pixels. default 15', type=int, default=720)
 
+    parser.add_argument('-dist-thresh', '--surface-distance-threshold', help='float controlling distance threshold for rejection sampling valid views. default 0.25 meters', type=float, default=0.25)
     parser.add_argument('-pos-density', '--position-samples-per-meter', help='float controlling density of camera samples in 3D position. default 1 per meter', type=float, default=1)
     
     parser.add_argument('-roll-num', '--roll-samples-count', help='int controlling number of rotation samples for roll rotation (about forward -Z direction). default 1', type=int, default=1)
