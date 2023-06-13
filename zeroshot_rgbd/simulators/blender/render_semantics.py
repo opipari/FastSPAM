@@ -1,4 +1,9 @@
 import os
+import sys
+import argparse
+import configparser
+import csv
+
 import math
 import numpy as np
 import itertools, functools, operator
@@ -10,7 +15,51 @@ from mathutils import Vector, Euler
 
 
 
-def render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_GRID=False, RENDER_IMAGES=True):
+
+##############################################################################
+#                             BLENDER UTILITIES                              #
+##############################################################################
+
+
+def get_camera(pos, rot, name="Camera_Sample", rot_mode='ZXY', lens=15, clip_start=1e-2, scale=(1,1,1)):
+    camera = bpy.data.cameras.get(name)
+    if camera is None:
+        camera = bpy.data.cameras.new(name)
+        camera.lens = lens
+        camera.clip_start = clip_start
+    
+    camera_sample_obj = bpy.data.objects.new("Camera", camera)
+    camera_sample_obj.location = Vector(pos)
+    camera_sample_obj.rotation_mode = rot_mode
+    camera_sample_obj.rotation_euler = Euler(rot)
+    camera_sample_obj.scale = scale
+
+    return camera_sample_obj
+
+
+def delete_object(obj):
+    if obj is not None:
+        bpy.ops.object.delete({"selected_objects": [obj]})
+
+
+def delete_collection(collection):
+    if collection is not None:
+        for obj in collection.objects:
+            bpy.data.objects.remove(obj, do_unlink=True)
+
+
+def add_object_to_collection(object, collection):
+    for coll in object.users_collection:
+        coll.objects.unlink(object)
+    collection.objects.link(object)
+
+
+##############################################################################
+#                         END OF BLENDER UTILITIES                           #
+##############################################################################
+
+
+def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, ARGS):
     
     SCENE_NAME = SCENE_DIR.split('/')[-1].split('-')[-1]
     SCENE_FILE = SCENE_NAME+'.glb'
@@ -23,7 +72,7 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_
         print("********************")
         print()
 
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    os.makedirs(SCENE_OUT_DIR, exist_ok=True)
 
     if ARGS.verbose:
         print()
@@ -87,27 +136,42 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_
         
     
 
-        semantic_building_collection.hide_render=False
-        building_collection.hide_render=True
-        bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
-        bpy.context.scene.display.shading.light = 'FLAT'
-        bpy.context.scene.display.shading.color_type = 'TEXTURE'
-        bpy.context.scene.render.dither_intensity = 0.0
-        bpy.context.scene.display.render_aa = 'OFF'
-        bpy.context.scene.view_settings.view_transform = 'Standard'
-        img_i = 0
-        for pos_i in sorted(valid_poses.keys()):
-            x,y,z = grid_pos_idx[pos_i]
-            camera_obj.location = Vector((x,y,z))
-            for rot_i in valid_poses[pos_i]:
-                roll,pitch,yaw = grid_rot_idx[rot_i]
-                
-                camera_obj.rotation_euler = Euler((pitch,yaw,roll))
-                bpy.context.view_layer.update()
-                
-                bpy.context.scene.render.filepath = os.path.join(OUTPUT_DIR, f'{SCENE_NAME.split(".")[0]}.{img_i:010}.{pos_i:05}.{rot_i:05}.SEM.png')
-                bpy.ops.render.render(write_still = True)
-                img_i += 1
+    semantic_building_collection.hide_render=False
+    bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
+    bpy.context.scene.display.shading.light = 'FLAT'
+    bpy.context.scene.display.shading.color_type = 'TEXTURE'
+    bpy.context.scene.render.dither_intensity = 0.0
+    bpy.context.scene.display.render_aa = 'OFF'
+    bpy.context.scene.view_settings.view_transform = 'Standard'
+
+    with open(SCENE_VIEWS_FILE, 'r') as csvfile:
+
+        pose_reader = csv.reader(csvfile, delimiter=',')
+
+        for pose_meta in pose_reader:
+            scene_name, view_idx, pos_idx, rot_idx, x_pos, y_pos, z_pos, roll, pitch, yaw = pose_meta
+            
+            # Skip information line if it is first
+            if scene_name=='Scene-ID':
+                continue
+
+            # Parse pose infomration out of string type
+            view_idx, pos_idx, rot_idx = int(view_idx), int(pos_idx), int(rot_idx)
+            x_pos, y_pos, z_pos = float(x_pos), float(y_pos), float(z_pos)
+            roll, pitch, yaw = float(roll), float(pitch), float(yaw)
+
+            # Set camera position
+            camera_obj.location = Vector((x_pos, y_pos, z_pos))
+
+            # Set camera rotation
+            camera_obj.rotation_euler = Euler((pitch,yaw,roll))
+
+            # Update scene view layer to recalculate camera extrensic matrix
+            bpy.context.view_layer.update()
+
+            bpy.context.scene.render.filepath = os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{view_idx:010}.{pos_idx:05}.{rot_idx:05}.SEM.png')
+            bpy.ops.render.render(write_still = True)
+
         
         
 
@@ -156,12 +220,6 @@ if __name__ == "__main__":
     args = parser.parse_args(argv)
 
 
-    SCENE_DIR = '/media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/00861-GLAQ4DNUx5U'
-
-    print(args)
-
-
-
     scene_directories = [path for path in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, path))]
     for scene_dir in scene_directories:
         scene_dir_path = os.path.join(args.dataset_dir, scene_dir)
@@ -169,8 +227,13 @@ if __name__ == "__main__":
         scene_files = os.listdir(scene_dir_path)
         scene_name = scene_files[0].split('.')[0]
         assert scene_dir.endswith(scene_name)
+
+        scene_out_path = os.path.join(args.output_dir, scene_name)
+        scene_view_poses_path = os.path.join(args.output_dir, scene_name+'_accepted_view_poses.csv')
+
         scene_has_semantic_mesh = any([fl.endswith('.semantic.glb') for fl in scene_files])
         scene_has_semantic_txt = any([fl.endswith('.semantic.txt') for fl in scene_files])
-        
-        if scene_has_semantic_mesh and scene_has_semantic_txt:
-            sample_scene_views(scene_dir_path, args.output_dir, args)
+        scene_has_sampled_views = os.path.isfile(scene_view_poses_path)
+
+        if scene_has_semantic_mesh and scene_has_semantic_txt and scene_has_sampled_views:
+            render_scene_semantics(scene_dir_path, scene_view_poses_path, scene_out_path, args)
