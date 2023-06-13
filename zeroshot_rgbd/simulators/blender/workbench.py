@@ -389,6 +389,10 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR, INITIALIZE_SCENE=True, VISUALIZE_
                 add_object_to_collection(obj, semantic_building_collection)
                 for mat in obj.data.materials:
                     mat.use_backface_culling = False
+                    if mat.node_tree:
+                        for node in mat.node_tree.nodes:
+                            if node.type == 'TEX_IMAGE':
+                                node.interpolation = 'Closest' 
                 obj.select_set(True)
                 #bpy.context.view_layer.objects.active = obj
         

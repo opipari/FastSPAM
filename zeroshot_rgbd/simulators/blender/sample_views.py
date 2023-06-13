@@ -1,4 +1,7 @@
 import os
+import sys
+import argparse
+
 import math
 import numpy as np
 import itertools, functools, operator
@@ -217,20 +220,22 @@ def get_sphere(pos, rot, name='Basic_Sphere', mat=None):
     
     return sphere_obj
 
-def get_camera(pos, rot, name="Camera_Sample", lens=15, clip_start=1e-2, scale=(1,1,1)):
+def get_camera(pos, rot, name="Camera_Sample", rot_mode='ZXY', lens=15, clip_start=1e-2, scale=(1,1,1)):
     camera = bpy.data.cameras.get(name)
     if camera is None:
         camera = bpy.data.cameras.new(name)
         camera.lens = lens
         camera.clip_start = clip_start
+    
     camera_sample_obj = bpy.data.objects.new("Camera", camera)
     camera_sample_obj.location = Vector(pos)
-    camera_sample_obj.rotation_mode = 'ZXY'
+    camera_sample_obj.rotation_mode = rot_mode
     camera_sample_obj.rotation_euler = Euler(rot)
     camera_sample_obj.scale = scale
-    bpy.context.collection.objects.link(camera_sample_obj)
-#    print("added camera")
+
     return camera_sample_obj
+
+
 
 def delete_object(obj):
     if obj is not None:
@@ -299,7 +304,6 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR):
     print("********************")
     print()
 
-    
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     print()
@@ -314,30 +318,18 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR):
         bpy.context.scene.collection.children.link(general_collection)
 
     delete_object(bpy.data.objects.get("Camera"))
-    camera = bpy.data.cameras.new("Camera")
-    camera.lens = 15
-    camera.clip_start = 1e-2
-    camera_obj = bpy.data.objects.new("Camera", camera)
-    camera_obj.location = Vector((0,0,0))
-    camera_obj.rotation_mode = 'ZXY'
-    camera_obj.rotation_euler = Euler((0,0,math.pi))
+    camera_obj = get_camera(pos=(0,0,0), rot=(0,0,math.pi), name="Camera", rot_mode='ZXY', lens=15, clip_start=1e-2)
     add_object_to_collection(camera_obj, general_collection)
     bpy.context.scene.camera = camera_obj
 
-
     building_collection = bpy.data.collections.get("Building")
     delete_collection(building_collection)
-    
-    semantic_building_collection = bpy.data.collections.get("Semantic_Building")
-    delete_collection(semantic_building_collection)
 
-    delete_object(bpy.data.objects.get("Building_Box"))
 
-    initial_sample_collection = bpy.data.collections.get("Initial_Sample_Grid")
-    delete_collection(initial_sample_collection)
-
-    grid_post_coll = bpy.data.collections.get("Accepted_Sample_Grid")
-    delete_collection(grid_post_coll)
+    bpy.context.scene.render.film_transparent = True
+    bpy.context.scene.render.image_settings.color_mode = 'RGBA'
+    bpy.context.scene.render.resolution_x = 960
+    bpy.context.scene.render.resolution_y = 720
 
     print("DONE RESETTING SCENE")
     print("********************")
@@ -365,30 +357,16 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR):
             for mat in obj.data.materials:
                 mat.use_backface_culling = False
     
-
-    bpy.ops.import_scene.gltf(filepath=os.path.join(SCENE_DIR,SEMANTIC_SCENE_FILE))
-    
-    semantic_building_collection = bpy.data.collections.get("Semantic_Building")
-    if semantic_building_collection is None:
-        semantic_building_collection = bpy.data.collections.new("Semantic_Building")
-        bpy.context.scene.collection.children.link(semantic_building_collection)
-
-    for obj in bpy.data.objects:
-        if obj.type=="MESH" and building_collection not in obj.users_collection:
-            add_object_to_collection(obj, semantic_building_collection)
-            for mat in obj.data.materials:
-                mat.use_backface_culling = False
-    
     print("DONE INITIALIZING SCENE")
     print("***********************")
     print()
 
 
-        
-    
-    
-    building_aabb = get_collection_aabb(building_collection)
 
+
+    
+
+    building_aabb = get_collection_aabb(building_collection)
 
     grid_x, grid_y, grid_z = get_grid_points(building_aabb, samples_per_meter=0.5)
     num_pos_samples = functools.reduce(operator.mul, map(len, (grid_x, grid_y, grid_z)), 1)
@@ -399,16 +377,24 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR):
     num_rot_samples = functools.reduce(operator.mul, map(len, (grid_roll, grid_pitch, grid_yaw)), 1)
     
 
-    bpy.context.scene.render.film_transparent = True
-    bpy.context.scene.render.image_settings.color_mode = 'RGBA'
-    bpy.context.scene.render.resolution_x = 960
-    bpy.context.scene.render.resolution_y = 720
 
     
-    meta_file = open(os.path.join(OUTPUT_DIR, f"{SCENE_NAME}_meta.csv"),"w")
-            
+    all_view_file = open(os.path.join(OUTPUT_DIR, f"{SCENE_NAME}_all_view_poses.csv"),"w")
+    all_view_file.write('Scene-ID,View-ID,Position-ID,Rotation-ID,X-Position,Y-Position,Z-Position,Roll-Z-EulerZXY,Pitch-X-EulerZXY,Yaw-Y-EulerZXY,Accepted-Y-N\n')
+    all_view_file.flush()
+
+
+    accepted_view_file = open(os.path.join(OUTPUT_DIR, f"{SCENE_NAME}_accepted_view_poses.csv"),"w")
+    accepted_view_file.write('Scene-ID,View-ID,Position-ID,Rotation-ID,X-Position,Y-Position,Z-Position,Roll-Z-EulerZXY,Pitch-X-EulerZXY,Yaw-Y-EulerZXY\n')
+    accepted_view_file.flush()
     
-    img_i = 0
+
+    print()
+    print("***********************")
+    print(f"INITIATING SIMULATION OF {num_pos_samples*num_rot_samples} VIEW SAMPLES")
+
+
+    valid_view_count = 0
 
     # Iterate over uniform grid of positions within scene bounding box
     for pos_i, (x,y,z) in enumerate(itertools.product(grid_x, grid_y, grid_z)):
@@ -428,22 +414,36 @@ def render_scene_images(SCENE_DIR, OUTPUT_DIR):
             # Determine if rejection sampling criteria is met
             # Valid view defined as one where corner and center rays view inner mesh surface and at least 0.25m from camera origin
             if camera_viewing_valid_surface(camera_obj, dist_threshold=0.25):
-                meta_file.write(f'{img_i:010},{pos_i:010},{rot_i:010},{x},{y},{z},{roll},{pitch},{yaw}\n')
-                meta_file.flush()
+                all_view_file.write(f'{SCENE_NAME},{(pos_i*num_rot_samples)+rot_i:010},{pos_i:010},{rot_i:010},{x},{y},{z},{roll},{pitch},{yaw},Y\n')
+                all_view_file.flush()
+
+                accepted_view_file.write(f'{SCENE_NAME},{valid_view_count:010},{pos_i:010},{rot_i:010},{x},{y},{z},{roll},{pitch},{yaw}\n')
+                accepted_view_file.flush()
                 
-                img_i += 1
+                valid_view_count += 1
+            else:
+                all_view_file.write(f'{SCENE_NAME},{(pos_i*num_rot_samples)+rot_i:010},{pos_i:010},{rot_i:010},{x},{y},{z},{roll},{pitch},{yaw},N\n')
+                all_view_file.flush()
 
-            if rot_i%10==0:
-                print(f'    {rot_i}/{num_rot_samples} rotation samples finished rendering')
+            if rot_i%100==0 and rot_i!=0:
+                print(f'    {rot_i}/{num_rot_samples} rotation samples finished simulating')
             
-        if pos_i%10==0:
-            print(f'{pos_i}/{num_pos_samples} position samples finished rendering')
+        if pos_i%100==0 and pos_i!=0:
+            print(f'{pos_i}/{num_pos_samples} position samples finished simulating')
     
-    meta_file.close()
+
+    all_view_file.close()
+    accepted_view_file.close()
 
 
-
+    print()
+    print("***********************")
+    print(f"DONE SIMULATING {num_pos_samples*num_rot_samples} VIEW SAMPLES")
+    print(f"ACCEPTED {valid_view_count} VALID VIEWS")
+    print("***********************")
+    print()
             
+
 SCENE_DIR = '/media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/00861-GLAQ4DNUx5U'
 OUTPUT_DIR = '/media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders'
 
@@ -453,6 +453,49 @@ OUTPUT_DIR = '/media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd
 
 
 
-render_scene_images(SCENE_DIR, OUTPUT_DIR)
 
 
+
+if __name__ == "__main__":
+
+    # Read command line arguments
+    argv = sys.argv
+
+    # Ignore Blender executable and Blender-specific command line arguments
+    argv = argv[argv.index("--") + 1:]
+
+
+    parser = argparse.ArgumentParser(
+                    prog='sample_views',
+                    usage='blender --background --python <path to sample_views.py> -- [options]',
+                    description='Blender python script for using rejection sampling to uniformly sample valid views from the Matterport 3D semantic dataset',
+                    epilog='For more information, see: https://github.com/opipari/ZeroShot_RGB_D/tree/main/zeroshot_rgbd/simulators/blender')
+
+
+    parser.add_argument('-data', '--dataset-dir', help='path to directory of Matterport semantic dataset directory formatted as one sub-directory per scene', type=str)
+    parser.add_argument('-out', '--output-dir', help='path to directory where output dataset should be stored', type=str)
+
+    parser.add_argument('-lens', '--camera-lens', help='float controling focal length of blender camera in (mm) units. default 15', type=float, default=15.0)
+    parser.add_argument('-clip', '--camera-clip', help='float controling distance of clip start of blender camera in (m) units. default 1e-2', type=float, default=1e-2)
+    parser.add_argument('-width', '--camera-width', help='int controling rendered image width in pixels. default 960', type=int, default=960)
+    parser.add_argument('-height', '--camera-height', help='int controling rendered image height in pixels. default 15', type=int, default=720)
+
+    parser.add_argument('-pos-density', '--position-samples-per-meter', help='float controling density of camera samples in 3D position. default 1 per meter', type=float, default=1)
+    
+    parser.add_argument('-roll-num', '--roll-samples-count', help='int controling number of rotation samples for roll rotation (about forward -Z direction). default 1', type=int, default=1)
+    parser.add_argument('-roll-min', '--roll-samples-minumum', help='float controling density of camera samples in 3D position. default 1 per meter', type=float, default=1)
+    parser.add_argument('-roll-max', '--roll-samples-maximum', help='float controling density of camera samples in 3D position. default 1 per meter', type=float, default=1)
+
+    parser.add_argument('-pitch-num', '--pitch-samples-per-meter', help='float controling density of camera samples in 3D position. default 1 per meter', type=float, default=1)
+    parser.add_argument('-pitch-min', '--position-samples-min', help='float controling density of camera samples in 3D position. default 1 per meter', type=float, default=1)
+    parser.add_argument('-pitch-max', '--position-samples-per-meter', help='float controling density of camera samples in 3D position. default 1 per meter', type=float, default=1)
+    
+    parser.add_argument('-yaw-density', '--position-samples-per-meter', help='float controling density of camera samples in 3D position. default 1 per meter', type=float, default=1)
+    
+
+    args = parser.parse_args(argv)
+
+
+    SCENE_DIR = '/media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/00861-GLAQ4DNUx5U'
+
+    #render_scene_images(SCENE_DIR, OUTPUT_DIR)
