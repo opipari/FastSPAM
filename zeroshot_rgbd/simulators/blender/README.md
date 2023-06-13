@@ -31,6 +31,11 @@ This folder contains all blender python scripts for rendering visual imagery and
   - Output: one directory per scene containing semantic images in png format which are mappable by name to corresponding pose and light conditions
 
 
+## Command Shortcuts
+
+1. Sampling Views
+  - `./blender-3.3.7-linux-x64/blender --background --python SegmentationProject/zeroshot_rgbd/simulators/blender/sample_views.py -- -data /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/ -out /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders/example/`
+
 ## Simulation Debugging
 
 The blender python script in `./workbench.py` is intended for use in the interactive Blender GUI. This script allows visualization of the rejection sampling process used for view sampling and can be used for interactive script development.
