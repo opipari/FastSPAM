@@ -163,14 +163,14 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, ARGS):
         pose_reader = csv.reader(csvfile, delimiter=',')
 
         for pose_meta in pose_reader:
-            scene_name, view_idx, pos_idx, rot_idx, x_pos, y_pos, z_pos, roll, pitch, yaw = pose_meta
+            scene_name, view_idx, valid_view_idx, pos_idx, rot_idx, x_pos, y_pos, z_pos, roll, pitch, yaw = pose_meta
             
             # Skip information line if it is first
             if scene_name=='Scene-ID':
                 continue
 
             # Parse pose infomration out of string type
-            view_idx, pos_idx, rot_idx = int(view_idx), int(pos_idx), int(rot_idx)
+            view_idx, valid_view_idx, pos_idx, rot_idx = int(view_idx), int(valid_view_idx), int(pos_idx), int(rot_idx)
             x_pos, y_pos, z_pos = float(x_pos), float(y_pos), float(z_pos)
             roll, pitch, yaw = float(roll), float(pitch), float(yaw)
 
@@ -183,7 +183,7 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, ARGS):
             # Update scene view layer to recalculate camera extrensic matrix
             bpy.context.view_layer.update()
 
-            bpy.context.scene.render.filepath = os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{view_idx:010}.{pos_idx:010}.{rot_idx:010}.SEM.png')
+            bpy.context.scene.render.filepath = os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{valid_view_idx:010}.{pos_idx:010}.{rot_idx:010}.SEM.png')
             bpy.ops.render.render(write_still = True)
 
             render_image_count += 1

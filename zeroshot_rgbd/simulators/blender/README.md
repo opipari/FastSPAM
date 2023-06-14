@@ -34,7 +34,7 @@ This folder contains all blender python scripts for rendering visual imagery and
 ## Command Shortcuts
 
 1. Sampling Views
-  - `./blender-3.3.7-linux-x64/blender --background --python SegmentationProject/zeroshot_rgbd/simulators/blender/sample_views.py -- -data /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/ -out /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders/example/`
+  - `./blender-3.3.7-linux-x64/blender --python SegmentationProject/zeroshot_rgbd/simulators/blender/sample_views.py -- -data /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/ -out /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders/example/`
 
 2. Rendering Semantics
   - `./blender-3.3.7-linux-x64/blender --background --python SegmentationProject/zeroshot_rgbd/simulators/blender/render_semantics.py -- -data /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/ -out /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders/example/`

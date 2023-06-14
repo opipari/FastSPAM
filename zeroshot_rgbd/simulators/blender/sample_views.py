@@ -12,6 +12,7 @@ import bpy
 import bmesh
 from mathutils import Vector, Euler
 
+import cv2
 import matplotlib.pyplot as plt
 
 
@@ -314,12 +315,13 @@ def camera_viewing_valid_surface(camera_obj, dist_threshold=0.25):
     
     camera_center_and_corner_ray_casts = [bpy.context.scene.ray_cast(bpy.context.view_layer.depsgraph, camera_obj.location, camera_dir) for camera_dir in camera_center_and_corner_dirs]
     camera_center_and_corner_normal_dots = [corner_dir.dot(ray_cast[2].normalized()) for (corner_dir, ray_cast) in zip(camera_center_and_corner_dirs, camera_center_and_corner_ray_casts)]
-    camera_center_and_corner_dists = [euclidean_distance(ray_cast[1], camera_obj.location) for ray_cast in camera_center_and_corner_ray_casts]
-    
+    #camera_center_and_corner_ray_dists = [euclidean_distance(ray_cast[1], camera_obj.location) for ray_cast in camera_center_and_corner_ray_casts]
+    camera_center_and_corner_depth = [-1*(camera_obj.matrix_world.inverted() @ ray_cast[1]).z for ray_cast in camera_center_and_corner_ray_casts]
+
     # Valid view if all corners and center ray hit inner mesh of scene
     all_rays_hit_surface = all([ray_cast[0] for ray_cast in camera_center_and_corner_ray_casts])
     all_rays_hit_inner_mesh = all([dot<0 for dot in camera_center_and_corner_normal_dots])
-    all_rays_hit_within_dist_threshold = all([dist>=dist_threshold for dist in camera_center_and_corner_dists])
+    all_rays_hit_within_dist_threshold = all([dist>=dist_threshold for dist in camera_center_and_corner_depth])
     
     return all_rays_hit_surface and all_rays_hit_inner_mesh and all_rays_hit_within_dist_threshold
 
@@ -347,7 +349,8 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
     SCENE_NAME = SCENE_DIR.split('/')[-1].split('-')[-1]
     SCENE_FILE = SCENE_NAME+'.glb'
     SEMANTIC_SCENE_FILE = SCENE_NAME+'.semantic.glb'
-    
+    SCENE_OUT_DIR = os.path.join(OUTPUT_DIR, SCENE_NAME)
+
     if ARGS.verbose:
         print()
         print("********************")
@@ -356,6 +359,7 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
         print()
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+    os.makedirs(SCENE_OUT_DIR, exist_ok=True)
 
     if ARGS.verbose:
         print()
@@ -373,7 +377,11 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
     building_collection = bpy.data.collections.get("Building")
     delete_collection(building_collection)
 
-
+    bpy.context.scene.render.engine = 'BLENDER_EEVEE'
+    # bpy.context.scene.cycles.samples = 1
+    # bpy.context.scene.cycles.max_bounces = 0
+    bpy.context.scene.render.dither_intensity = 0.0
+    bpy.context.scene.view_settings.view_transform = 'Standard'
     bpy.context.scene.render.film_transparent = True
     bpy.context.scene.render.image_settings.color_mode = 'RGBA'
     bpy.context.scene.render.resolution_x = ARGS.camera_width
@@ -400,9 +408,6 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
 
     # Link depth output from z_pass to node viewier Image input
     node_tree.links.new(render_layers.outputs['Depth'], node_viewer.inputs['Image']) # link Z to output
-
-
-    
 
 
     if ARGS.verbose:
@@ -461,7 +466,7 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
 
 
     accepted_view_file = open(os.path.join(OUTPUT_DIR, f"{SCENE_NAME}_accepted_view_poses.csv"),"w")
-    accepted_view_file.write('Scene-ID,View-ID,Position-ID,Rotation-ID,X-Position,Y-Position,Z-Position,Roll-Z-EulerZXY,Pitch-X-EulerZXY,Yaw-Y-EulerZXY\n')
+    accepted_view_file.write('Scene-ID,View-ID,Valid-View-ID,Position-ID,Rotation-ID,X-Position,Y-Position,Z-Position,Roll-Z-EulerZXY,Pitch-X-EulerZXY,Yaw-Y-EulerZXY\n')
     accepted_view_file.flush()
     
     if ARGS.verbose:
@@ -487,6 +492,7 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
             # Update scene view layer to recalculate camera extrensic matrix
             bpy.context.view_layer.update()
 
+            is_valid_view = False
             
             # Determine if rejection sampling criteria is met
             # Valid view defined as one where corner and center rays view inner mesh surface and at least 0.25m from camera origin
@@ -495,20 +501,19 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
                 min_depth, depth_arr = render_depth()
                 if min_depth>=ARGS.surface_distance_threshold:
 
+                    depth_arr = np.flipud(np.round(depth_arr*1000).astype(np.uint16))
+                    cv2.imwrite(os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{valid_view_count:010}.{pos_i:010}.{rot_i:010}.DEPTH.png'), depth_arr)
 
                     all_view_file.write(f'{SCENE_NAME},{(pos_i*num_rot_samples)+rot_i:010},{pos_i:010},{rot_i:010},{x},{y},{z},{roll},{pitch},{yaw},Y\n')
                     all_view_file.flush()
 
-                    accepted_view_file.write(f'{SCENE_NAME},{valid_view_count:010},{pos_i:010},{rot_i:010},{x},{y},{z},{roll},{pitch},{yaw}\n')
+                    accepted_view_file.write(f'{SCENE_NAME},{(pos_i*num_rot_samples)+rot_i:010},{valid_view_count:010},{pos_i:010},{rot_i:010},{x},{y},{z},{roll},{pitch},{yaw}\n')
                     accepted_view_file.flush()
 
                     valid_view_count += 1
+                    is_valid_view = True
 
-                else:
-                    raise
-                    all_view_file.write(f'{SCENE_NAME},{(pos_i*num_rot_samples)+rot_i:010},{pos_i:010},{rot_i:010},{x},{y},{z},{roll},{pitch},{yaw},N\n')
-                    all_view_file.flush()
-            else:
+            if not is_valid_view:
                 all_view_file.write(f'{SCENE_NAME},{(pos_i*num_rot_samples)+rot_i:010},{pos_i:010},{rot_i:010},{x},{y},{z},{roll},{pitch},{yaw},N\n')
                 all_view_file.flush()
 
