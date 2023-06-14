@@ -88,26 +88,9 @@ def add_object_to_collection(object, collection):
     collection.objects.link(object)
 
 
-def clear_scene():
-    
-    for c in bpy.context.scene.collection.children:
-        bpy.context.scene.collection.children.unlink(c)
-    
-    for block in bpy.data.meshes:
-        if block.users == 0:
-            bpy.data.meshes.remove(block)
-
-    for block in bpy.data.materials:
-        if block.users == 0:
-            bpy.data.materials.remove(block)
-
-    for block in bpy.data.textures:
-        if block.users == 0:
-            bpy.data.textures.remove(block)
-
-    for block in bpy.data.images:
-        if block.users == 0:
-            bpy.data.images.remove(block)
+def reset_blend():
+    for obj in bpy.data.objects:
+        delete_object(obj)
 
 
 ##############################################################################
@@ -367,6 +350,7 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, CONFIG, verbose=True):
         print("********************")
         print("RESETTING SCENE")
 
+    reset_blend()
     
     general_collection = bpy.context.scene.collection
 
@@ -385,9 +369,38 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, CONFIG, verbose=True):
     building_collection = bpy.data.collections.get("Building")
     delete_collection(building_collection)
 
+    if verbose:
+        print("DONE RESETTING SCENE")
+        print("********************")
+        print()
+
+
+
+    if verbose:
+        print()
+        print("***********************")
+        print("INITIALIZING SCENE")
+    
+    bpy.ops.import_scene.gltf(filepath=os.path.join(SCENE_DIR,SCENE_FILE))
+
+    building_collection = bpy.data.collections.get("Building")
+    if building_collection is None:
+        building_collection = bpy.data.collections.new("Building")
+        bpy.context.scene.collection.children.link(building_collection)
+    
+    bpy.ops.object.select_all(action='DESELECT')
+    
+    for obj in bpy.data.objects:
+        if obj.type=="MESH":
+            add_object_to_collection(obj, building_collection)
+            for mat in obj.data.materials:
+                mat.use_backface_culling = False
+    
+
     bpy.context.scene.render.engine = 'BLENDER_EEVEE'
-    # bpy.context.scene.cycles.samples = 1
-    # bpy.context.scene.cycles.max_bounces = 0
+    bpy.context.scene.eevee.taa_render_samples = 1
+    bpy.context.scene.eevee.taa_samples = 1
+    bpy.context.scene.eevee.sss_samples = 1
     bpy.context.scene.render.dither_intensity = 0.0
     bpy.context.scene.view_settings.view_transform = 'Standard'
     bpy.context.scene.render.film_transparent = True
@@ -418,33 +431,6 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, CONFIG, verbose=True):
     node_tree.links.new(render_layers.outputs['Depth'], node_viewer.inputs['Image']) # link Z to output
 
 
-    if verbose:
-        print("DONE RESETTING SCENE")
-        print("********************")
-        print()
-
-
-
-    if verbose:
-        print()
-        print("***********************")
-        print("INITIALIZING SCENE")
-    
-    bpy.ops.import_scene.gltf(filepath=os.path.join(SCENE_DIR,SCENE_FILE))
-
-    building_collection = bpy.data.collections.get("Building")
-    if building_collection is None:
-        building_collection = bpy.data.collections.new("Building")
-        bpy.context.scene.collection.children.link(building_collection)
-    
-    bpy.ops.object.select_all(action='DESELECT')
-    
-    for obj in bpy.data.objects:
-        if obj.type=="MESH":
-            add_object_to_collection(obj, building_collection)
-            for mat in obj.data.materials:
-                mat.use_backface_culling = False
-    
     if verbose:
         print("DONE INITIALIZING SCENE")
         print("***********************")
@@ -563,7 +549,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
                     prog='sample_views',
-                    usage='blender --background --python <path to sample_views.py> -- [options]',
+                    usage='blender --python <path to sample_views.py> -- [options]',
                     description='Blender python script for using rejection sampling to uniformly sample valid views from the Matterport 3D semantic dataset',
                     epilog='For more information, see: https://github.com/opipari/ZeroShot_RGB_D/tree/main/zeroshot_rgbd/simulators/blender')
 
@@ -582,7 +568,7 @@ if __name__ == "__main__":
         print(args)
         print()
         print(config)
-        print()    
+        print()
 
     scene_directories = [path for path in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, path))]
     for scene_dir in scene_directories:

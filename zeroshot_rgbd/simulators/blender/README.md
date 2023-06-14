@@ -34,13 +34,13 @@ This folder contains all blender python scripts for rendering visual imagery and
 ## Command Shortcuts
 
 1. Sampling Views
-  - `./blender-3.3.7-linux-x64/blender --python SegmentationProject/zeroshot_rgbd/simulators/blender/sample_views.py -- -config SegmentationProject/zeroshot_rgbd/simulators/blender/render_config.ini -data /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/ -out /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders/example/`
+  - `./blender-3.3.7-linux-x64/blender --python SegmentationProject/zeroshot_rgbd/simulators/blender/sample_views.py -- -config SegmentationProject/zeroshot_rgbd/simulators/blender/configs/render_config.ini -data /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/ -out /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders/example/`
 
 2. Rendering Semantics
-  - `./blender-3.3.7-linux-x64/blender --background --python SegmentationProject/zeroshot_rgbd/simulators/blender/render_semantics.py -- -data /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/ -out /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders/example/`
+  - `./blender-3.3.7-linux-x64/blender --background --python SegmentationProject/zeroshot_rgbd/simulators/blender/render_semantics.py -- -config SegmentationProject/zeroshot_rgbd/simulators/blender/configs/render_config.ini -data /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/ -out /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders/example/`
 
 3. Rendering Color
-  - `./blender-3.3.7-linux-x64/blender --background --python SegmentationProject/zeroshot_rgbd/simulators/blender/render_color.py -- -data /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/ -out /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders/example/`
+  - `./blender-3.3.7-linux-x64/blender --background --python SegmentationProject/zeroshot_rgbd/simulators/blender/render_color.py -- -config SegmentationProject/zeroshot_rgbd/simulators/blender/configs/render_config.ini -light-config SegmentationProject/zeroshot_rgbd/simulators/blender/configs/illumination_0000000000_config.ini -data /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/ -out /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders/example/`
 
 ## Simulation Debugging
 

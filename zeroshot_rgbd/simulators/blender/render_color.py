@@ -21,12 +21,14 @@ from mathutils import Vector, Euler
 ##############################################################################
 
 
-def get_camera(pos, rot, name="Camera_Sample", rot_mode='ZXY', lens=15, clip_start=1e-2, scale=(1,1,1)):
+def get_camera(pos, rot, name="Camera_Sample", rot_mode='ZXY', lens_unit='FOV', angle_x=69, clip_start=1e-2, clip_end=1000, scale=(1,1,1)):
     camera = bpy.data.cameras.get(name)
     if camera is None:
         camera = bpy.data.cameras.new(name)
-        camera.lens = lens
+        camera.lens_unit = lens_unit
+        camera.angle_x = angle_x
         camera.clip_start = clip_start
+        camera.clip_end = clip_end
     
     camera_sample_obj = bpy.data.objects.new("Camera", camera)
     camera_sample_obj.location = Vector(pos)
@@ -54,18 +56,22 @@ def add_object_to_collection(object, collection):
     collection.objects.link(object)
 
 
+def reset_blend():
+    for obj in bpy.data.objects:
+        delete_object(obj)
+
 ##############################################################################
 #                         END OF BLENDER UTILITIES                           #
 ##############################################################################
 
 
-def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, ARGS):
+def render_scene_color(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, LIGHT_CONFIG, verbose=True):
     
     SCENE_NAME = SCENE_DIR.split('/')[-1].split('-')[-1]
     SCENE_FILE = SCENE_NAME+'.glb'
     SEMANTIC_SCENE_FILE = SCENE_NAME+'.semantic.glb'
     
-    if ARGS.verbose:
+    if verbose:
         print()
         print("********************")
         print(f"SAMPLING VIEWS FOR SCENE: {SCENE_NAME}")
@@ -74,31 +80,34 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, ARGS):
 
     os.makedirs(SCENE_OUT_DIR, exist_ok=True)
 
-    if ARGS.verbose:
+    if verbose:
         print()
         print("********************")
         print("RESETTING SCENE")
 
+    reset_blend()
     
     general_collection = bpy.context.scene.collection
 
     delete_object(bpy.data.objects.get("Camera"))
-    camera_obj = get_camera(pos=(0,0,0), rot=(0,0,math.pi), name="Camera", rot_mode='ZXY', lens=ARGS.camera_lens, clip_start=ARGS.camera_clip)
+    camera_obj = get_camera(pos=(0,0,0), 
+        rot=(0,0,math.pi), 
+        name="Camera", 
+        rot_mode='ZXY',
+        lens_unit=CONFIG['blender.camera']['lens_unit'], # leave units as string
+        angle_x=CONFIG['blender.camera'].getfloat('angle_x'), 
+        clip_start=CONFIG['blender.camera'].getfloat('clip_start'), 
+        clip_end=config['blender.camera'].getfloat('clip_end'))
     add_object_to_collection(camera_obj, general_collection)
     bpy.context.scene.camera = camera_obj
 
     delete_object(bpy.data.objects.get("Spot_Light"))
     
-    if ARGS.spotlight_energy == 0:
-        bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[0].default_value[:3] = (1,1,1)
-        bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[1].default_value = 1
-    else:
-        bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[0].default_value[:3] = (0,0,0)
-        bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[1].default_value = 0
-
+    if LIGHT_CONFIG['blender.illumination'].getint('energy') > 0:
         spot_light = bpy.data.lights.new(name="Spot_Light", type='SPOT')
-        spot_light.energy = ARGS.spotlight_energy
-        spot_light.spot_size = math.pi
+        spot_light.energy = LIGHT_CONFIG['blender.illumination'].getint('energy')
+        spot_light.spot_size = math.radians(LIGHT_CONFIG['blender.illumination'].getfloat('spot_size'))
+        spot_light.spot_blend = LIGHT_CONFIG['blender.illumination'].getfloat('spot_blend')
         spot_light.distance = 25
         spot_light_obj = bpy.data.objects.new(name="Spot_Light", object_data=spot_light)
         spot_light_obj.location = Vector((0,0,0))
@@ -108,13 +117,7 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, ARGS):
     building_collection = bpy.data.collections.get("Building")
     delete_collection(building_collection)
 
-
-    bpy.context.scene.render.film_transparent = True
-    bpy.context.scene.render.image_settings.color_mode = 'RGBA'
-    bpy.context.scene.render.resolution_x = ARGS.camera_width
-    bpy.context.scene.render.resolution_y = ARGS.camera_height
-
-    if ARGS.verbose:
+    if verbose:
         print("DONE RESETTING SCENE")
         print("********************")
         print()
@@ -122,7 +125,7 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, ARGS):
 
 
 
-    if ARGS.verbose:
+    if verbose:
         print()
         print("***********************")
         print("INITIALIZING SCENE")
@@ -141,26 +144,80 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, ARGS):
             add_object_to_collection(obj, building_collection)
             for mat in obj.data.materials:
                 mat.use_backface_culling = False
+                if mat.node_tree:
+                    node_tree = mat.node_tree
+                    node_types = [node.type for node in node_tree.nodes]
+                    print(node_types)
+                    print(mat,obj)
+                    assert set(['TEX_IMAGE','BSDF_PRINCIPLED','OUTPUT_MATERIAL'])==set(node_types)
 
-    if ARGS.verbose:
+                    tex_node = node_tree.nodes['Image Texture']
+                    bsdf_node = node_tree.nodes['Principled BSDF']
+                    mat_node = node_tree.nodes['Material Output']
+
+                    # for link in node_tree.links:
+                    #     node_tree.links.remove(link)
+                    
+                    # if LIGHT_CONFIG['blender.illumination'].getint('energy')==0:
+                    #     node_tree.links.new(tex_node.outputs['Color'], bsdf_node.inputs['Emission'])
+                    # else:
+                    #     node_tree.links.new(tex_node.outputs['Color'], bsdf_node.inputs['Base Color'])
+
+                    # node_tree.links.new(bsdf_node.outputs['BSDF'], mat_node.inputs['Surface'])
+
+    building_collection.hide_render = False
+
+    if verbose:
         print("DONE INITIALIZING SCENE")
         print("***********************")
         print()
 
         
     
+        
 
-    building_collection.hide_render = False
-    bpy.context.scene.render.engine = 'BLENDER_EEVEE'
+    if LIGHT_CONFIG['blender.illumination'].getint('energy') == 0:
+        bpy.context.scene.render.engine = 'BLENDER_EEVEE'
+        bpy.context.scene.eevee.taa_render_samples = 32
+        bpy.context.scene.eevee.taa_samples = 32
+        bpy.context.scene.eevee.sss_samples = 32
+        bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[0].default_value[:3] = (1,1,1)
+        bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[1].default_value = 1
+    else:
+        bpy.context.scene.render.engine = 'CYCLES'
+        bpy.context.preferences.addons[
+            "cycles"
+        ].preferences.compute_device_type = "CUDA" # or "OPENCL"
+
+        # Set the device and feature set
+        bpy.context.scene.cycles.device = "GPU"
+
+        # get_devices() to let Blender detects GPU device
+        bpy.context.preferences.addons["cycles"].preferences.get_devices()
+        print(bpy.context.preferences.addons["cycles"].preferences.compute_device_type)
+        for d in bpy.context.preferences.addons["cycles"].preferences.devices:
+            d["use"] = 1 # Using all devices, include GPU and CPU
+            print(d["name"], d["use"])
+        bpy.context.scene.cycles.samples = 8
+        
+        bpy.context.scene.cycles.diffuse_bounces = 4
+        bpy.context.scene.cycles.glossy_bounces = 4
+        bpy.context.scene.cycles.transmission_bounces = 4
+        bpy.context.scene.cycles.max_bounces = 12
+
     bpy.context.scene.render.dither_intensity = 1.0
     bpy.context.scene.view_settings.view_transform = 'Standard'
 
+    bpy.context.scene.render.film_transparent = True
+    bpy.context.scene.render.image_settings.color_mode = 'RGBA'
+    bpy.context.scene.render.resolution_x = CONFIG['blender.resolution'].getint('resolution_x') # width
+    bpy.context.scene.render.resolution_y = CONFIG['blender.resolution'].getint('resolution_y') # height
 
-    if ARGS.verbose:
+    if verbose:
         print()
         print("***********************")
         print(f"INITIATING RENDERING")
-
+    
     render_image_count = 0
 
     with open(SCENE_VIEWS_FILE, 'r') as csvfile:
@@ -168,14 +225,14 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, ARGS):
         pose_reader = csv.reader(csvfile, delimiter=',')
 
         for pose_meta in pose_reader:
-            scene_name, view_idx, pos_idx, rot_idx, x_pos, y_pos, z_pos, roll, pitch, yaw = pose_meta
+            scene_name, view_idx, valid_view_idx, pos_idx, rot_idx, x_pos, y_pos, z_pos, roll, pitch, yaw = pose_meta
             
             # Skip information line if it is first
             if scene_name=='Scene-ID':
                 continue
 
             # Parse pose infomration out of string type
-            view_idx, pos_idx, rot_idx = int(view_idx), int(pos_idx), int(rot_idx)
+            view_idx, valid_view_idx, pos_idx, rot_idx = int(view_idx), int(valid_view_idx), int(pos_idx), int(rot_idx)
             x_pos, y_pos, z_pos = float(x_pos), float(y_pos), float(z_pos)
             roll, pitch, yaw = float(roll), float(pitch), float(yaw)
 
@@ -188,12 +245,12 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, ARGS):
             # Update scene view layer to recalculate camera extrensic matrix
             bpy.context.view_layer.update()
 
-            bpy.context.scene.render.filepath = os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{view_idx:010}.{pos_idx:010}.{rot_idx:010}.RGB.{ARGS.spotlight_energy:010}.png')
+            bpy.context.scene.render.filepath = os.path.join(SCENE_OUT_DIR, f"{SCENE_NAME}.{valid_view_idx:010}.{pos_idx:010}.{rot_idx:010}.RGB.{LIGHT_CONFIG['blender.illumination'].getint('energy'):010}.png")
             bpy.ops.render.render(write_still = True)
 
             render_image_count += 1
-        
-    if ARGS.verbose:
+            raise
+    if verbose:
         print(f"DONE RENDERING {render_image_count} VIEWS")
         print("***********************")
         print()
@@ -212,37 +269,30 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
                     prog='sample_views',
-                    usage='blender --background --python <path to sample_views.py> -- [options]',
-                    description='Blender python script for using rejection sampling to uniformly sample valid views from the Matterport 3D semantic dataset',
+                    usage='blender --background --python <path to render_semantics.py> -- [options]',
+                    description='Blender python script for rendering color images under active spot light illumination from the Matterport 3D semantic dataset assuming valid views have already been sampled',
                     epilog='For more information, see: https://github.com/opipari/ZeroShot_RGB_D/tree/main/zeroshot_rgbd/simulators/blender')
 
-
+    parser.add_argument('-config', '--config-file', help='path to ini file containing rendering and sampling configuration', type=str)
+    parser.add_argument('-light-config', '--light-config-file', help='path to ini file containing active illumination configuration', type=str)
     parser.add_argument('-data', '--dataset-dir', help='path to directory of Matterport semantic dataset directory formatted as one sub-directory per scene', type=str)
     parser.add_argument('-out', '--output-dir', help='path to directory where output dataset should be stored', type=str)
     parser.add_argument('-v', '--verbose', help='whether verbose output printed to stdout', type=int, default=1)
 
-    parser.add_argument('-energy', '--spotlight-energy', help='int controlling strength of active illumination of blender spotlight in (W) units. default is 0 for global illumination', type=int, default=0)
-
-    parser.add_argument('-lens', '--camera-lens', help='float controlling focal length of blender camera in (mm) units. default 15', type=float, default=15.0)
-    parser.add_argument('-clip', '--camera-clip', help='float controlling distance of clip start of blender camera in (m) units. default 1e-2', type=float, default=1e-2)
-    parser.add_argument('-width', '--camera-width', help='int controlling rendered image width in pixels. default 960', type=int, default=960)
-    parser.add_argument('-height', '--camera-height', help='int controlling rendered image height in pixels. default 15', type=int, default=720)
-
-    parser.add_argument('-pos-density', '--position-samples-per-meter', help='float controlling density of camera samples in 3D position. default 1 per meter', type=float, default=1)
-    
-    parser.add_argument('-roll-num', '--roll-samples-count', help='int controlling number of rotation samples for roll rotation (about forward -Z direction). default 1', type=int, default=1)
-    parser.add_argument('-roll-min', '--roll-samples-minimum', help='float controlling minimum extent of roll samples for rotation. default math.radians(180)', type=float, default=math.radians(180))
-    parser.add_argument('-roll-max', '--roll-samples-maximum', help='float controlling maximum extent of roll samples for rotation. default math.radians(180)', type=float, default=math.radians(180))
-
-    parser.add_argument('-pitch-num', '--pitch-samples-count', help='int controlling number of rotation samples for pitch rotation (about sideways X direction). default 3', type=int, default=3)
-    parser.add_argument('-pitch-min', '--pitch-samples-minimum', help='float controlling minimum extent of pitch samples for rotation. default math.radians(-20)', type=float, default=math.radians(-20))
-    parser.add_argument('-pitch-max', '--pitch-samples-maximum', help='float controlling maximum extent of pitch samples for rotation. default math.radians(20)', type=float, default=math.radians(20))
-    
-    parser.add_argument('-yaw-num', '--yaw-samples-count', help='int controlling number of rotation samples for yaw rotation (about vertical Y direction). default 8', type=int, default=8)
-    parser.add_argument('-yaw-min', '--yaw-samples-minimum', help='float controlling minimum extent of yaw samples for rotation. default math.radians(0)', type=float, default=0)
-    parser.add_argument('-yaw-max', '--yaw-samples-maximum', help='float controlling maximum extent of yaw samples for rotation. default math.radians(360)-(math.radians(360)/8)', type=float, default=math.radians(360)-(math.radians(360)/8))
-
     args = parser.parse_args(argv)
+
+    config = configparser.ConfigParser()
+    config.read(args.config_file)
+
+    light_config = configparser.ConfigParser()
+    light_config.read(args.light_config_file)
+
+    if args.verbose:
+        print()
+        print(args)
+        print()
+        print(config)
+        print()
 
 
     scene_directories = [path for path in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, path))]
@@ -261,4 +311,11 @@ if __name__ == "__main__":
         scene_has_sampled_views = os.path.isfile(scene_view_poses_path)
 
         if scene_has_semantic_mesh and scene_has_semantic_txt and scene_has_sampled_views:
-            render_scene_semantics(scene_dir_path, scene_view_poses_path, scene_out_path, args)
+            render_scene_color(scene_dir_path, scene_view_poses_path, scene_out_path, config, light_config, verbose=args.verbose)
+
+    if args.verbose:
+        print()
+        print("***********************")
+        print(f"DONE RENDERING ALL SCENES")
+        print("***********************")
+        print()
