@@ -53,11 +53,12 @@ def get_sphere(pos, rot, name='Basic_Sphere', mat=None):
     return sphere_obj
 
 
-def get_camera(pos, rot, name="Camera_Sample", rot_mode='ZXY', lens=15, clip_start=1e-2, clip_end=1000, scale=(1,1,1)):
+def get_camera(pos, rot, name="Camera_Sample", rot_mode='ZXY', lens_unit='FOV', angle_x=69, clip_start=1e-2, clip_end=1000, scale=(1,1,1)):
     camera = bpy.data.cameras.get(name)
     if camera is None:
         camera = bpy.data.cameras.new(name)
-        camera.lens = lens
+        camera.lens_unit = lens_unit
+        camera.angle_x = angle_x
         camera.clip_start = clip_start
         camera.clip_end = clip_end
     
@@ -344,14 +345,14 @@ def render_depth():
 
 
             
-def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
+def sample_scene_views(SCENE_DIR, OUTPUT_DIR, CONFIG, verbose=True):
     
     SCENE_NAME = SCENE_DIR.split('/')[-1].split('-')[-1]
     SCENE_FILE = SCENE_NAME+'.glb'
     SEMANTIC_SCENE_FILE = SCENE_NAME+'.semantic.glb'
     SCENE_OUT_DIR = os.path.join(OUTPUT_DIR, SCENE_NAME)
 
-    if ARGS.verbose:
+    if verbose:
         print()
         print("********************")
         print(f"SAMPLING VIEWS FOR SCENE: {SCENE_NAME}")
@@ -361,7 +362,7 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     os.makedirs(SCENE_OUT_DIR, exist_ok=True)
 
-    if ARGS.verbose:
+    if verbose:
         print()
         print("********************")
         print("RESETTING SCENE")
@@ -370,7 +371,14 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
     general_collection = bpy.context.scene.collection
 
     delete_object(bpy.data.objects.get("Camera"))
-    camera_obj = get_camera(pos=(0,0,0), rot=(0,0,math.pi), name="Camera", rot_mode='ZXY', lens=ARGS.camera_lens, clip_start=ARGS.camera_clip_start, clip_end=ARGS.camera_clip_end)
+    camera_obj = get_camera(pos=(0,0,0), 
+        rot=(0,0,math.pi), 
+        name="Camera", 
+        rot_mode='ZXY',
+        lens_unit=CONFIG['blender.camera']['lens_unit'], # leave units as string
+        angle_x=CONFIG['blender.camera'].getfloat('angle_x'), 
+        clip_start=CONFIG['blender.camera'].getfloat('clip_start'), 
+        clip_end=config['blender.camera'].getfloat('clip_end'))
     add_object_to_collection(camera_obj, general_collection)
     bpy.context.scene.camera = camera_obj
 
@@ -384,8 +392,8 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
     bpy.context.scene.view_settings.view_transform = 'Standard'
     bpy.context.scene.render.film_transparent = True
     bpy.context.scene.render.image_settings.color_mode = 'RGBA'
-    bpy.context.scene.render.resolution_x = ARGS.camera_width
-    bpy.context.scene.render.resolution_y = ARGS.camera_height
+    bpy.context.scene.render.resolution_x = CONFIG['blender.resolution'].getint('resolution_x') # width
+    bpy.context.scene.render.resolution_y = CONFIG['blender.resolution'].getint('resolution_y') # height
     
 
     # Add z pass to view layer for rendering depth
@@ -410,14 +418,14 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
     node_tree.links.new(render_layers.outputs['Depth'], node_viewer.inputs['Image']) # link Z to output
 
 
-    if ARGS.verbose:
+    if verbose:
         print("DONE RESETTING SCENE")
         print("********************")
         print()
 
 
 
-    if ARGS.verbose:
+    if verbose:
         print()
         print("***********************")
         print("INITIALIZING SCENE")
@@ -437,39 +445,45 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
             for mat in obj.data.materials:
                 mat.use_backface_culling = False
     
-    if ARGS.verbose:
+    if verbose:
         print("DONE INITIALIZING SCENE")
         print("***********************")
         print()
 
 
-
-
-    
-
     building_aabb = get_collection_aabb(building_collection)
 
-    grid_x, grid_y, grid_z = get_grid_points(building_aabb, samples_per_meter=ARGS.position_samples_per_meter)
+    grid_x, grid_y, grid_z = get_grid_points(building_aabb, samples_per_meter=CONFIG['view_sampling'].getfloat('position_samples_per_meter'))
     num_pos_samples = functools.reduce(operator.mul, map(len, (grid_x, grid_y, grid_z)), 1)
 
-    grid_roll, grid_pitch, grid_yaw = get_grid_euler(roll_bounds=(ARGS.roll_samples_minimum, ARGS.roll_samples_maximum), roll_samples=ARGS.roll_samples_count, 
-                                                       pitch_bounds=(ARGS.pitch_samples_minimum, ARGS.pitch_samples_maximum), pitch_samples=ARGS.pitch_samples_count, 
-                                                       yaw_bounds=(ARGS.yaw_samples_minimum, ARGS.yaw_samples_maximum), yaw_samples=ARGS.yaw_samples_count)
+    grid_roll, grid_pitch, grid_yaw = get_grid_euler(roll_bounds=(math.radians(CONFIG['view_sampling'].getfloat('roll_samples_minimum')),
+                                                                  math.radians(CONFIG['view_sampling'].getfloat('roll_samples_maximum'))
+                                                                  ), 
+                                                        roll_samples=CONFIG['view_sampling'].getint('roll_samples_count'), 
+                                                        pitch_bounds=(math.radians(CONFIG['view_sampling'].getfloat('pitch_samples_minimum')), 
+                                                                      math.radians(CONFIG['view_sampling'].getfloat('pitch_samples_maximum'))
+                                                                      ), 
+                                                        pitch_samples=CONFIG['view_sampling'].getint('pitch_samples_count'), 
+                                                        yaw_bounds=(math.radians(CONFIG['view_sampling'].getfloat('yaw_samples_minimum')), 
+                                                                    math.radians(CONFIG['view_sampling'].getfloat('yaw_samples_maximum'))
+                                                                    ), 
+                                                        yaw_samples=CONFIG['view_sampling'].getint('yaw_samples_count')
+                                                        )
     num_rot_samples = functools.reduce(operator.mul, map(len, (grid_roll, grid_pitch, grid_yaw)), 1)
     
 
 
     
-    all_view_file = open(os.path.join(OUTPUT_DIR, f"{SCENE_NAME}_all_view_poses.csv"),"w")
+    all_view_file = open(os.path.join(OUTPUT_DIR, f"{SCENE_NAME}_all_view_poses.csv"), "w")
     all_view_file.write('Scene-ID,View-ID,Position-ID,Rotation-ID,X-Position,Y-Position,Z-Position,Roll-Z-EulerZXY,Pitch-X-EulerZXY,Yaw-Y-EulerZXY,Accepted-Y-N\n')
     all_view_file.flush()
 
 
-    accepted_view_file = open(os.path.join(OUTPUT_DIR, f"{SCENE_NAME}_accepted_view_poses.csv"),"w")
+    accepted_view_file = open(os.path.join(OUTPUT_DIR, f"{SCENE_NAME}_accepted_view_poses.csv"), "w")
     accepted_view_file.write('Scene-ID,View-ID,Valid-View-ID,Position-ID,Rotation-ID,X-Position,Y-Position,Z-Position,Roll-Z-EulerZXY,Pitch-X-EulerZXY,Yaw-Y-EulerZXY\n')
     accepted_view_file.flush()
     
-    if ARGS.verbose:
+    if verbose:
         print()
         print("***********************")
         print(f"INITIATING SIMULATION OF {num_pos_samples*num_rot_samples} VIEW SAMPLES")
@@ -496,10 +510,10 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
             
             # Determine if rejection sampling criteria is met
             # Valid view defined as one where corner and center rays view inner mesh surface and at least 0.25m from camera origin
-            if camera_viewing_valid_surface(camera_obj, dist_threshold=ARGS.surface_distance_threshold):
+            if camera_viewing_valid_surface(camera_obj, dist_threshold=CONFIG['view_sampling'].getfloat('surface_distance_threshold')):
 
                 min_depth, depth_arr = render_depth()
-                if min_depth>=ARGS.surface_distance_threshold:
+                if min_depth>=CONFIG['view_sampling'].getfloat('surface_distance_threshold'):
 
                     depth_arr = np.flipud(np.round(depth_arr*1000).astype(np.uint16))
                     cv2.imwrite(os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{valid_view_count:010}.{pos_i:010}.{rot_i:010}.DEPTH.png'), depth_arr)
@@ -527,13 +541,13 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, ARGS):
     all_view_file.close()
     accepted_view_file.close()
 
-    if ARGS.verbose:
+    if verbose:
         print("***********************")
         print(f"DONE SIMULATING {num_pos_samples*num_rot_samples} VIEW SAMPLES")
         print(f"ACCEPTED {valid_view_count} VALID VIEWS")
         print("***********************")
         print()
-            
+
 
 
 
@@ -553,40 +567,22 @@ if __name__ == "__main__":
                     description='Blender python script for using rejection sampling to uniformly sample valid views from the Matterport 3D semantic dataset',
                     epilog='For more information, see: https://github.com/opipari/ZeroShot_RGB_D/tree/main/zeroshot_rgbd/simulators/blender')
 
-
+    parser.add_argument('-config', '--config-file', help='path to ini file containing rendering and sampling configuration', type=str)
     parser.add_argument('-data', '--dataset-dir', help='path to directory of Matterport semantic dataset directory formatted as one sub-directory per scene', type=str)
     parser.add_argument('-out', '--output-dir', help='path to directory where output dataset should be stored', type=str)
     parser.add_argument('-v', '--verbose', help='whether verbose output printed to stdout', type=int, default=1)
 
-    parser.add_argument('-lens', '--camera-lens', help='float controlling focal length of blender camera in (mm) units. default 15', type=float, default=15.0)
-    parser.add_argument('-clip-start', '--camera-clip-start', help='float controlling distance of clip start of blender camera in (m) units. default 1e-2', type=float, default=1e-2)
-    parser.add_argument('-clip-end', '--camera-clip-end', help='float controlling distance of clip end of blender camera in (m) units. default 1000', type=float, default=1000)
-    parser.add_argument('-width', '--camera-width', help='int controlling rendered image width in pixels. default 960', type=int, default=960)
-    parser.add_argument('-height', '--camera-height', help='int controlling rendered image height in pixels. default 15', type=int, default=720)
-
-    parser.add_argument('-dist-thresh', '--surface-distance-threshold', help='float controlling distance threshold for rejection sampling valid views. default 0.25 meters', type=float, default=0.25)
-    parser.add_argument('-pos-density', '--position-samples-per-meter', help='float controlling density of camera samples in 3D position. default 1 per meter', type=float, default=1)
-    
-    parser.add_argument('-roll-num', '--roll-samples-count', help='int controlling number of rotation samples for roll rotation (about forward -Z direction). default 1', type=int, default=1)
-    parser.add_argument('-roll-min', '--roll-samples-minimum', help='float controlling minimum extent of roll samples for rotation. default math.radians(180)', type=float, default=math.radians(180))
-    parser.add_argument('-roll-max', '--roll-samples-maximum', help='float controlling maximum extent of roll samples for rotation. default math.radians(180)', type=float, default=math.radians(180))
-
-    parser.add_argument('-pitch-num', '--pitch-samples-count', help='int controlling number of rotation samples for pitch rotation (about sideways X direction). default 3', type=int, default=3)
-    parser.add_argument('-pitch-min', '--pitch-samples-minimum', help='float controlling minimum extent of pitch samples for rotation. default math.radians(-20)', type=float, default=math.radians(-20))
-    parser.add_argument('-pitch-max', '--pitch-samples-maximum', help='float controlling maximum extent of pitch samples for rotation. default math.radians(20)', type=float, default=math.radians(20))
-    
-    parser.add_argument('-yaw-num', '--yaw-samples-count', help='int controlling number of rotation samples for yaw rotation (about vertical Y direction). default 8', type=int, default=8)
-    parser.add_argument('-yaw-min', '--yaw-samples-minimum', help='float controlling minimum extent of yaw samples for rotation. default math.radians(0)', type=float, default=0)
-    parser.add_argument('-yaw-max', '--yaw-samples-maximum', help='float controlling maximum extent of yaw samples for rotation. default math.radians(360)-(math.radians(360)/8)', type=float, default=math.radians(360)-(math.radians(360)/8))
-
     args = parser.parse_args(argv)
 
+    config = configparser.ConfigParser()
+    config.read(args.config_file)
 
-    SCENE_DIR = '/media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/00861-GLAQ4DNUx5U'
-
-    print(args)
-
-
+    if args.verbose:
+        print()
+        print(args)
+        print()
+        print(config)
+        print()    
 
     scene_directories = [path for path in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, path))]
     for scene_dir in scene_directories:
@@ -599,5 +595,13 @@ if __name__ == "__main__":
         scene_has_semantic_txt = any([fl.endswith('.semantic.txt') for fl in scene_files])
         
         if scene_has_semantic_mesh and scene_has_semantic_txt:
-            sample_scene_views(scene_dir_path, args.output_dir, args)
-            
+            sample_scene_views(scene_dir_path, args.output_dir, config, verbose=args.verbose)
+
+    if args.verbose:
+        print()
+        print("***********************")
+        print(f"DONE SAMPLING ALL SCENES")
+        print("***********************")
+        print()
+
+    bpy.ops.wm.quit_blender()
