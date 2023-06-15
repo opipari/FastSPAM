@@ -330,8 +330,8 @@ def render_depth():
             
 def sample_scene_views(SCENE_DIR, OUTPUT_DIR, CONFIG, verbose=True):
     
-    SCENE_NAME = SCENE_DIR.split('/')[-1].split('-')[-1]
-    SCENE_FILE = SCENE_NAME+'.glb'
+    SCENE_NAME = SCENE_DIR.split('/')[-1]
+    SCENE_FILE = SCENE_NAME.split('-')[1]+'.glb'
     SEMANTIC_SCENE_FILE = SCENE_NAME+'.semantic.glb'
     SCENE_OUT_DIR = os.path.join(OUTPUT_DIR, SCENE_NAME)
 
@@ -351,6 +351,7 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, CONFIG, verbose=True):
         print("RESETTING SCENE")
 
     reset_blend()
+    bpy.ops.outliner.orphans_purge()
     
     general_collection = bpy.context.scene.collection
 
@@ -570,7 +571,7 @@ if __name__ == "__main__":
         print(config)
         print()
 
-    scene_directories = [path for path in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, path))]
+    scene_directories = sorted([path for path in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, path))])
     for scene_dir in scene_directories:
         scene_dir_path = os.path.join(args.dataset_dir, scene_dir)
 
@@ -582,7 +583,7 @@ if __name__ == "__main__":
         
         if scene_has_semantic_mesh and scene_has_semantic_txt:
             sample_scene_views(scene_dir_path, args.output_dir, config, verbose=args.verbose)
-
+            
     if args.verbose:
         print()
         print("***********************")

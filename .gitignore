@@ -165,4 +165,4 @@ zeroshot_rgbd/models/output/*
 
 
 # Datasets
-# zeroshot_rgbd/datasets/Replica-Dataset/
+zeroshot_rgbd/datasets/*
