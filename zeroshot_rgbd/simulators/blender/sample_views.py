@@ -13,7 +13,6 @@ import bmesh
 from mathutils import Vector, Euler
 
 import cv2
-import matplotlib.pyplot as plt
 
 
 
