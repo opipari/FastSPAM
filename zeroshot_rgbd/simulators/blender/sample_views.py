@@ -327,12 +327,12 @@ def render_depth():
 
 
             
-def sample_scene_views(SCENE_DIR, OUTPUT_DIR, CONFIG, verbose=True):
+def sample_scene_views(SCENE_DIR, OUT_DIR, CONFIG, verbose=True):
     
     SCENE_NAME = SCENE_DIR.split('/')[-1]
     SCENE_FILE = SCENE_NAME.split('-')[1]+'.glb'
     SEMANTIC_SCENE_FILE = SCENE_NAME.split('-')[1]+'.semantic.glb'
-    SCENE_OUT_DIR = os.path.join(OUTPUT_DIR, SCENE_NAME)
+    SCENE_OUT_DIR = os.path.join(OUT_DIR, SCENE_NAME)
 
     if verbose:
         print()
@@ -341,7 +341,7 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, CONFIG, verbose=True):
         print("********************")
         print()
 
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    os.makedirs(OUT_DIR, exist_ok=True)
     os.makedirs(SCENE_OUT_DIR, exist_ok=True)
 
     if verbose:

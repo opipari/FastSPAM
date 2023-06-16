@@ -25,12 +25,12 @@ def get_camera(pos, rot, name="Camera_Sample", rot_mode='ZXY', lens_unit='FOV', 
     camera = bpy.data.cameras.get(name)
     if camera is None:
         camera = bpy.data.cameras.new(name)
-        camera.lens_unit = lens_unit
-        camera.angle_x = angle_x
-        camera.clip_start = clip_start
-        camera.clip_end = clip_end
+    camera.lens_unit = lens_unit
+    camera.angle_x = math.radians(angle_x) # Convert to radians for blender
+    camera.clip_start = clip_start
+    camera.clip_end = clip_end
     
-    camera_sample_obj = bpy.data.objects.new("Camera", camera)
+    camera_sample_obj = bpy.data.objects.new(name, camera)
     camera_sample_obj.location = Vector(pos)
     camera_sample_obj.rotation_mode = rot_mode
     camera_sample_obj.rotation_euler = Euler(rot)
@@ -208,6 +208,7 @@ def post_process_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, OUT_DIR, verbose=T
     SCENE_FILE = SCENE_NAME.split('-')[1]+'.glb'
     SEMANTIC_SCENE_FILE = SCENE_NAME.split('-')[1]+'.semantic.txt'
     SEMANTIC_SCENE_FILE_PATH = os.path.join(SCENE_DIR, SEMANTIC_SCENE_FILE)
+    SCENE_OUT_DIR = os.path.join(OUT_DIR, SCENE_NAME)
 
     if verbose:
         print()
@@ -217,6 +218,7 @@ def post_process_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, OUT_DIR, verbose=T
         print()
 
     os.makedirs(OUT_DIR, exist_ok=True)
+    os.makedirs(SCENE_OUT_DIR, exist_ok=True)
 
     scene_semantic_objects = {}
     with open(SEMANTIC_SCENE_FILE_PATH, "r") as sem_file:
@@ -228,7 +230,7 @@ def post_process_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, OUT_DIR, verbose=T
 
             assert object_hex_color not in scene_semantic_objects.keys()
             scene_semantic_objects[object_hex_color] = {"object_id": object_id, 
-                                                        "color_id": object_color_hex, 
+                                                        "color_id": object_hex_color, 
                                                         "object_name": object_name,
                                                         "visible_views": []
                                                         }
@@ -259,13 +261,25 @@ def post_process_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, OUT_DIR, verbose=T
             semantic_label_image_rgb_colors = np.unique(semantic_label_image.reshape(-1, 3), axis=0)
             semantic_label_image_hex_colors = [rgb2hex(*rgb_color) for rgb_color in semantic_label_image_rgb_colors]
             
+            for hex_color in semantic_label_image_hex_colors:
+                if hex_color not in scene_semantic_objects.keys() and hex_color!='000000':
+                    mask = np.all(np.equal(semantic_label_image, semantic_label_image_rgb_colors[semantic_label_image_hex_colors.index(hex_color)]), axis=2)
+                    semantic_label_image = np.where(mask[...,None], 0, semantic_label_image)
+                    semantic_label_image = Image.fromarray(semantic_label_image)
+                    semantic_label_image.save(semantic_label_file_path)
+
+            semantic_label_image = Image.open(semantic_label_file_path).convert('RGB')
+            semantic_label_image = np.array(semantic_label_image, dtype=np.uint8)
+            semantic_label_image_rgb_colors = np.unique(semantic_label_image.reshape(-1, 3), axis=0)
+            semantic_label_image_hex_colors = [rgb2hex(*rgb_color) for rgb_color in semantic_label_image_rgb_colors]
+
             found_objects = []
             for hex_color in semantic_label_image_hex_colors:
                 if hex_color in scene_semantic_objects.keys():
                     scene_semantic_objects[hex_color]["visible_views"].append(valid_view_idx)
                 else:
                     assert hex_color=='000000'
-    
+
     SEMANTIC_SCENE_LABEL_FILE = SCENE_NAME.split('-')[1]+'.semantic.csv'
     SEMANTIC_SCENE_LABEL_FILE_PATH = os.path.join(OUT_DIR, SEMANTIC_SCENE_FILE)
 
@@ -339,7 +353,7 @@ if __name__ == "__main__":
         scene_has_sampled_views = os.path.isfile(scene_view_poses_path)
 
         if scene_has_semantic_mesh and scene_has_semantic_txt and scene_has_sampled_views:
-            #render_scene_semantics(scene_dir_path, scene_view_poses_path, scene_out_path, config, verbose=args.verbose)
+            render_scene_semantics(scene_dir_path, scene_view_poses_path, scene_out_path, config, verbose=args.verbose)
             post_process_scene_semantics(scene_dir_path, scene_view_poses_path, args.output_dir, verbose=args.verbose)
 
     if args.verbose:
