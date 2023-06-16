@@ -6,6 +6,8 @@ This folder contains all blender python scripts for rendering visual imagery and
 ## Prerequisites
 
 1. Install [Blender LTS](https://www.blender.org/download/releases/3-3/). This code was developed and tested with Blenderv3.3.7 on Ubuntu 20.04.
+2. `./blender-3.3.7-linux-x64/3.3/python/bin/python3.10 -m ensurepip`
+2. `./blender-3.3.7-linux-x64/3.3/python/bin/python3.10 -m pip install opencv-python numpy==1.22.0 Pillow`
 2. Download and extract all scenes in the [Matterport 3D Semantic dataset](https://aihabitat.org/datasets/hm3d-semantics/)
 
 
@@ -35,6 +37,10 @@ This folder contains all blender python scripts for rendering visual imagery and
 
 1. Sampling Views
   - `./blender-3.3.7-linux-x64/blender --python SegmentationProject/zeroshot_rgbd/simulators/blender/sample_views.py -- -config SegmentationProject/zeroshot_rgbd/simulators/blender/configs/render_config.ini -data /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/ -out /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders/example/`
+
+1.5 Visualize Sampled Views
+
+  - `./blender-3.3.7-linux-x64/blender --python SegmentationProject/zeroshot_rgbd/simulators/blender/visualize_views.py -- -scene 00861-GLAQ4DNUx5U -config SegmentationProject/zeroshot_rgbd/simulators/blender/configs/render_config.ini -data /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/ -out /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders/example/`
 
 2. Rendering Semantics
   - `./blender-3.3.7-linux-x64/blender --background --python SegmentationProject/zeroshot_rgbd/simulators/blender/render_semantics.py -- -config SegmentationProject/zeroshot_rgbd/simulators/blender/configs/render_config.ini -data /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/ -out /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders/example/`

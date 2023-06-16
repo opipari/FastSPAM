@@ -56,12 +56,12 @@ def get_camera(pos, rot, name="Camera_Sample", rot_mode='ZXY', lens_unit='FOV', 
     camera = bpy.data.cameras.get(name)
     if camera is None:
         camera = bpy.data.cameras.new(name)
-        camera.lens_unit = lens_unit
-        camera.angle_x = angle_x
-        camera.clip_start = clip_start
-        camera.clip_end = clip_end
+    camera.lens_unit = lens_unit
+    camera.angle_x = math.radians(angle_x) # Convert to radians for blender
+    camera.clip_start = clip_start
+    camera.clip_end = clip_end
     
-    camera_sample_obj = bpy.data.objects.new("Camera", camera)
+    camera_sample_obj = bpy.data.objects.new(name, camera)
     camera_sample_obj.location = Vector(pos)
     camera_sample_obj.rotation_mode = rot_mode
     camera_sample_obj.rotation_euler = Euler(rot)
@@ -331,7 +331,7 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, CONFIG, verbose=True):
     
     SCENE_NAME = SCENE_DIR.split('/')[-1]
     SCENE_FILE = SCENE_NAME.split('-')[1]+'.glb'
-    SEMANTIC_SCENE_FILE = SCENE_NAME+'.semantic.glb'
+    SEMANTIC_SCENE_FILE = SCENE_NAME.split('-')[1]+'.semantic.glb'
     SCENE_OUT_DIR = os.path.join(OUTPUT_DIR, SCENE_NAME)
 
     if verbose:
@@ -349,22 +349,10 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, CONFIG, verbose=True):
         print("********************")
         print("RESETTING SCENE")
 
+    bpy.ops.wm.read_homefile()
     reset_blend()
-    bpy.ops.outliner.orphans_purge()
     
     general_collection = bpy.context.scene.collection
-
-    delete_object(bpy.data.objects.get("Camera"))
-    camera_obj = get_camera(pos=(0,0,0), 
-        rot=(0,0,math.pi), 
-        name="Camera", 
-        rot_mode='ZXY',
-        lens_unit=CONFIG['blender.camera']['lens_unit'], # leave units as string
-        angle_x=CONFIG['blender.camera'].getfloat('angle_x'), 
-        clip_start=CONFIG['blender.camera'].getfloat('clip_start'), 
-        clip_end=config['blender.camera'].getfloat('clip_end'))
-    add_object_to_collection(camera_obj, general_collection)
-    bpy.context.scene.camera = camera_obj
 
     building_collection = bpy.data.collections.get("Building")
     delete_collection(building_collection)
@@ -396,6 +384,19 @@ def sample_scene_views(SCENE_DIR, OUTPUT_DIR, CONFIG, verbose=True):
             for mat in obj.data.materials:
                 mat.use_backface_culling = False
     
+
+    delete_object(bpy.data.objects.get("Camera"))
+    camera_obj = get_camera(pos=(0,0,0), 
+        rot=(0,0,math.pi), 
+        name="Camera", 
+        rot_mode='ZXY',
+        lens_unit=CONFIG['blender.camera']['lens_unit'], # leave units as string
+        angle_x=CONFIG['blender.camera'].getfloat('angle_x'), 
+        clip_start=CONFIG['blender.camera'].getfloat('clip_start'), 
+        clip_end=config['blender.camera'].getfloat('clip_end'))
+    add_object_to_collection(camera_obj, general_collection)
+    bpy.context.scene.camera = camera_obj
+
 
     bpy.context.scene.render.engine = 'BLENDER_EEVEE'
     bpy.context.scene.eevee.taa_render_samples = 1
