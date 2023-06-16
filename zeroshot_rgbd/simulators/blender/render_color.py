@@ -86,33 +86,6 @@ def render_scene_color(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, LIGHT
         print("RESETTING SCENE")
 
     reset_blend()
-    
-    general_collection = bpy.context.scene.collection
-
-    delete_object(bpy.data.objects.get("Camera"))
-    camera_obj = get_camera(pos=(0,0,0), 
-        rot=(0,0,math.pi), 
-        name="Camera", 
-        rot_mode='ZXY',
-        lens_unit=CONFIG['blender.camera']['lens_unit'], # leave units as string
-        angle_x=CONFIG['blender.camera'].getfloat('angle_x'), 
-        clip_start=CONFIG['blender.camera'].getfloat('clip_start'), 
-        clip_end=config['blender.camera'].getfloat('clip_end'))
-    add_object_to_collection(camera_obj, general_collection)
-    bpy.context.scene.camera = camera_obj
-
-    delete_object(bpy.data.objects.get("Spot_Light"))
-    
-    if LIGHT_CONFIG['blender.illumination'].getint('energy') > 0:
-        spot_light = bpy.data.lights.new(name="Spot_Light", type='SPOT')
-        spot_light.energy = LIGHT_CONFIG['blender.illumination'].getint('energy')
-        spot_light.spot_size = math.radians(LIGHT_CONFIG['blender.illumination'].getfloat('spot_size'))
-        spot_light.spot_blend = LIGHT_CONFIG['blender.illumination'].getfloat('spot_blend')
-        spot_light.distance = 25
-        spot_light_obj = bpy.data.objects.new(name="Spot_Light", object_data=spot_light)
-        spot_light_obj.location = Vector((0,0,0))
-        spot_light_obj.parent = camera_obj
-        add_object_to_collection(spot_light_obj, general_collection)
 
     building_collection = bpy.data.collections.get("Building")
     delete_collection(building_collection)
@@ -130,6 +103,8 @@ def render_scene_color(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, LIGHT
         print("***********************")
         print("INITIALIZING SCENE")
     
+    general_collection = bpy.context.scene.collection
+
     bpy.ops.import_scene.gltf(filepath=os.path.join(SCENE_DIR,SCENE_FILE))
 
     building_collection = bpy.data.collections.get("Building")
@@ -147,13 +122,17 @@ def render_scene_color(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, LIGHT
                 if mat.node_tree:
                     node_tree = mat.node_tree
                     node_types = [node.type for node in node_tree.nodes]
-                    print(node_types)
-                    print(mat,obj)
+                    
                     assert set(['TEX_IMAGE','BSDF_PRINCIPLED','OUTPUT_MATERIAL'])==set(node_types)
 
                     tex_node = node_tree.nodes['Image Texture']
                     bsdf_node = node_tree.nodes['Principled BSDF']
                     mat_node = node_tree.nodes['Material Output']
+
+
+                    bsdf_node.inputs["Specular"].default_value = CONFIG['blender.BSDF_PRINCIPLED'].getfloat('Specular')
+                    bsdf_node.inputs["Roughness"].default_value = CONFIG['blender.BSDF_PRINCIPLED'].getfloat('Roughness')
+
 
                     # for link in node_tree.links:
                     #     node_tree.links.remove(link)
@@ -166,6 +145,32 @@ def render_scene_color(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, LIGHT
                     # node_tree.links.new(bsdf_node.outputs['BSDF'], mat_node.inputs['Surface'])
 
     building_collection.hide_render = False
+
+    delete_object(bpy.data.objects.get("Camera"))
+    camera_obj = get_camera(pos=(0,0,0), 
+        rot=(0,0,math.pi), 
+        name="Camera", 
+        rot_mode='ZXY',
+        lens_unit=CONFIG['blender.camera']['lens_unit'], # leave units as string
+        angle_x=CONFIG['blender.camera'].getfloat('angle_x'), 
+        clip_start=CONFIG['blender.camera'].getfloat('clip_start'), 
+        clip_end=CONFIG['blender.camera'].getfloat('clip_end'))
+    add_object_to_collection(camera_obj, general_collection)
+    bpy.context.scene.camera = camera_obj
+
+    delete_object(bpy.data.objects.get("Spot_Light"))
+    
+    if LIGHT_CONFIG['blender.illumination'].getint('energy') > 0:
+        spot_light = bpy.data.lights.new(name="Spot_Light", type='SPOT')
+        spot_light.energy = LIGHT_CONFIG['blender.illumination'].getint('energy')
+        spot_light.spot_size = math.radians(LIGHT_CONFIG['blender.illumination'].getfloat('spot_size'))
+        spot_light.spot_blend = LIGHT_CONFIG['blender.illumination'].getfloat('spot_blend')
+        spot_light.soft_size = LIGHT_CONFIG['blender.illumination'].getfloat('shadow_soft_size')
+        spot_light.distance = 25
+        spot_light_obj = bpy.data.objects.new(name="Spot_Light", object_data=spot_light)
+        spot_light_obj.location = Vector((0,0,0))
+        spot_light_obj.parent = camera_obj
+        add_object_to_collection(spot_light_obj, general_collection)
 
     if verbose:
         print("DONE INITIALIZING SCENE")

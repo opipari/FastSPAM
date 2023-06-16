@@ -276,7 +276,7 @@ def post_process_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, OUT_DIR, verbose=T
             found_objects = []
             for hex_color in semantic_label_image_hex_colors:
                 if hex_color in scene_semantic_objects.keys():
-                    scene_semantic_objects[hex_color]["visible_views"].append(valid_view_idx)
+                    scene_semantic_objects[hex_color]["visible_views"].append(f'{valid_view_idx:010}')
                 else:
                     assert hex_color=='000000'
 

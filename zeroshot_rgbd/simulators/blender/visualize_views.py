@@ -141,6 +141,8 @@ def visualize_scene_view_samples(SCENE_DIR, SCENE_ALL_VIEWS_FILE, SCENE_ACCEPTED
         print()
         print("***********************")
         print("INITIALIZING SCENE")
+
+    general_collection = bpy.context.scene.collection
     
     bpy.ops.import_scene.gltf(filepath=os.path.join(SCENE_DIR,SCENE_FILE))
 
@@ -156,6 +158,19 @@ def visualize_scene_view_samples(SCENE_DIR, SCENE_ALL_VIEWS_FILE, SCENE_ACCEPTED
             add_object_to_collection(obj, building_collection)
             for mat in obj.data.materials:
                 mat.use_backface_culling = True
+                if mat.node_tree:
+                    node_tree = mat.node_tree
+                    node_types = [node.type for node in node_tree.nodes]
+                    
+                    assert set(['TEX_IMAGE','BSDF_PRINCIPLED','OUTPUT_MATERIAL'])==set(node_types)
+
+                    tex_node = node_tree.nodes['Image Texture']
+                    bsdf_node = node_tree.nodes['Principled BSDF']
+                    mat_node = node_tree.nodes['Material Output']
+
+
+                    bsdf_node.inputs["Specular"].default_value = CONFIG['blender.BSDF_PRINCIPLED'].getfloat('Specular')
+                    bsdf_node.inputs["Roughness"].default_value = CONFIG['blender.BSDF_PRINCIPLED'].getfloat('Roughness')
     
     bpy.ops.import_scene.gltf(filepath=os.path.join(SCENE_DIR,SEMANTIC_SCENE_FILE))
 
@@ -170,7 +185,7 @@ def visualize_scene_view_samples(SCENE_DIR, SCENE_ALL_VIEWS_FILE, SCENE_ACCEPTED
         if obj.type=="MESH" and building_collection not in obj.users_collection:
             add_object_to_collection(obj, semantic_building_collection)
             for mat in obj.data.materials:
-                mat.use_backface_culling = False
+                mat.use_backface_culling = True
                 if mat.node_tree:
                     for node in mat.node_tree.nodes:
                         if node.type == 'TEX_IMAGE':
@@ -194,6 +209,30 @@ def visualize_scene_view_samples(SCENE_DIR, SCENE_ALL_VIEWS_FILE, SCENE_ACCEPTED
     if sphere_mat is None:
         sphere_mat = bpy.data.materials.new(name="Sphere_Material")
 
+    delete_object(bpy.data.objects.get("Camera"))
+    camera_obj = get_camera(pos=(0,0,0), 
+        rot=(0,0,math.pi), 
+        name="Camera", 
+        rot_mode='ZXY',
+        lens_unit=CONFIG['blender.camera']['lens_unit'], # leave units as string
+        angle_x=CONFIG['blender.camera'].getfloat('angle_x'), 
+        clip_start=CONFIG['blender.camera'].getfloat('clip_start'), 
+        clip_end=CONFIG['blender.camera'].getfloat('clip_end'))
+    add_object_to_collection(camera_obj, general_collection)
+    bpy.context.scene.camera = camera_obj
+
+    delete_object(bpy.data.objects.get("Spot_Light"))
+    
+    spot_light = bpy.data.lights.new(name="Spot_Light", type='SPOT')
+    spot_light.energy = 50
+    spot_light.spot_size = math.radians(180)
+    spot_light.spot_blend = 1.0
+    spot_light.distance = 25
+    spot_light.shadow_soft_size = 0.0
+    spot_light_obj = bpy.data.objects.new(name="Spot_Light", object_data=spot_light)
+    spot_light_obj.location = Vector((0,0,0))
+    spot_light_obj.parent = camera_obj
+    add_object_to_collection(spot_light_obj, general_collection)
 
 
     bpy.context.scene.render.engine = 'BLENDER_EEVEE'
