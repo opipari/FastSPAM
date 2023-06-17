@@ -353,11 +353,9 @@ if __name__ == "__main__":
     scene_dir_path = os.path.join(args.dataset_dir, args.scene_dir)
 
     scene_files = os.listdir(scene_dir_path)
-    scene_name = scene_files[0].split('.')[0]
-    assert args.scene_dir.endswith(scene_name)
 
-    scene_all_view_poses_path = os.path.join(args.output_dir, args.scene_dir+'_all_view_poses.csv')
-    scene_accepted_view_poses_path = os.path.join(args.output_dir, args.scene_dir+'_accepted_view_poses.csv')
+    scene_all_view_poses_path = os.path.join(args.output_dir, args.scene_dir, args.scene_dir+'.all_view_poses.csv')
+    scene_accepted_view_poses_path = os.path.join(args.output_dir, args.scene_dir, args.scene_dir+'.accepted_view_poses.csv')
 
     scene_has_semantic_mesh = any([fl.endswith('.semantic.glb') for fl in scene_files])
     scene_has_semantic_txt = any([fl.endswith('.semantic.txt') for fl in scene_files])

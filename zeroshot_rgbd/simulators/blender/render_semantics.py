@@ -231,7 +231,7 @@ def post_process_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, OUT_DIR, verbose=T
             assert object_hex_color not in scene_semantic_objects.keys()
             scene_semantic_objects[object_hex_color] = {"object_id": object_id, 
                                                         "color_id": object_hex_color, 
-                                                        "object_name": object_name,
+                                                        "object_name": object_name.strip("\""),
                                                         "visible_views": []
                                                         }
             
@@ -280,8 +280,8 @@ def post_process_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, OUT_DIR, verbose=T
                 else:
                     assert hex_color=='000000'
 
-    SEMANTIC_SCENE_LABEL_FILE = SCENE_NAME.split('-')[1]+'.semantic.csv'
-    SEMANTIC_SCENE_LABEL_FILE_PATH = os.path.join(OUT_DIR, SEMANTIC_SCENE_FILE)
+    SEMANTIC_SCENE_LABEL_FILE = SCENE_NAME+'.semantic.csv'
+    SEMANTIC_SCENE_LABEL_FILE_PATH = os.path.join(SCENE_OUT_DIR, SEMANTIC_SCENE_FILE)
 
     with open(SEMANTIC_SCENE_LABEL_FILE_PATH, 'w') as csvfile:
 
@@ -342,11 +342,9 @@ if __name__ == "__main__":
         scene_dir_path = os.path.join(args.dataset_dir, scene_dir)
 
         scene_files = os.listdir(scene_dir_path)
-        scene_name = scene_files[0].split('.')[0]
-        assert scene_dir.endswith(scene_name)
 
         scene_out_path = os.path.join(args.output_dir, scene_dir)
-        scene_view_poses_path = os.path.join(args.output_dir, scene_dir+'_accepted_view_poses.csv')
+        scene_view_poses_path = os.path.join(scene_out_path, scene_dir+'.accepted_view_poses.csv')
 
         scene_has_semantic_mesh = any([fl.endswith('.semantic.glb') for fl in scene_files])
         scene_has_semantic_txt = any([fl.endswith('.semantic.txt') for fl in scene_files])

@@ -461,12 +461,12 @@ def sample_scene_views(SCENE_DIR, OUT_DIR, CONFIG, verbose=True):
 
 
     
-    all_view_file = open(os.path.join(OUTPUT_DIR, f"{SCENE_NAME}_all_view_poses.csv"), "w")
+    all_view_file = open(os.path.join(SCENE_OUT_DIR, f"{SCENE_NAME}.all_view_poses.csv"), "w")
     all_view_file.write('Scene-ID,View-ID,Position-ID,Rotation-ID,X-Position,Y-Position,Z-Position,Roll-Z-EulerZXY,Pitch-X-EulerZXY,Yaw-Y-EulerZXY,Accepted-Y-N\n')
     all_view_file.flush()
 
 
-    accepted_view_file = open(os.path.join(OUTPUT_DIR, f"{SCENE_NAME}_accepted_view_poses.csv"), "w")
+    accepted_view_file = open(os.path.join(SCENE_OUT_DIR, f"{SCENE_NAME}.accepted_view_poses.csv"), "w")
     accepted_view_file.write('Scene-ID,View-ID,Valid-View-ID,Position-ID,Rotation-ID,X-Position,Y-Position,Z-Position,Roll-Z-EulerZXY,Pitch-X-EulerZXY,Yaw-Y-EulerZXY\n')
     accepted_view_file.flush()
     
@@ -576,8 +576,7 @@ if __name__ == "__main__":
         scene_dir_path = os.path.join(args.dataset_dir, scene_dir)
 
         scene_files = os.listdir(scene_dir_path)
-        scene_name = scene_files[0].split('.')[0]
-        assert scene_dir.endswith(scene_name)
+        
         scene_has_semantic_mesh = any([fl.endswith('.semantic.glb') for fl in scene_files])
         scene_has_semantic_txt = any([fl.endswith('.semantic.txt') for fl in scene_files])
         

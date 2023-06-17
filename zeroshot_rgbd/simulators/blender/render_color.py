@@ -25,12 +25,12 @@ def get_camera(pos, rot, name="Camera_Sample", rot_mode='ZXY', lens_unit='FOV', 
     camera = bpy.data.cameras.get(name)
     if camera is None:
         camera = bpy.data.cameras.new(name)
-        camera.lens_unit = lens_unit
-        camera.angle_x = angle_x
-        camera.clip_start = clip_start
-        camera.clip_end = clip_end
+    camera.lens_unit = lens_unit
+    camera.angle_x = math.radians(angle_x) # Convert to radians for blender
+    camera.clip_start = clip_start
+    camera.clip_end = clip_end
     
-    camera_sample_obj = bpy.data.objects.new("Camera", camera)
+    camera_sample_obj = bpy.data.objects.new(name, camera)
     camera_sample_obj.location = Vector(pos)
     camera_sample_obj.rotation_mode = rot_mode
     camera_sample_obj.rotation_euler = Euler(rot)
@@ -154,7 +154,7 @@ def render_scene_color(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, LIGHT
         lens_unit=CONFIG['blender.camera']['lens_unit'], # leave units as string
         angle_x=CONFIG['blender.camera'].getfloat('angle_x'), 
         clip_start=CONFIG['blender.camera'].getfloat('clip_start'), 
-        clip_end=CONFIG['blender.camera'].getfloat('clip_end'))
+        clip_end=config['blender.camera'].getfloat('clip_end'))
     add_object_to_collection(camera_obj, general_collection)
     bpy.context.scene.camera = camera_obj
 
@@ -165,7 +165,7 @@ def render_scene_color(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, LIGHT
         spot_light.energy = LIGHT_CONFIG['blender.illumination'].getint('energy')
         spot_light.spot_size = math.radians(LIGHT_CONFIG['blender.illumination'].getfloat('spot_size'))
         spot_light.spot_blend = LIGHT_CONFIG['blender.illumination'].getfloat('spot_blend')
-        spot_light.soft_size = LIGHT_CONFIG['blender.illumination'].getfloat('shadow_soft_size')
+        spot_light.shadow_soft_size = LIGHT_CONFIG['blender.illumination'].getfloat('shadow_soft_size')
         spot_light.distance = 25
         spot_light_obj = bpy.data.objects.new(name="Spot_Light", object_data=spot_light)
         spot_light_obj.location = Vector((0,0,0))
@@ -183,9 +183,9 @@ def render_scene_color(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, LIGHT
 
     if LIGHT_CONFIG['blender.illumination'].getint('energy') == 0:
         bpy.context.scene.render.engine = 'BLENDER_EEVEE'
-        bpy.context.scene.eevee.taa_render_samples = 32
-        bpy.context.scene.eevee.taa_samples = 32
-        bpy.context.scene.eevee.sss_samples = 32
+        bpy.context.scene.eevee.taa_render_samples = 64
+        bpy.context.scene.eevee.taa_samples = 64
+        bpy.context.scene.eevee.sss_samples = 64
         bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[0].default_value[:3] = (1,1,1)
         bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[1].default_value = 1
     else:
@@ -203,12 +203,12 @@ def render_scene_color(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, LIGHT
         for d in bpy.context.preferences.addons["cycles"].preferences.devices:
             d["use"] = 1 # Using all devices, include GPU and CPU
             print(d["name"], d["use"])
-        bpy.context.scene.cycles.samples = 8
+        bpy.context.scene.cycles.samples = 64
         
-        bpy.context.scene.cycles.diffuse_bounces = 4
-        bpy.context.scene.cycles.glossy_bounces = 4
-        bpy.context.scene.cycles.transmission_bounces = 4
-        bpy.context.scene.cycles.max_bounces = 12
+        bpy.context.scene.cycles.diffuse_bounces = 64
+        bpy.context.scene.cycles.glossy_bounces = 64
+        bpy.context.scene.cycles.transmission_bounces = 64
+        bpy.context.scene.cycles.max_bounces = 64
 
     bpy.context.scene.render.dither_intensity = 1.0
     bpy.context.scene.view_settings.view_transform = 'Standard'
@@ -250,11 +250,11 @@ def render_scene_color(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, LIGHT
             # Update scene view layer to recalculate camera extrensic matrix
             bpy.context.view_layer.update()
 
-            bpy.context.scene.render.filepath = os.path.join(SCENE_OUT_DIR, f"{SCENE_NAME}.{valid_view_idx:010}.{pos_idx:010}.{rot_idx:010}.RGB.{LIGHT_CONFIG['blender.illumination'].getint('energy'):010}.png")
+            bpy.context.scene.render.filepath = os.path.join(SCENE_OUT_DIR, f"{scene_name}.{valid_view_idx:010}.{pos_idx:010}.{rot_idx:010}.RGB.{LIGHT_CONFIG['blender.illumination'].getint('energy'):010}.png")
             bpy.ops.render.render(write_still = True)
 
             render_image_count += 1
-            raise
+            
     if verbose:
         print(f"DONE RENDERING {render_image_count} VIEWS")
         print("***********************")
@@ -305,11 +305,9 @@ if __name__ == "__main__":
         scene_dir_path = os.path.join(args.dataset_dir, scene_dir)
 
         scene_files = os.listdir(scene_dir_path)
-        scene_name = scene_files[0].split('.')[0]
-        assert scene_dir.endswith(scene_name)
 
-        scene_out_path = os.path.join(args.output_dir, scene_name)
-        scene_view_poses_path = os.path.join(args.output_dir, scene_name+'_accepted_view_poses.csv')
+        scene_out_path = os.path.join(args.output_dir, scene_dir)
+        scene_view_poses_path = os.path.join(scene_out_path, scene_dir+'.accepted_view_poses.csv')
 
         scene_has_semantic_mesh = any([fl.endswith('.semantic.glb') for fl in scene_files])
         scene_has_semantic_txt = any([fl.endswith('.semantic.txt') for fl in scene_files])
