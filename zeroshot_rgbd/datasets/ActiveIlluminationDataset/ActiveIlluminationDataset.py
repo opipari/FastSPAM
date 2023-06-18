@@ -153,7 +153,7 @@ class SceneDataset(Dataset):
 
         scene = self.scenes[scene_idx]
         
-        image, view_prefix = scene.read_image(view_idx)
+        image, view_prefix = scene.read_image(view_idx, illumination=self.illumination)
         label, label_mask, label_hex_colors, view_prefix = scene.read_label(view_idx)
 
         if self.transform:
