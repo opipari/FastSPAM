@@ -77,8 +77,6 @@ if __name__ == "__main__":
     
 
     for idx in range(len(dataset)):
-        if idx<2730:
-            continue
         if idx%10==0:
             print("processing",idx,"/",len(dataset))
         image, label, scene_name, view_prefix = dataset[idx]
