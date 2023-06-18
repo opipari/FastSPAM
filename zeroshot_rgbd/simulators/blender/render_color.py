@@ -183,9 +183,9 @@ def render_scene_color(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, LIGHT
 
     if LIGHT_CONFIG['blender.illumination'].getint('energy') == 0:
         bpy.context.scene.render.engine = 'BLENDER_EEVEE'
-        bpy.context.scene.eevee.taa_render_samples = 64
-        bpy.context.scene.eevee.taa_samples = 64
-        bpy.context.scene.eevee.sss_samples = 64
+        bpy.context.scene.eevee.taa_render_samples = 16
+        bpy.context.scene.eevee.taa_samples = 16
+        bpy.context.scene.eevee.sss_samples = 16
         bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[0].default_value[:3] = (1,1,1)
         bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[1].default_value = 1
     else:
@@ -203,12 +203,12 @@ def render_scene_color(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, LIGHT
         for d in bpy.context.preferences.addons["cycles"].preferences.devices:
             d["use"] = 1 # Using all devices, include GPU and CPU
             print(d["name"], d["use"])
-        bpy.context.scene.cycles.samples = 64
+        bpy.context.scene.cycles.samples = 16
         
-        bpy.context.scene.cycles.diffuse_bounces = 64
-        bpy.context.scene.cycles.glossy_bounces = 64
-        bpy.context.scene.cycles.transmission_bounces = 64
-        bpy.context.scene.cycles.max_bounces = 64
+        bpy.context.scene.cycles.diffuse_bounces = 16
+        bpy.context.scene.cycles.glossy_bounces = 16
+        bpy.context.scene.cycles.transmission_bounces = 16
+        bpy.context.scene.cycles.max_bounces = 16
 
     bpy.context.scene.render.dither_intensity = 1.0
     bpy.context.scene.view_settings.view_transform = 'Standard'
