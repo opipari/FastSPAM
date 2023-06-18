@@ -1,1 +1,1 @@
-from .ActiveIlluminationDataset import ActiveIlluminationDataset
+from .ActiveIlluminationDataset import SceneDataset

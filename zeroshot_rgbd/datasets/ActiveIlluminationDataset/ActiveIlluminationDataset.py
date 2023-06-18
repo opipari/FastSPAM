@@ -107,7 +107,7 @@ class Scene:
         image = Image.open(image_path).convert('L').convert('RGB')
         image =  torchvision.transforms.functional.pil_to_tensor(image)
 
-        return image
+        return image, view_prefix
 
     def read_label(self, view_idx, object_id=None):
         view_prefix = self.views[view_idx]["prefix"]
@@ -125,7 +125,7 @@ class Scene:
 
         label_mask = torch.all(label_rgb_colors.reshape(-1,3,1,1) == label.unsqueeze(0), dim=1)
 
-        return label, label_mask, label_hex_colors
+        return label, label_mask, label_hex_colors, view_prefix
 
 
 class SceneDataset(Dataset):
@@ -153,8 +153,8 @@ class SceneDataset(Dataset):
 
         scene = self.scenes[scene_idx]
         
-        image = scene.read_image(view_idx)
-        label, label_mask, label_hex_colors = scene.read_label(view_idx)
+        image, view_prefix = scene.read_image(view_idx)
+        label, label_mask, label_hex_colors, view_prefix = scene.read_label(view_idx)
 
         if self.transform:
             image = self.transform(image)
@@ -162,7 +162,7 @@ class SceneDataset(Dataset):
         # if self.target_transform:
         #     label = self.target_transform(label)
             
-        return image, (label, label_mask, label_hex_colors)
+        return image, (label, label_mask, label_hex_colors), scene.name, view_prefix
 
 
     def convert_semantic_to_viz(self, label):
