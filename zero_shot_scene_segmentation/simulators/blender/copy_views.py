@@ -21,8 +21,8 @@ if __name__ == "__main__":
                     description='Python script for copying view samples between machines',
                     epilog='For more information, see: https://github.com/opipari/ZeroShot_RGB_D/tree/main/zeroshot_rgbd/simulators/blender')
 
-    parser.add_argument('-data', '--dataset-dir', help='path to directory of Matterport semantic dataset directory formatted as one sub-directory per scene', type=str)
-    parser.add_argument('-out', '--output-dir', help='path to directory where output dataset should be stored', type=str)
+    parser.add_argument('-src', '--source-dataset-dir', help='path to directory where existing dataset with sampled views exists', type=str)
+    parser.add_argument('-dst', '--destination-dataset-dir', help='path to directory where output dataset should be stored', type=str)
     parser.add_argument('-v', '--verbose', help='whether verbose output printed to stdout', type=int, default=1)
 
     args = parser.parse_args(argv)

@@ -116,21 +116,16 @@ if __name__ == "__main__":
                     description='Blender python script for rendering instance semantic segmentation label images from the Matterport 3D semantic dataset assuming valid views have already been sampled',
                     epilog='For more information, see: https://github.com/opipari/ZeroShot_RGB_D/tree/main/zeroshot_rgbd/simulators/blender')
 
-    parser.add_argument('-config', '--config-file', help='path to ini file containing rendering and sampling configuration', type=str)
     parser.add_argument('-data', '--dataset-dir', help='path to directory of Matterport semantic dataset directory formatted as one sub-directory per scene', type=str)
     parser.add_argument('-out', '--output-dir', help='path to directory where output dataset should be stored', type=str)
     parser.add_argument('-v', '--verbose', help='whether verbose output printed to stdout', type=int, default=1)
 
     args = parser.parse_args(argv)
 
-    config = configparser.ConfigParser()
-    config.read(args.config_file)
 
     if args.verbose:
         print()
         print(args)
-        print()
-        print(config)
         print()
 
     scene_directories = sorted([path for path in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, path))])
