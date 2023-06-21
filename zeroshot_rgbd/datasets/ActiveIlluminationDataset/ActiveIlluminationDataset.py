@@ -153,7 +153,7 @@ class SceneDataset(Dataset):
 
         scene = self.scenes[scene_idx]
         
-        image, view_prefix = scene.read_image(view_idx)
+        image, view_prefix = scene.read_image(view_idx, illumination=self.illumination)
         label, label_mask, label_hex_colors, view_prefix = scene.read_label(view_idx)
 
         if self.transform:
@@ -179,7 +179,37 @@ class SceneDataset(Dataset):
         return semantic_img
 
 
-def get_view_segment_matches(predicted_segments, labeled_segments, eps=1e-10):
+def get_pairwise_segment_F_scores(segments_A, segments_B, eps=1e-10):
+    """Calculate the pairwise F score between two sets of segments.
+
+    Keyword arguments:
+    predicted_segments -- binary tensor of shape (A,H,W) where A corresponds to number of predicted segments in a
+    labeled_segments -- binary tensor of shape (B,H,W) where B corresponds to number of predicted segments in b
+    eps -- float to avoid numerical overflow for division
+    """
+    num_segments_A, num_segments_B = segments_A.shape[0], segments_B.shape[0]
+    mask_dim_A, mask_dim_B = segments_A.shape[1:], segments_B.shape[1:]
+    
+    assert segments_A.ndim == segments_B.ndim == 3
+    assert segments_A.device == segments_B.device
+    assert mask_dim_A == mask_dim_B
+
+    pairwise_segment_intersection = torch.sum(segments_A.unsqueeze(1) * segments_B.unsqueeze(0), dim=(2,3)) + eps
+    pairwise_segment_precision_denominator = torch.sum(segments_A, dim=(1,2)).unsqueeze(-1) # num_segments_A x 1
+    pairwise_segment_recall_denominator = torch.sum(segments_B, dim=(1,2)).unsqueeze(0) # 1 x num_segments_B
+
+    assert pairwise_segment_intersection.shape == (num_segments_A, num_segments_B)
+    assert pairwise_segment_precision_denominator.shape == (num_segments_A, 1)
+    assert pairwise_segment_recall_denominator.shape == (1, num_segments_B)
+
+    pairwise_segment_precision = pairwise_segment_intersection / pairwise_segment_precision_denominator
+    pairwise_segment_recall = pairwise_segment_intersection / pairwise_segment_recall_denominator
+    pairwise_segment_F_score = (2 * pairwise_segment_precision * pairwise_segment_recall) / (pairwise_segment_precision + pairwise_segment_recall)
+
+    return np.array(pairwise_segment_F_score.cpu())
+
+
+def get_view_segment_matches(predicted_segments, labeled_segments):
     """Calculate matched segments given a two segmentation candidates on a single view.
 
     Keyword arguments:
@@ -188,28 +218,12 @@ def get_view_segment_matches(predicted_segments, labeled_segments, eps=1e-10):
     eps -- float to avoid numerical overflow for division
     """
 
-    num_segments_predicted, num_segments_labeled = predicted_segments.shape[0], labeled_segments.shape[0]
-    mask_dim_predicted, mask_dim_labeled = predicted_segments.shape[1:], labeled_segments.shape[1:]
-    
-    assert predicted_segments.ndim == labeled_segments.ndim == 3
-    assert predicted_segments.device == labeled_segments.device
-    assert mask_dim_predicted == mask_dim_labeled
+    pairwise_segment_F_score = get_pairwise_segment_F_scores(predicted_segments, labeled_segments)
 
-    pairwise_segment_intersection = torch.sum(predicted_segments.unsqueeze(1) * labeled_segments.unsqueeze(0), dim=(2,3)) + eps
-    pairwise_segment_precision_denominator = torch.sum(predicted_segments, dim=(1,2)).unsqueeze(-1) # num_segments_predicted x 1
-    pairwise_segment_recall_denominator = torch.sum(labeled_segments, dim=(1,2)).unsqueeze(0) # 1 x num_segments_predicted
-
-    assert pairwise_segment_intersection.shape == (num_segments_predicted, num_segments_labeled)
-    assert pairwise_segment_precision_denominator.shape == (num_segments_predicted, 1)
-    assert pairwise_segment_recall_denominator.shape == (1, num_segments_labeled)
-
-    pairwise_segment_precision = pairwise_segment_intersection / pairwise_segment_precision_denominator
-    pairwise_segment_recall = pairwise_segment_intersection / pairwise_segment_recall_denominator
-    pairwise_segment_F_score = (2 * pairwise_segment_precision * pairwise_segment_recall) / (pairwise_segment_precision + pairwise_segment_recall)
-
-    predicted_ind, labeled_ind = scipy.optimize.linear_sum_assignment(np.array(pairwise_segment_F_score.cpu()), maximize=True)
+    predicted_ind, labeled_ind = scipy.optimize.linear_sum_assignment(pairwise_segment_F_score, maximize=True)
 
     return predicted_ind, labeled_ind
+
 
 def scene_level_metric(scene_dataset):
     for scene_idx, scene in enumerate(scene_dataset.scenes):
@@ -217,11 +231,13 @@ def scene_level_metric(scene_dataset):
 
         for view_idx in scene.views.keys():
 
-            view_label, view_label_mask, view_label_hex_colors = scene.read_label(view_idx)
+            view_label, view_label_mask, view_label_hex_colors, view_prefix = scene.read_label(view_idx)
             view_labeled_segments = view_label_mask
-            view_predicted_segments = view_label_mask
-            
 
+    
+            view_predicted_segments = torch.load(os.path.join(f'./zeroshot_rgbd/models/output.{scene_dataset.illumination:010}', scene.name, view_prefix+f".RGB.{scene_dataset.illumination:010}.SAM.pt"))
+            
+            print(view_predicted_segments.shape)
             view_matches = get_view_segment_matches(view_predicted_segments, view_labeled_segments)
 
             scene_view_matches[view_idx] = view_matches

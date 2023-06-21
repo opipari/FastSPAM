@@ -71,7 +71,7 @@ if __name__ == "__main__":
     sam.to(device=device)
     mask_generator = SamAutomaticMaskGenerator(sam)
 
-    illumination=20
+    illumination=0
     dataset = SceneDataset(root=img_dir, illumination=illumination)
 
     
