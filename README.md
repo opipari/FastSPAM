@@ -7,18 +7,19 @@ This repository is setup to contain a centralized python package, `ZeroShotScene
 ### Directory Structure
 
 ```
-.
-├── envs                            # Directory containing virtualenvironment requirement and source files.
-│   ├── requirements
-│   └── segment-anything
-├── README.md
-├── setup.py
-├── tree.txt
-└── zero_shot_scene_segmentation    # The central python package
-    ├── datasets                    # Directory containing source code for dataset pre and post-processing as well as PyTorch Dataset Classes.
-    ├── models                      # Directory containing source code for model development, training and evaluation.
-    └── simulators                  # Directory containing source code for data simulationa and rendering.
-
+.                                   # Root project directory
+├── README.md                       # This readme file
+├── setup.py                        # Setup script using setuptools to install the ZeroShotSceneSegmentation package
+├── envs                            # Directory containing virtual environment source files and package dependency requirements
+│   ├── requirements                # Directory containing the specification of package dependency requirements
+│   │   └── segment-anything.txt    # Package requirements for segment anything model package
+│   └── segment-anything            # Directory for segment anything's virtual environment
+└── zero_shot_scene_segmentation    # The central python package for ZeroShotSceneSegmentation package
+    ├── datasets                    # Directory containing source code for dataset processing as well as PyTorch Dataset classes
+    ├── models                      # Directory containing source code for model development, training and evaluation
+    │   └── segment-anything        # Directory containing all source for training and evaluating segment anything model
+    └── simulators                  # Directory containing source code for data simulationa and rendering
+        └── blender                 # Directory containing source code for blender-based rendering
 ```
 
 
