@@ -6,15 +6,9 @@ This folder contains all blender python scripts for rendering visual imagery and
 ## Prerequisites
 
 1. Install [Blender LTS](https://www.blender.org/download/releases/3-3/). This code was developed and tested with Blenderv3.3.7 on Ubuntu 20.04.
-    - **Shortcut**
-    ```
-    wget -P ./zero_shot_scene_segmentation/simulators/blender/ https://mirrors.ocf.berkeley.edu/blender/release/Blender3.3/blender-3.3.7-linux-x64.tar.xz && \
-      tar -xf ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64.tar.xz -C ./zero_shot_scene_segmentation/simulators/blender/ && \
-        rm ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64.tar.xz && \
-          ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64/3.3/python/bin/python3.10 -m ensurepip && \
-            ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64/3.3/python/bin/python3.10 -m pip install -r ./envs/requirements/blender.txt
-    ```
+    - Details on main repository [README.md()]()
 2. Download and extract all scenes in the [Matterport 3D Semantic dataset](https://aihabitat.org/datasets/hm3d-semantics/)
+    - Details on main repository [README.md]()
 
 
 ## Simulation Workflow
