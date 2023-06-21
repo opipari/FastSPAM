@@ -38,6 +38,12 @@ This repository is setup to contain a centralized python package, `ZeroShotScene
     sudo apt install python3.8 python3.8-venv python3.8-dev
     ```
 
+3. Install Python v3.9
+
+    ```
+    sudo apt install python3.9 python3.9-venv python3.9-dev
+    ```
+
 
 
 ## Models
@@ -48,7 +54,8 @@ This repository is setup to contain a centralized python package, `ZeroShotScene
 python3.8 -m venv ./envs/segment-anything && \
   source ./envs/segment-anything/bin/activate && \
     pip install -r ./envs/requirements/segment-anything.txt && \
-      deactivate
+      deactivate && \
+        wget -P ./zero_shot_scene_segmentation/models/segment-anything/segment-anything/checkpoints/ https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
 ```
 
 ## Datasets
@@ -101,6 +108,14 @@ wget -P ./zero_shot_scene_segmentation/simulators/blender/ https://mirrors.ocf.b
 ```
 
 ### Habitat-Sim
+
+
+```
+python3.9 -m venv ./envs/habitat-sim && \
+  source ./envs/habitat-sim/bin/activate && \
+    pip install -r ./envs/requirements/habitat-sim.txt && \
+      deactivate
+```
 
 1. Setup habitat-sim environment
     1. `conda create -n habitat python=3.9 and cmake=3.14.0`
