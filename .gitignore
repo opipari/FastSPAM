@@ -160,9 +160,10 @@ cython_debug/
 #.idea/
 
 
-# Results
-zero_shot_scene_segmentation/models/output/*
-
 
 # Datasets
 zero_shot_scene_segmentation/datasets/*
+
+
+# Python virtual environments
+envs/*

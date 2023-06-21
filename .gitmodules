@@ -1,0 +1,3 @@
+[submodule "zero_shot_scene_segmentation/models/segment-anything/segment-anything"]
+	path = zero_shot_scene_segmentation/models/segment-anything/segment-anything
+	url = git@github.com:facebookresearch/segment-anything.git
