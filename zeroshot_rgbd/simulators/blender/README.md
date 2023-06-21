@@ -48,6 +48,10 @@ This folder contains all blender python scripts for rendering visual imagery and
 3. Rendering Color
   - `./blender-3.3.7-linux-x64/blender --background --python SegmentationProject/zeroshot_rgbd/simulators/blender/render_color.py -- -config SegmentationProject/zeroshot_rgbd/simulators/blender/configs/render_config.ini -light-config SegmentationProject/zeroshot_rgbd/simulators/blender/configs/illumination_0000000000_config.ini -data /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/ -out /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders/example/`
 
+
+Copy view files between machines:
+  - `python SegmentationProject/zeroshot_rgbd/simulators/blender/copy_views.py -- -data /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/matterport/HM3D/example/ -out /media/topipari/0CD418EB76995EEF/SegmentationProject/zeroshot_rgbd/datasets/renders/example/`
+
 ## Simulation Debugging
 
 The blender python script in `./workbench.py` is intended for use in the interactive Blender GUI. This script allows visualization of the rejection sampling process used for view sampling and can be used for interactive script development.
