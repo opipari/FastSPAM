@@ -81,7 +81,7 @@ This folder contains all blender python scripts for rendering visual imagery and
     ```
     ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64/3.3/python/bin/python3.10 ./zero_shot_scene_segmentation/simulators/blender/copy_views.py \
     -- \
-    -src /media/topipari/0CD418EB76995EEF/ZeroShotSceneSegmentation/datasets/renders/example/ \
+    -src /media/topipari/0CD418EB76995EEF/ZeroShotSceneSegmentation/zero_shot_scene_segmentation/datasets/renders/example/ \
     -dst ./zero_shot_scene_segmentation/datasets/renders/example/
     ```
 
