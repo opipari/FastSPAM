@@ -1,3 +1,6 @@
 [submodule "zero_shot_scene_segmentation/models/segment-anything/segment-anything"]
 	path = zero_shot_scene_segmentation/models/segment-anything/segment-anything
 	url = git@github.com:facebookresearch/segment-anything.git
+[submodule "zero_shot_scene_segmentation/models/supergb-d/supergb-d"]
+	path = zero_shot_scene_segmentation/models/supergb-d/supergb-d
+	url = git@github.com:evinpinar/supergb-d.git
