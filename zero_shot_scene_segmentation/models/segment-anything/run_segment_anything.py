@@ -50,9 +50,9 @@ if __name__ == "__main__":
     parser.add_argument("--dest-dir", dest="dest_dir")
     parser.add_argument("--sam-checkpoint", dest="sam_checkpoint")
     parser.add_argument("--model-type", dest="model_type")
-    parser.set_defaults(img_dir="./zeroshot_rgbd/datasets/renders/example",
-                    dest_dir="./zeroshot_rgbd/models/output/",
-                    sam_checkpoint="./zeroshot_rgbd/models/segment_anything/checkpoints/sam_vit_h_4b8939.pth",
+    parser.set_defaults(img_dir="./zero_shot_scene_segmentation/datasets/renders/example",
+                    dest_dir="./zero_shot_scene_segmentation/models/segment-anything/output/",
+                    sam_checkpoint="./zero_shot_scene_segmentation/models/segment-anything/segment-anything/checkpoints/sam_vit_h_4b8939.pth",
                     model_type="vit_h")
     args, _ = parser.parse_known_args()
     img_dir = args.img_dir
