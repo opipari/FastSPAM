@@ -26,7 +26,9 @@ This repository is setup to contain a centralized python package, `ZeroShotScene
 ## Setup
 
 1. Clone repository and submodules
-    - `git clone --recurse-submodules git@github.com:opipari/ZeroShotSceneSegmentation.git`
+    ```
+    git clone --recurse-submodules git@github.com:opipari/ZeroShotSceneSegmentation.git
+    ```
 
 
 
