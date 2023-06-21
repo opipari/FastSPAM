@@ -49,24 +49,13 @@ This folder contains all blender python scripts for rendering visual imagery and
             -data ./zero_shot_scene_segmentation/datasets/HM3D/example/ \
             -out ./zero_shot_scene_segmentation/datasets/renders/example/ 
         ```
-    - **Post-Process semantic labels**
-        - Run a post-processing python script to map Scene ID to Object ID to Image ID
-        - Output: one csv file per scene which contains Scene ID, Object ID, Image ID triplets
-        - A triplet will be included if at least one pixel of a given object is visible within a corresponding image based on the color value in semantic images from step 2
-        - **Shortcut**
-            ```
-            ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64/3.3/python/bin/python3.10 ./zero_shot_scene_segmentation/simulators/blender/post_process_semantics.py \
-              -- \
-              -data ./zero_shot_scene_segmentation/datasets/HM3D/example/ \
-              -out ./zero_shot_scene_segmentation/datasets/renders/example/ 
-            ```
 4. Render visual images
     - Run a blender command line script to render visual RGB images given valid view metadata
     - Input: meta data generated from step 1 and lighting parameters (i.e. spot light strength)
     - Output: one directory per scene containing semantic images in png format which are mappable by name to corresponding pose and light conditions
     - **Shortcut**
         ````
-        ./blender-3.3.7-linux-x64/blender \
+        ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64/blender \
         --background \
         --python ./zero_shot_scene_segmentation/simulators/blender/render_color.py \
         -- \

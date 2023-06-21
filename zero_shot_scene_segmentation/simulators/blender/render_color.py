@@ -241,6 +241,10 @@ def render_scene_color(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, LIGHT
             x_pos, y_pos, z_pos = float(x_pos), float(y_pos), float(z_pos)
             roll, pitch, yaw = float(roll), float(pitch), float(yaw)
 
+            render_out_path = os.path.join(SCENE_OUT_DIR, f"{scene_name}.{valid_view_idx:010}.{pos_idx:010}.{rot_idx:010}.RGB.{LIGHT_CONFIG['blender.illumination'].getint('energy'):010}.png")
+            if os.path.isfile(render_out_path):
+                continue
+
             # Set camera position
             camera_obj.location = Vector((x_pos, y_pos, z_pos))
 
@@ -250,7 +254,7 @@ def render_scene_color(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, LIGHT
             # Update scene view layer to recalculate camera extrensic matrix
             bpy.context.view_layer.update()
 
-            bpy.context.scene.render.filepath = os.path.join(SCENE_OUT_DIR, f"{scene_name}.{valid_view_idx:010}.{pos_idx:010}.{rot_idx:010}.RGB.{LIGHT_CONFIG['blender.illumination'].getint('energy'):010}.png")
+            bpy.context.scene.render.filepath = render_out_path
             bpy.ops.render.render(write_still = True)
 
             render_image_count += 1
@@ -300,7 +304,7 @@ if __name__ == "__main__":
         print()
 
 
-    scene_directories = [path for path in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, path))]
+    scene_directories = sorted([path for path in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, path))])
     for scene_dir in scene_directories:
         scene_dir_path = os.path.join(args.dataset_dir, scene_dir)
 

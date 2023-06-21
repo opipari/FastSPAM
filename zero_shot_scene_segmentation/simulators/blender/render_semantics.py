@@ -182,6 +182,10 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, v
             x_pos, y_pos, z_pos = float(x_pos), float(y_pos), float(z_pos)
             roll, pitch, yaw = float(roll), float(pitch), float(yaw)
 
+            render_out_path =  os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{valid_view_idx:010}.{pos_idx:010}.{rot_idx:010}.SEM.png')
+            if os.path.isfile(render_out_path):
+                continue
+
             # Set camera position
             camera_obj.location = Vector((x_pos, y_pos, z_pos))
 
@@ -191,7 +195,7 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, v
             # Update scene view layer to recalculate camera extrensic matrix
             bpy.context.view_layer.update()
 
-            bpy.context.scene.render.filepath = os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{valid_view_idx:010}.{pos_idx:010}.{rot_idx:010}.SEM.png')
+            bpy.context.scene.render.filepath = render_out_path
             bpy.ops.render.render(write_still = True)
 
             render_image_count += 1
@@ -201,107 +205,6 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, v
         print("***********************")
         print()
 
-
-def post_process_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, OUT_DIR, verbose=True):
-    
-    SCENE_NAME = SCENE_DIR.split('/')[-1]
-    SCENE_FILE = SCENE_NAME.split('-')[1]+'.glb'
-    SEMANTIC_SCENE_FILE = SCENE_NAME.split('-')[1]+'.semantic.txt'
-    SEMANTIC_SCENE_FILE_PATH = os.path.join(SCENE_DIR, SEMANTIC_SCENE_FILE)
-    SCENE_OUT_DIR = os.path.join(OUT_DIR, SCENE_NAME)
-
-    if verbose:
-        print()
-        print("********************")
-        print(f"POST PROCESSING SEMANTICS FOR SCENE: {SCENE_NAME}")
-        print("********************")
-        print()
-
-    os.makedirs(OUT_DIR, exist_ok=True)
-    os.makedirs(SCENE_OUT_DIR, exist_ok=True)
-
-    scene_semantic_objects = {}
-    with open(SEMANTIC_SCENE_FILE_PATH, "r") as sem_file:
-        for line in sem_file.readlines():
-            if line.startswith("HM3D Semantic Annotations"):
-                continue
-            
-            object_id, object_hex_color, object_name, unknown = line.split(',')
-
-            assert object_hex_color not in scene_semantic_objects.keys()
-            scene_semantic_objects[object_hex_color] = {"object_id": object_id, 
-                                                        "color_id": object_hex_color, 
-                                                        "object_name": object_name.strip("\""),
-                                                        "visible_views": []
-                                                        }
-            
-    
-    rgb2hex = lambda r,g,b: '%02X%02X%02X' % (r,g,b)
-    
-    with open(SCENE_VIEWS_FILE, 'r') as csvfile:
-
-        pose_reader = csv.reader(csvfile, delimiter=',')
-
-        for pose_meta in pose_reader:
-            scene_name, view_idx, valid_view_idx, pos_idx, rot_idx, x_pos, y_pos, z_pos, roll, pitch, yaw = pose_meta
-            
-            # Skip information line if it is first
-            if scene_name=='Scene-ID':
-                continue
-
-            # Parse pose infomration out of string type
-            view_idx, valid_view_idx, pos_idx, rot_idx = int(view_idx), int(valid_view_idx), int(pos_idx), int(rot_idx)
-            x_pos, y_pos, z_pos = float(x_pos), float(y_pos), float(z_pos)
-            roll, pitch, yaw = float(roll), float(pitch), float(yaw)
-
-            semantic_label_file_path = os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{valid_view_idx:010}.{pos_idx:010}.{rot_idx:010}.SEM.png')
-            
-            semantic_label_image = Image.open(semantic_label_file_path).convert('RGB')
-            semantic_label_image = np.array(semantic_label_image, dtype=np.uint8)
-            semantic_label_image_rgb_colors = np.unique(semantic_label_image.reshape(-1, 3), axis=0)
-            semantic_label_image_hex_colors = [rgb2hex(*rgb_color) for rgb_color in semantic_label_image_rgb_colors]
-            
-            for hex_color in semantic_label_image_hex_colors:
-                if hex_color not in scene_semantic_objects.keys() and hex_color!='000000':
-                    mask = np.all(np.equal(semantic_label_image, semantic_label_image_rgb_colors[semantic_label_image_hex_colors.index(hex_color)]), axis=2)
-                    semantic_label_image = np.where(mask[...,None], 0, semantic_label_image)
-                    semantic_label_image = Image.fromarray(semantic_label_image)
-                    semantic_label_image.save(semantic_label_file_path)
-
-            semantic_label_image = Image.open(semantic_label_file_path).convert('RGB')
-            semantic_label_image = np.array(semantic_label_image, dtype=np.uint8)
-            semantic_label_image_rgb_colors = np.unique(semantic_label_image.reshape(-1, 3), axis=0)
-            semantic_label_image_hex_colors = [rgb2hex(*rgb_color) for rgb_color in semantic_label_image_rgb_colors]
-
-            found_objects = []
-            for hex_color in semantic_label_image_hex_colors:
-                if hex_color in scene_semantic_objects.keys():
-                    scene_semantic_objects[hex_color]["visible_views"].append(f'{valid_view_idx:010}')
-                else:
-                    assert hex_color=='000000'
-
-    SEMANTIC_SCENE_LABEL_FILE = SCENE_NAME+'.semantic.csv'
-    SEMANTIC_SCENE_LABEL_FILE_PATH = os.path.join(SCENE_OUT_DIR, SEMANTIC_SCENE_FILE)
-
-    with open(SEMANTIC_SCENE_LABEL_FILE_PATH, 'w') as csvfile:
-
-        label_writer = csv.writer(csvfile, delimiter=',')
-
-        label_writer.writerow(['Object-ID','Color-ID','Object-Name','Accepted-Visible-View-ID(s)'])
-
-        for hex_color in scene_semantic_objects.keys():
-            
-            object_info = scene_semantic_objects[hex_color]
-            object_meta = [object_info["object_id"], object_info["color_id"], object_info["object_name"]]
-            
-            label_writer.writerow(object_meta + scene_semantic_objects[hex_color]["visible_views"])
-        
-    if verbose:
-        print()
-        print("********************")
-        print(f"DONE POST PROCESSING SEMANTICS FOR SCENE: {SCENE_NAME}")
-        print("********************")
-        print()
 
 
 if __name__ == "__main__":
@@ -337,7 +240,7 @@ if __name__ == "__main__":
         print(config)
         print()
 
-    scene_directories = [path for path in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, path))]
+    scene_directories = sorted([path for path in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, path))])
     for scene_dir in scene_directories:
         scene_dir_path = os.path.join(args.dataset_dir, scene_dir)
 
@@ -352,7 +255,7 @@ if __name__ == "__main__":
 
         if scene_has_semantic_mesh and scene_has_semantic_txt and scene_has_sampled_views:
             render_scene_semantics(scene_dir_path, scene_view_poses_path, scene_out_path, config, verbose=args.verbose)
-            post_process_scene_semantics(scene_dir_path, scene_view_poses_path, args.output_dir, verbose=args.verbose)
+
 
     if args.verbose:
         print()
