@@ -6,6 +6,19 @@ This repository is setup to contain a centralized python package, `ZeroShotRGBD`
 
 ## Directory Structure
 
+```
+.
+├── envs
+│   ├── requirements
+│   └── segment-anything
+├── README.md
+├── setup.py
+└── zeroshot_rgbd
+    ├── datasets
+    ├── models
+    └── simulators
+
+```
 1. `zeroshot_rgbd`: The central python package
 2. `zeroshot_rgbd/envs`: Directory containing virtualenvironment requirement and source files.
 3. `zeroshot_rgbd/simulators`: Directory containing source code for data simulationa and rendering.
@@ -14,8 +27,23 @@ This repository is setup to contain a centralized python package, `ZeroShotRGBD`
 
 ## Setup
 
-1. Clone repository and submodules `git clone --recurse-submodules git@github.com:opipari/ZeroShot_RGB_D.git`
-2. Setup habitat-sim environment
+1. Clone repository and submodules
+    - `git clone --recurse-submodules git@github.com:opipari/ZeroShot_RGB_D.git`
+
+
+
+## Models
+
+### Segment Anything Model (SAM)
+
+`python3.8 -m venv ./envs/segment-anything && source ./envs/segment-anything/bin/activate && pip install -r ./envs/requirements/segment-anything.txt && deactivate`
+
+
+## Simulators
+
+### Habitat-Sim
+
+1. Setup habitat-sim environment
     1. `conda create -n habitat python=3.9 and cmake=3.14.0`
     2. `conda activate habitat`
     3. `conda install habitat-sim withbullet -c conda-forge -c aihabitat`
