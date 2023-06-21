@@ -4,7 +4,7 @@
 
 This repository is setup to contain a centralized python package, `ZeroShotSceneSegmentation`, that stores all code for data simulation, data processing, model training, and model evaluation. Correspondingly, the code for these core functions is spread across sub-directories.
 
-### Directory Structure
+#### Directory Structure
 
 ```
 .                                   # Root project directory
@@ -34,10 +34,24 @@ This repository is setup to contain a centralized python package, `ZeroShotScene
 
 ### Segment Anything Model (SAM)
 
-`python3.8 -m venv ./envs/segment-anything && source ./envs/segment-anything/bin/activate && pip install -r ./envs/requirements/segment-anything.txt && deactivate`
+```
+python3.8 -m venv ./envs/segment-anything && \
+  source ./envs/segment-anything/bin/activate && \
+    pip install -r ./envs/requirements/segment-anything.txt && \
+      deactivate
+```
 
 
 ## Simulators
+
+### Blender
+```
+wget -P ./zero_shot_scene_segmentation/simulators/blender/ https://mirrors.ocf.berkeley.edu/blender/release/Blender3.3/blender-3.3.7-linux-x64.tar.xz && \
+  tar -xf ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64.tar.xz -C ./zero_shot_scene_segmentation/simulators/blender/ && \
+    rm ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64.tar.xz && \
+      ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64/3.3/python/bin/python3.10 -m ensurepip && \
+        ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64/3.3/python/bin/python3.10 -m pip install -r ./envs/requirements/blender.txt
+```
 
 ### Habitat-Sim
 
