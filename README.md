@@ -15,9 +15,9 @@ This repository is setup to contain a centralized python package, `ZeroShotScene
 │   │   └── segment-anything.txt    # Package requirements for segment anything model package
 │   └── segment-anything            # Directory for segment anything's virtual environment
 └── zero_shot_scene_segmentation    # The central python package for ZeroShotSceneSegmentation package
-    ├── datasets                    # Directory containing source code for dataset processing as well as PyTorch Dataset classes
     ├── models                      # Directory containing source code for model development, training and evaluation
     │   └── segment-anything        # Directory containing all source for training and evaluating segment anything model
+    ├── datasets                    # Directory containing source code for dataset processing as well as PyTorch Dataset classes
     └── simulators                  # Directory containing source code for data simulationa and rendering
         └── blender                 # Directory containing source code for blender-based rendering
 ```
@@ -44,10 +44,36 @@ python3.8 -m venv ./envs/segment-anything && \
       deactivate
 ```
 
+## Datasets
+
+### [Habitat Matterport 3D Semantic Dataset](https://aihabitat.org/datasets/hm3d-semantics/)
+
+#### Setup
+
+1. Create an account on [Matterport website](https://buy.matterport.com/free-account-register?_ga=2.183460966.1764739312.1687379653-577208820.1687379653)
+2. Request access to the dataset by accepting [the terms and conditions](https://matterport.com/matterport-end-user-license-agreement-academic-use-model-data)
+3. Download the [v0.2 dataset files](https://github.com/matterport/habitat-matterport-3dresearch#-downloading-hm3d-v02)
+4. Extract dataset files into the following directory structure
+   - Recommended location for extraction: `./zero_shot_scene_segmentation/datasets/HM3D/`
+    ```
+    .                                                             # Root directory of dataset (Recommended to be ./zero_shot_scene_segmentation/datasets/HM3D/)
+    ├── hm3d_annotated_basis.scene_dataset_config.json            # JSON files describing scene information per-subset of the overall dataset
+    ├── hm3d_annotated_example_basis.scene_dataset_config.json    # The dataset is broken down into a collection of scans (i.e. 'scenes'), each at building scale
+    ├── hm3d_annotated_minival_basis.scene_dataset_config.json
+    ├── hm3d_annotated_train_basis.scene_dataset_config.json
+    ├── hm3d_annotated_val_basis.scene_dataset_config.json
+    ├── example                                                   # Directory containing a single scene directory (00337, 00770, and 00861)
+    ├── minival                                                   # Directory containing 10 scene directories subsampled from overall val set
+    ├── train                                                     # Directory containing most scenes in the dataset
+    └── val                                                       # Directory containing scenes to be used for model validation (chosen by dataset authors)
+    ```
 
 ## Simulators
 
 ### Blender
+
+#### Setup
+
 ```
 wget -P ./zero_shot_scene_segmentation/simulators/blender/ https://mirrors.ocf.berkeley.edu/blender/release/Blender3.3/blender-3.3.7-linux-x64.tar.xz && \
   tar -xf ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64.tar.xz -C ./zero_shot_scene_segmentation/simulators/blender/ && \
