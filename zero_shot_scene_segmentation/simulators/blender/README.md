@@ -6,9 +6,9 @@ This folder contains all blender python scripts for rendering visual imagery and
 ## Prerequisites
 
 1. Install [Blender LTS](https://www.blender.org/download/releases/3-3/). This code was developed and tested with Blenderv3.3.7 on Ubuntu 20.04.
-    - Details on main repository [README.md()]()
+    - Details on main repository [README.md](https://github.com/opipari/ZeroShotSceneSegmentation/blob/main/README.md#blender)
 2. Download and extract all scenes in the [Matterport 3D Semantic dataset](https://aihabitat.org/datasets/hm3d-semantics/)
-    - Details on main repository [README.md]()
+    - Details on main repository [README.md](https://github.com/opipari/ZeroShotSceneSegmentation/tree/main#habitat-matterport-3d-semantic-dataset)
 
 
 ## Simulation Workflow
