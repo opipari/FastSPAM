@@ -1,34 +1,31 @@
-# ZeroShot_RGB_D
+# ZeroShotSceneSegmentation
 
 ## Repository Structure
 
-This repository is setup to contain a centralized python package, `ZeroShotRGBD`, that stores all code for data simulation, data processing, model training, and model evaluation. Correspondingly, the code for these core functions is spread across sub-directories.
+This repository is setup to contain a centralized python package, `ZeroShotSceneSegmentation`, that stores all code for data simulation, data processing, model training, and model evaluation. Correspondingly, the code for these core functions is spread across sub-directories.
 
-## Directory Structure
+### Directory Structure
 
 ```
 .
-├── envs
+├── envs                            # Directory containing virtualenvironment requirement and source files.
 │   ├── requirements
 │   └── segment-anything
 ├── README.md
 ├── setup.py
-└── zeroshot_rgbd
-    ├── datasets
-    ├── models
-    └── simulators
+├── tree.txt
+└── zero_shot_scene_segmentation    # The central python package
+    ├── datasets                    # Directory containing source code for dataset pre and post-processing as well as PyTorch Dataset Classes.
+    ├── models                      # Directory containing source code for model development, training and evaluation.
+    └── simulators                  # Directory containing source code for data simulationa and rendering.
 
 ```
-1. `zeroshot_rgbd`: The central python package
-2. `zeroshot_rgbd/envs`: Directory containing virtualenvironment requirement and source files.
-3. `zeroshot_rgbd/simulators`: Directory containing source code for data simulationa and rendering.
-4. `zeroshot_rgbd/datasets`: Directory containing source code for dataset pre and post-processing as well as PyTorch Dataset Classes.
-5. `zeroshot_rgbd/models`: Directory containing source code for model development, training and evaluation.
+
 
 ## Setup
 
 1. Clone repository and submodules
-    - `git clone --recurse-submodules git@github.com:opipari/ZeroShot_RGB_D.git`
+    - `git clone --recurse-submodules git@github.com:opipari/ZeroShotSceneSegmentation.git`
 
 
 
