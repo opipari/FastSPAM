@@ -1,8 +1,8 @@
 from distutils.core import setup
 
 setup(
-    name='ZeroShotRGBD',
+    name='ZeroShotSceneSegmentation',
     version='0.1dev',
-    packages=['zeroshot_rgbd', ],
+    packages=['zero_shot_scene_segmentation', ],
     license='MIT license',
 )

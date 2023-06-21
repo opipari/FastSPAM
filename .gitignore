@@ -161,8 +161,8 @@ cython_debug/
 
 
 # Results
-zeroshot_rgbd/models/output/*
+zero_shot_scene_segmentation/models/output/*
 
 
 # Datasets
-zeroshot_rgbd/datasets/*
+zero_shot_scene_segmentation/datasets/*
