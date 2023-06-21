@@ -34,6 +34,21 @@ def post_process_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, OUT_DIR, verbose=T
     os.makedirs(OUT_DIR, exist_ok=True)
     os.makedirs(SCENE_OUT_DIR, exist_ok=True)
 
+    scene_semantic_objects = {}
+    with open(SEMANTIC_SCENE_FILE_PATH, "r") as sem_file:
+        for line in sem_file.readlines():
+            if line.startswith("HM3D Semantic Annotations"):
+                continue
+            
+            object_id, object_hex_color, object_name, unknown = line.split(',')
+
+            assert object_hex_color not in scene_semantic_objects.keys()
+            scene_semantic_objects[object_hex_color] = {"object_id": object_id, 
+                                                        "color_id": object_hex_color, 
+                                                        "object_name": object_name.strip("\""),
+                                                        "visible_views": []
+                                                        }
+
     
     rgb2hex = lambda r,g,b: '%02X%02X%02X' % (r,g,b)
     
@@ -76,12 +91,13 @@ def post_process_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, OUT_DIR, verbose=T
             semantic_label_image_hex_colors = [rgb2hex(*(rgb_color.cpu())) for rgb_color in semantic_label_image_rgb_colors]
             semantic_label_mask = torch.all(semantic_label_image.unsqueeze(0) == semantic_label_image_rgb_colors.reshape(-1,3,1,1), dim=1).bool()
             
-
+            print(semantic_label_mask.shape)
+            raise
             to_store = {"semantic_label_mask": semantic_label_mask.cpu(),
                         "semantic_label_hex_colors": semantic_label_image_hex_colors}
 
             torch.save(to_store, semantic_label_pt_path)
-            os.remove(semantic_label_file_path)
+            #os.remove(semantic_label_file_path)
 
             found_objects = []
             for hex_color in semantic_label_image_hex_colors:
@@ -90,7 +106,22 @@ def post_process_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, OUT_DIR, verbose=T
                 else:
                     assert hex_color=='000000'
 
-            # 
+
+    SEMANTIC_SCENE_LABEL_FILE = SCENE_NAME+'.semantic.csv'
+    SEMANTIC_SCENE_LABEL_FILE_PATH = os.path.join(SCENE_OUT_DIR, SEMANTIC_SCENE_FILE)
+
+    with open(SEMANTIC_SCENE_LABEL_FILE_PATH, 'w') as csvfile:
+
+        label_writer = csv.writer(csvfile, delimiter=',')
+
+        label_writer.writerow(['Object-ID','Color-ID','Object-Name','Accepted-Visible-View-ID(s)'])
+
+        for hex_color in scene_semantic_objects.keys():
+            
+            object_info = scene_semantic_objects[hex_color]
+            object_meta = [object_info["object_id"], object_info["color_id"], object_info["object_name"]]
+            
+            label_writer.writerow(object_meta + scene_semantic_objects[hex_color]["visible_views"])
         
     if verbose:
         print()

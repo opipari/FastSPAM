@@ -32,13 +32,13 @@ if __name__ == "__main__":
         print(args)
         print()
 
-    scene_directories = [path for path in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, path))]
+    scene_directories = [path for path in os.listdir(args.source_dataset_dir) if os.path.isdir(os.path.join(args.source_dataset_dir, path))]
     for scene_dir in scene_directories:
-        scene_dir_path = os.path.join(args.dataset_dir, scene_dir)
+        scene_dir_path = os.path.join(args.source_dataset_dir, scene_dir)
 
         scene_files = os.listdir(scene_dir_path)
 
-        scene_out_path = os.path.join(args.output_dir, scene_dir)
+        scene_out_path = os.path.join(args.destination_dataset_dir, scene_dir)
         scene_view_all_poses_path = scene_dir+'.all_view_poses.csv'
         scene_view_accepted_poses_path = scene_dir+'.accepted_view_poses.csv'
 

@@ -25,7 +25,7 @@ This folder contains all blender python scripts for rendering visual imagery and
           --python ./zero_shot_scene_segmentation/simulators/blender/sample_views.py \
             -- \
             -config ./zero_shot_scene_segmentation/simulators/blender/configs/render_config.ini \
-            -data ./zero_shot_scene_segmentation/datasets/matterport/HM3D/example/ \
+            -data ./zero_shot_scene_segmentation/datasets/HM3D/example/ \
             -out ./zero_shot_scene_segmentation/datasets/renders/example/
       ```
     - **Visualize Sampled Views**
@@ -35,7 +35,7 @@ This folder contains all blender python scripts for rendering visual imagery and
           -- \
           -scene 00861-GLAQ4DNUx5U \
           -config ./zero_shot_scene_segmentation/simulators/blender/configs/render_config.ini \
-          -data ./zero_shot_scene_segmentation/datasets/matterport/HM3D/example/ \
+          -data ./zero_shot_scene_segmentation/datasets/HM3D/example/ \
           -out ./zero_shot_scene_segmentation/datasets/renders/example/
       ```
 2. **Render semantic label images**
@@ -46,7 +46,7 @@ This folder contains all blender python scripts for rendering visual imagery and
         ```
         ./blender-3.3.7-linux-x64/3.3/python/bin/python3.10 ./zero_shot_scene_segmentation/simulators/blender/post_process_semantics.py \
             -- \
-            -data ./zero_shot_scene_segmentation/datasets/matterport/HM3D/example/ \
+            -data ./zero_shot_scene_segmentation/datasets/HM3D/example/ \
             -out ./zero_shot_scene_segmentation/datasets/renders/example/ 
         ```
     - **Post-Process semantic labels**
@@ -55,12 +55,9 @@ This folder contains all blender python scripts for rendering visual imagery and
         - A triplet will be included if at least one pixel of a given object is visible within a corresponding image based on the color value in semantic images from step 2
         - **Shortcut**
             ```
-            ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64/blender \
-            --background \
-            --python ./zero_shot_scene_segmentation/simulators/blender/render_semantics.py \
+            ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64/3.3/python/bin/python3.10 ./zero_shot_scene_segmentation/simulators/blender/post_process_semantics.py \
               -- \
-              -config ./zero_shot_scene_segmentation/simulators/blender/configs/render_config.ini \
-              -data ./zero_shot_scene_segmentation/datasets/matterport/HM3D/example/ \
+              -data ./zero_shot_scene_segmentation/datasets/HM3D/example/ \
               -out ./zero_shot_scene_segmentation/datasets/renders/example/ 
             ```
 4. Render visual images
@@ -75,14 +72,14 @@ This folder contains all blender python scripts for rendering visual imagery and
         -- \
         -config ./zero_shot_scene_segmentation/simulators/blender/configs/render_config.ini \
         -light-config ./zero_shot_scene_segmentation/simulators/blender/configs/illumination_0000000000_config.ini \
-        -data ./zero_shot_scene_segmentation/datasets/matterport/HM3D/example/ \
+        -data ./zero_shot_scene_segmentation/datasets/HM3D/example/ \
         -out ./zero_shot_scene_segmentation/datasets/renders/example/
         ````
 
 
 - Copy view files between machines:
     ```
-    ./blender-3.3.7-linux-x64/3.3/python/bin/python3.10 ./zero_shot_scene_segmentation/simulators/blender/copy_views.py \
+    ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64/3.3/python/bin/python3.10 ./zero_shot_scene_segmentation/simulators/blender/copy_views.py \
     -- \
     -src /media/topipari/0CD418EB76995EEF/ZeroShotSceneSegmentation/datasets/renders/example/ \
     -dst ./zero_shot_scene_segmentation/datasets/renders/example/

@@ -26,9 +26,16 @@ This repository is setup to contain a centralized python package, `ZeroShotScene
 ## Setup
 
 1. Clone repository and submodules
+
     ```
     git clone --recurse-submodules git@github.com:opipari/ZeroShotSceneSegmentation.git && \
     cd ZeroShotSceneSegmentation
+    ```
+
+2. Install Python v3.8
+
+    ```
+    sudo apt install python3.8 python3.8-venv python3.8-dev
     ```
 
 
@@ -45,6 +52,17 @@ python3.8 -m venv ./envs/segment-anything && \
 ```
 
 ## Datasets
+
+### Generic Data Processing Environment
+
+This environment is to be used for dataset preprocessing since Blender's version of python3.10 is not compatible with needed cocotools api.
+
+```
+python3.8 -m venv ./envs/data-processing && \
+  source ./envs/data-processing/bin/activate && \
+    pip install -r ./envs/requirements/data-processing.txt && \
+      deactivate
+```
 
 ### [Habitat Matterport 3D Semantic Dataset](https://aihabitat.org/datasets/hm3d-semantics/)
 
