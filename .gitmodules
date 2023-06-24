@@ -10,3 +10,6 @@
 [submodule "zero_shot_scene_segmentation/models/aot-benchmark/aot-benchmark"]
 	path = zero_shot_scene_segmentation/models/aot-benchmark/aot-benchmark
 	url = git@github.com:yoxu515/aot-benchmark.git
+[submodule "zero_shot_scene_segmentation/models/AFB-URR/AFB-URR"]
+	path = zero_shot_scene_segmentation/models/AFB-URR/AFB-URR
+	url = https://github.com/xmlyqing00/AFB-URR
