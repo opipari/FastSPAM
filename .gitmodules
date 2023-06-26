@@ -13,3 +13,6 @@
 [submodule "zero_shot_scene_segmentation/models/AFB-URR/AFB-URR"]
 	path = zero_shot_scene_segmentation/models/AFB-URR/AFB-URR
 	url = https://github.com/xmlyqing00/AFB-URR
+[submodule "zero_shot_scene_segmentation/simulators/habitat-sim/habitat-lab"]
+	path = zero_shot_scene_segmentation/simulators/habitat-sim/habitat-lab
+	url = git@github.com:facebookresearch/habitat-lab.git
