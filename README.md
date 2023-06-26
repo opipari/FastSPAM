@@ -110,20 +110,32 @@ wget -P ./zero_shot_scene_segmentation/simulators/blender/ https://mirrors.ocf.b
 ### Habitat-Sim
 
 
-```
+<!-- ```
 python3.9 -m venv ./envs/habitat-sim && \
   source ./envs/habitat-sim/bin/activate && \
-    pip install -r ./envs/requirements/habitat-sim.txt && \
+    python -m pip install -r ./envs/requirements/habitat-sim.txt && \
       deactivate
+``` -->
+
+#### Setup
+
+```
+# Update the dependency solver for base conda for faster install
+conda update -n base conda
+conda install -n base conda-libmamba-solver
+conda config --set solver libmamba
+
+# Create environment for habitat-sim and habitat-lab
+conda create -n habitat python=3.9 cmake=3.14.0
+conda activate habitat
+conda install habitat-sim withbullet -c conda-forge -c aihabitat
+pip install -r ./envs/requirements/habitat.txt
 ```
 
-1. Setup habitat-sim environment
-    1. `conda create -n habitat python=3.9 and cmake=3.14.0`
-    2. `conda activate habitat`
-    3. `conda install habitat-sim withbullet -c conda-forge -c aihabitat`
-    4. `cd zeroshot_rgbd/simulators/habitat-lab`
-    5. `pip install -e habitat-lab`
-    6. `pip install -e habitat-baselines`
-    7. `pip install pygame==2.0.1 pybullet==3.0.4`
-    8. `cd ../../..`
-3. Install ZeroShotRGBD package `pip install -e .`
+## ZeroShotSceneSegmentation Package
+
+#### Setup
+
+```
+pip install -e .
+```
