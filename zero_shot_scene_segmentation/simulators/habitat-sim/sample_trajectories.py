@@ -176,11 +176,11 @@ def sample_scene_trajectories(SCENE_DIR, SCENE_OUT_DIR, CONFIG, render_images=Fa
         print()
 
     
-    
-    if append_samples:
-        accepted_view_file = open(os.path.join(SCENE_OUT_DIR, f"{SCENE_NAME}.habitat_trajectory_poses.csv"), "a")
+    csv_pose_path = os.path.join(SCENE_OUT_DIR, f"{SCENE_NAME}.habitat_trajectory_poses.csv")
+    if append_samples and os.path.isfile(csv_pose_path):
+        accepted_view_file = open(csv_pose_path, "a")
     else:
-        accepted_view_file = open(os.path.join(SCENE_OUT_DIR, f"{SCENE_NAME}.habitat_trajectory_poses.csv"), "w")
+        accepted_view_file = open(csv_pose_path, "w")
         accepted_view_file.write('Scene-ID,Trajectory-ID,Sensor-Height,View-ID,X-Position,Y-Position,Z-Position,W-Quaternion,X-Quaternion,Y-Quaternion,Z-Quaternion\n')
         accepted_view_file.flush()
     
@@ -196,6 +196,9 @@ def sample_scene_trajectories(SCENE_DIR, SCENE_OUT_DIR, CONFIG, render_images=Fa
     valid_path_count = 0 
     valid_view_count = 0
     seed = 0
+    sampled_start_goal_points = []
+
+    points_in_arr_list = lambda start_arr, goal_arr, list_of_start_goal_tuples : any([(start_arr==start).all() and (goal_arr==goal).all() for (start, goal) in list_of_start_goal_tuples])
 
     sim.pathfinder.seed(seed)
     while valid_path_count < CONFIG['trajectory_settings'].getint('minimum_trajectories_per_scene') and valid_view_count < CONFIG['trajectory_settings'].getint('minimum_frames_per_scene'):
@@ -203,6 +206,13 @@ def sample_scene_trajectories(SCENE_DIR, SCENE_OUT_DIR, CONFIG, render_images=Fa
         # Sample valid points on the NavMesh for agent spawn location and pathfinding goal
         sample_start = sim.pathfinder.get_random_navigable_point()
         sample_goal = sim.pathfinder.get_random_navigable_point()
+
+        # Don't create duplicate trajectories
+        if points_in_arr_list(sample_start, sample_goal, sampled_start_goal_points):
+            continue
+
+        # Record the start and goal points to avoid future duplicate trajectories
+        sampled_start_goal_points.append((sample_start, sample_goal))
 
         # Use ShortestPath module to compute path between samples
         path = habitat_sim.ShortestPath()
@@ -236,7 +246,7 @@ def sample_scene_trajectories(SCENE_DIR, SCENE_OUT_DIR, CONFIG, render_images=Fa
                             # rgb, depth, semantic = observations["color_sensor"], observations["depth_sensor"], observations["semantic_sensor"]
 
                             rgb_img = Image.fromarray(observations["color_sensor"], mode="RGBA")
-                            rgb_img.save(os.path.join(SCENE_OUT_DIR, f"{SCENE_NAME}.{valid_path_count:010}.{trajectory_view_count:010}.{trajectory_view_count:010}.RGB.{0:010}.png"))
+                            rgb_img.save(os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{valid_path_count:010}.{CONFIG["sensor_spec"].getint("sensor_height"):010}.{trajectory_view_count:010}.RGB.{0:010}.png'))
 
 
                         # x, y, z = agent_state.position
