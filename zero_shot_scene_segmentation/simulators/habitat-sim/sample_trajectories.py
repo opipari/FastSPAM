@@ -73,20 +73,72 @@ def make_cfg(scene, scene_config, CONFIG):
 
 
 
-def euclidean_distance(arr_a, arr_b):
-    print(np.sqrt(np.sum((arr_a-arr_b)**2)))
-    print(np.linalg.norm(arr_a-arr_b))
+def get_rotation(point, tangent):
+    tangent_orientation_matrix = mn.Matrix4.look_at(
+        point, point + tangent, np.array([0, 1.0, 0])
+    )
+    tangent_orientation_q = mn.Quaternion.from_matrix(
+        tangent_orientation_matrix.rotation()
+    )
+    rotation = utils.quat_from_magnum(tangent_orientation_q)
+    
+    return rotation
 
-def smooth_path(path_points, forward=0.1, turn=15):
-    expanded_targets = []
+
+def smooth_path(path_points, forward_step=0.1, turn_step=10):
+    current_position = path_points[0]
+    tangent = path_points[1] - current_position
+    current_rotation = get_rotation(current_position, tangent)
+
+    expanded_targets = [(current_position, current_rotation)]
+
     for ix, point in enumerate(path_points):
         if ix < len(path_points) - 1:
-            tangent = path_points[ix + 1] - point
-            
-            euclidean_distance(path_points[ix + 1], point)
-            print(type(tangent), point, path_points[ix+1])
 
-            raise
+            reached_target = False
+            while not reached_target:
+                tangent = path_points[ix + 1] - current_position
+                distance_to_target = np.linalg.norm(tangent)
+                direction_to_target = tangent / distance_to_target
+
+                if distance_to_target < forward_step:
+                    reached_target = True
+                    current_position = path_points[ix + 1]
+                    expanded_targets.append((current_position, current_rotation))
+                    break
+
+                current_position = current_position + (forward_step * direction_to_target)
+                expanded_targets.append((current_position, current_rotation))
+
+            
+
+        if ix < len(path_points) - 2:
+            reached_target = False
+            while not reached_target:
+                next_tangent = path_points[ix + 2] - path_points[ix + 1]
+
+                next_rotation = get_rotation(current_position, next_tangent)
+
+                rotation_diff = next_rotation * current_rotation.conjugate()
+                theta, w = utils.quat_to_angle_axis(rotation_diff)
+                
+                theta_deg = math.degrees(theta)%360
+                if theta_deg > 180:
+                    theta_deg -= 360
+                theta = math.radians(theta_deg)
+
+                if abs(theta) < math.radians(turn_step):
+                    reached_target = True
+                    current_rotation = next_rotation
+                    expanded_targets.append((current_position, current_rotation))
+                    break
+                
+                theta = np.sign(theta) * math.radians(turn_step)
+                current_rotation = utils.quat_from_angle_axis(theta, w) * current_rotation
+                expanded_targets.append((current_position, current_rotation))
+    return expanded_targets
+
+
 #python zero_shot_scene_segmentation/simulators/habitat-sim/render_trajectories.py -- -config zero_shot_scene_segmentation/simulators/habitat-sim/configs/render_config.ini -data zero_shot_scene_segmentation/datasets/raw_data/HM3D/train -out zero_shot_scene_segmentation/datasets/raw_data/samples/train/
 def render_scene_trajectories(SCENE_DIR, SCENE_OUT_DIR, CONFIG, verbose=True):
     
@@ -169,49 +221,40 @@ def render_scene_trajectories(SCENE_DIR, SCENE_OUT_DIR, CONFIG, verbose=True):
         path.requested_end = sample2
         found_path = sim.pathfinder.find_path(path)
         geodesic_distance = path.geodesic_distance
-        path_points = path.points
-
-        print(len(path_points), sample1, sample2)
+        
         # Display trajectory (if found) on a topdown map of ground floor
-        if found_path and len(path_points) > CONFIG['trajectory_settings'].getint('minimum_frames_per_trajectory'):
-            smooth_path(path_points)
-            trajectory_view_count = 0
-            tangent = path_points[1] - path_points[0]
-            agent_state = habitat_sim.AgentState()
-            for ix, point in enumerate(path_points):
-                if ix < len(path_points) - 1:
-                    tangent = path_points[ix + 1] - point
-                    agent_state.position = point
-                    tangent_orientation_matrix = mn.Matrix4.look_at(
-                        point, point + tangent, np.array([0, 1.0, 0])
-                    )
-                    tangent_orientation_q = mn.Quaternion.from_matrix(
-                        tangent_orientation_matrix.rotation()
-                    )
-                    agent_state.rotation = utils.quat_from_magnum(tangent_orientation_q)
-                    agent.set_state(agent_state)
+        if found_path:
+            path_points = smooth_path(path.points)
+            if len(path_points) > CONFIG['trajectory_settings'].getint('minimum_frames_per_trajectory'):
+                trajectory_view_count = 0
+                agent_state = habitat_sim.AgentState()
+                for point, rotation in path_points:
+                        
+                        agent_state.position = point
+                        agent_state.rotation = rotation
+                        agent.set_state(agent_state)
 
-                    observations = sim.get_sensor_observations()
-                    rgb, depth, semantic = observations["color_sensor"], observations["depth_sensor"], observations["semantic_sensor"]
+                        observations = sim.get_sensor_observations()
+                        rgb, depth, semantic = observations["color_sensor"], observations["depth_sensor"], observations["semantic_sensor"]
 
-                    rgb_img = Image.fromarray(rgb, mode="RGBA")
-                    rgb_img.save(os.path.join(SCENE_OUT_DIR, f"{SCENE_NAME}.{valid_path_count:010}.{trajectory_view_count:010}.RGB.png"))
+                        rgb_img = Image.fromarray(rgb, mode="RGBA")
+                        rgb_img.save(os.path.join(SCENE_OUT_DIR, f"{SCENE_NAME}.{valid_path_count:010}.{trajectory_view_count:010}.RGB.png"))
 
 
-                    # x, y, z = agent_state.position
-                    # quat_w, quat_x, quat_y, quat_z = [agent_state.rotation.real]+list(agent_state.rotation.imag)
+                        # x, y, z = agent_state.position
+                        # quat_w, quat_x, quat_y, quat_z = [agent_state.rotation.real]+list(agent_state.rotation.imag)
 
-                    sensor_pose = agent.get_state().sensor_states['color_sensor']
-                    x, y, z = sensor_pose.position
-                    quat_w, quat_x, quat_y, quat_z = [sensor_pose.rotation.real]+list(sensor_pose.rotation.imag)
+                        sensor_pose = agent.get_state().sensor_states['color_sensor']
+                        x, y, z = sensor_pose.position
+                        quat_w, quat_x, quat_y, quat_z = [sensor_pose.rotation.real]+list(sensor_pose.rotation.imag)
 
-                    accepted_view_file.write(f'{SCENE_NAME},{valid_path_count:010},{trajectory_view_count:010},{x},{y},{z},{quat_w},{quat_x},{quat_y},{quat_z}\n')
-                    accepted_view_file.flush()
+                        accepted_view_file.write(f'{SCENE_NAME},{valid_path_count:010},{trajectory_view_count:010},{x},{y},{z},{quat_w},{quat_x},{quat_y},{quat_z}\n')
+                        accepted_view_file.flush()
 
 
-                    trajectory_view_count += 1
-                    valid_view_count += 1
-            valid_path_count += 1
+                        trajectory_view_count += 1
+                        valid_view_count += 1
+                valid_path_count += 1
 
     accepted_view_file.close()
 
