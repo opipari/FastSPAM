@@ -11,7 +11,7 @@ import itertools, functools, operator
 
 import bpy
 import bmesh
-from mathutils import Vector, Euler
+from mathutils import Vector, Euler, Quaternion
 
 from PIL import Image
 
@@ -93,7 +93,7 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, v
     camera_obj = get_camera(pos=(0,0,0), 
         rot=(0,0,math.pi), 
         name="Camera", 
-        rot_mode='ZXY',
+        rot_mode='QUATERNION',
         lens_unit=CONFIG['blender.camera']['lens_unit'], # leave units as string
         angle_x=CONFIG['blender.camera'].getfloat('angle_x'), 
         clip_start=CONFIG['blender.camera'].getfloat('clip_start'), 
@@ -171,18 +171,22 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, v
         pose_reader = csv.reader(csvfile, delimiter=',')
 
         for pose_meta in pose_reader:
-            scene_name, view_idx, valid_view_idx, pos_idx, rot_idx, x_pos, y_pos, z_pos, roll, pitch, yaw = pose_meta
-            
+            info_ID = pose_meta[:4]
+            info_position = pose_meta[4:7]
+            info_rotation = pose_meta[7:11]
+
             # Skip information line if it is first
-            if scene_name=='Scene-ID':
+            if info_ID[0]=='Scene-ID':
                 continue
 
-            # Parse pose infomration out of string type
-            view_idx, valid_view_idx, pos_idx, rot_idx = int(view_idx), int(valid_view_idx), int(pos_idx), int(rot_idx)
-            x_pos, y_pos, z_pos = float(x_pos), float(y_pos), float(z_pos)
-            roll, pitch, yaw = float(roll), float(pitch), float(yaw)
+            x_pos, y_pos, z_pos = info_position
+            quat_w, quat_x, quat_y, quat_z = info_rotation
 
-            render_out_path =  os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{valid_view_idx:010}.{pos_idx:010}.{rot_idx:010}.SEM.png')
+            # Parse pose infomration out of string type
+            x_pos, y_pos, z_pos = float(x_pos), float(y_pos), float(z_pos)
+            quat_w, quat_x, quat_y, quat_z = float(quat_w), float(quat_x), float(quat_y), float(quat_z)
+
+            render_out_path =  os.path.join(SCENE_OUT_DIR, f"{'.'.join(info_ID)}.SEM.png")
             if os.path.isfile(render_out_path):
                 continue
 
@@ -190,7 +194,7 @@ def render_scene_semantics(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, v
             camera_obj.location = Vector((x_pos, y_pos, z_pos))
 
             # Set camera rotation
-            camera_obj.rotation_euler = Euler((pitch,yaw,roll))
+            camera_obj.rotation_quaternion = Quaternion((quat_w, quat_x, quat_y, quat_z))
 
             # Update scene view layer to recalculate camera extrensic matrix
             bpy.context.view_layer.update()
@@ -247,7 +251,7 @@ if __name__ == "__main__":
         scene_files = os.listdir(scene_dir_path)
 
         scene_out_path = os.path.join(args.output_dir, scene_dir)
-        scene_view_poses_path = os.path.join(scene_out_path, scene_dir+'.accepted_view_poses.csv')
+        scene_view_poses_path = os.path.join(scene_out_path, scene_dir+'.render_view_poses.csv')
 
         scene_has_semantic_mesh = any([fl.endswith('.semantic.glb') for fl in scene_files])
         scene_has_semantic_txt = any([fl.endswith('.semantic.txt') for fl in scene_files])
