@@ -182,12 +182,15 @@ def render_scene_color(SCENE_DIR, SCENE_VIEWS_FILE, SCENE_OUT_DIR, CONFIG, LIGHT
         
 
     if LIGHT_CONFIG['blender.illumination'].getint('energy') == 0:
-        bpy.context.scene.render.engine = 'BLENDER_EEVEE'
-        bpy.context.scene.eevee.taa_render_samples = 16
-        bpy.context.scene.eevee.taa_samples = 16
-        bpy.context.scene.eevee.sss_samples = 16
-        bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[0].default_value[:3] = (1,1,1)
-        bpy.data.worlds['World'].node_tree.nodes['Background'].inputs[1].default_value = 1
+        bpy.context.scene.render.engine = 'BLENDER_WORKBENCH'
+        bpy.context.scene.display.shading.light = 'FLAT'
+        bpy.context.scene.display.shading.color_type = 'TEXTURE'
+        bpy.context.scene.render.dither_intensity = 1.0
+        bpy.context.scene.display.render_aa = '16'
+        bpy.context.scene.view_settings.view_transform = 'Standard'
+
+        bpy.context.scene.render.film_transparent = True
+        bpy.context.scene.render.image_settings.color_mode = 'RGBA'
     else:
         bpy.context.scene.render.engine = 'CYCLES'
         bpy.context.preferences.addons[
