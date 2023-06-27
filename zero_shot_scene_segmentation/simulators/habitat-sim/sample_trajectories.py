@@ -19,6 +19,13 @@ from scipy.spatial.transform import Rotation as R
 
 
 def make_cfg(scene, scene_config, CONFIG):
+    """Generate a configuration object for instantiating habitat-sim simulator.
+
+    Keyword arguments:
+    scene -- string path to habitat-sim compatible scene file (e.g. .glb formatted mesh)
+    scene_config -- string path to habitat-sim compatible scene configuration file in .json format
+    CONFIG -- configparser object holding config settings for sensor specification in habitat-sim
+    """
     sim_cfg = habitat_sim.SimulatorConfiguration()
     sim_cfg.gpu_device_id = 0
     sim_cfg.scene_id = scene
@@ -61,8 +68,13 @@ def make_cfg(scene, scene_config, CONFIG):
     return habitat_sim.Configuration(sim_cfg, [agent_cfg])
 
 
-
 def get_rotation(point, tangent):
+    """Helper function to define a quaternion rotation towards tangent direction from point. Assumes world-up direction of +Y
+
+    Keyword arguments:
+    point -- numpy array of length 3 defining 3D point in euclidean space
+    tangent -- numpy array of length 3 defining viewing direction in euclidean space
+    """
     tangent_orientation_matrix = mn.Matrix4.look_at(
         point, point + tangent, np.array([0, 1.0, 0])
     )
@@ -75,61 +87,90 @@ def get_rotation(point, tangent):
 
 
 def smooth_path(path_points, forward_step=0.05, turn_step=0.5):
+    """Helper function to convert sparse waypoints from habitat-sim navmesh into smooth trajectory to model an agent moving in scene.
+        Motion is linear along each segment (point-to-point) then linear along axis-angle rotation from tangent-to-tangent.
+
+    Keyword arguments:
+    path_points -- list of numpy arrays. Each array defining navmesh waypoint in 3D space.
+    forward_step -- float describing maximum step size for linear displacement from point-to-point
+    turn_step -- float describing maximum step size for axis-angle rotation in degrees
+    """
+
+    # Define starting point and starting viewing direction
     current_position = path_points[0]
     tangent = path_points[1] - current_position
     current_rotation = get_rotation(current_position, tangent)
 
+    # Add starting point and viewing direction to smoothed path list
     expanded_targets = [(current_position, current_rotation)]
 
+    # Iterate over each waypoint from navmesh. For each point, expand intermediate poses for smoothed trajectory.
     for ix, point in enumerate(path_points):
+
+        # While not reached the final waypoint, apply linear displacement steps to move towards 'next' waypoint
         if ix < len(path_points) - 1:
 
+            # While loop to continually move towards 'next' waypoint
             reached_target = False
             while not reached_target:
                 tangent = path_points[ix + 1] - current_position
                 distance_to_target = np.linalg.norm(tangent)
-                direction_to_target = tangent / distance_to_target
-
+                
+                # If agent within a maximum forward step, consider waypoint reached, update state correspondingly
                 if distance_to_target < forward_step:
                     reached_target = True
                     current_position = path_points[ix + 1]
+                    # Add expanded waypoint to smoothed path list and move to next waypoint
                     expanded_targets.append((current_position, current_rotation))
                     break
 
+                # Otherwise, take maximum step in straight-line direction of waypoint
+                direction_to_target = tangent / distance_to_target
                 current_position = current_position + (forward_step * direction_to_target)
+                # Add expanded waypoint to smoothed path list and continue linear movement
                 expanded_targets.append((current_position, current_rotation))
 
             
-
+        # After reaching 'next' waypoint in position, agent must rotate towards 'next-next' waypoint
+        # This rotation will ensure future linear steps align with camera viewing direction
         if ix < len(path_points) - 2:
+
+            # While loop to continually rotate towards next tangent viewing direction
             reached_target = False
             while not reached_target:
                 next_tangent = path_points[ix + 2] - path_points[ix + 1]
-
                 next_rotation = get_rotation(current_position, next_tangent)
 
+                # Use axis-angle representation to calculate minimum rotation needed to align agent view direction with tangent
                 rotation_diff = next_rotation * current_rotation.conjugate()
                 theta, w = utils.quat_to_angle_axis(rotation_diff)
                 
+                # Handle case where axis-angle representation does not align with notion of shortest path
+                # Essentially, don't allow rotations outside the range of (-180, +180)
+                # This range allows all rotations and ensures shortest time spent rotating to next view direction
                 theta_deg = math.degrees(theta)%360
                 if theta_deg > 180:
                     theta_deg -= 360
                 theta = math.radians(theta_deg)
 
+                # If agent within maximum step of desired view direction, consider view direction reached, update state correspondingly
                 if abs(theta) < math.radians(turn_step):
                     reached_target = True
                     current_rotation = next_rotation
+                    # Add expanded waypoint to smoothed path list and move to next waypoint
                     expanded_targets.append((current_position, current_rotation))
                     break
                 
+                # Otherwise, take maximum step-sized rotation along correct axis to move view direction towards tangent
                 theta = np.sign(theta) * math.radians(turn_step)
                 current_rotation = utils.quat_from_angle_axis(theta, w) * current_rotation
+                # Add expanded waypoint to smoothed path list and move to next waypoint and continue rotational displacement
                 expanded_targets.append((current_position, current_rotation))
 
+    # Return expanded list of waypoints for view sampling
     return expanded_targets
 
 
-#python zero_shot_scene_segmentation/simulators/habitat-sim/render_trajectories.py -- -config zero_shot_scene_segmentation/simulators/habitat-sim/configs/render_config.ini -data zero_shot_scene_segmentation/datasets/raw_data/HM3D/train -out zero_shot_scene_segmentation/datasets/raw_data/samples/train/
 def sample_scene_trajectories(SCENE_DIR, SCENE_OUT_DIR, CONFIG, render_images=False, append_samples=False, verbose=True):
     
     SCENE_NAME = SCENE_DIR.split('/')[-1]
@@ -147,7 +188,6 @@ def sample_scene_trajectories(SCENE_DIR, SCENE_OUT_DIR, CONFIG, render_images=Fa
         print()
 
     os.makedirs(SCENE_OUT_DIR, exist_ok=True)
-
 
 
 
@@ -195,12 +235,16 @@ def sample_scene_trajectories(SCENE_DIR, SCENE_OUT_DIR, CONFIG, render_images=Fa
 
     valid_path_count = 0 
     valid_view_count = 0
+
+    # Seed pathfinder for pseudo random sampling
     seed = 0
-    sampled_start_goal_points = []
-
-    points_in_arr_list = lambda start_arr, goal_arr, list_of_start_goal_tuples : any([(start_arr==start).all() and (goal_arr==goal).all() for (start, goal) in list_of_start_goal_tuples])
-
     sim.pathfinder.seed(seed)
+
+    # Define lambda function and list of sampled navmesh points to avoid duplicate trajectory sampling
+    sampled_start_goal_points = []
+    points_in_arr_list = lambda start_arr, goal_arr, list_of_start_goal_tuples : any([(start_arr==start).all() and (goal_arr==goal).all() for (start, goal) in list_of_start_goal_tuples])
+    
+    # Simulate at least minimum number desired trajectories and image frames for this specific scene
     while valid_path_count < CONFIG['trajectory_settings'].getint('minimum_trajectories_per_scene') or valid_view_count < CONFIG['trajectory_settings'].getint('minimum_frames_per_scene'):
 
         # Sample valid points on the NavMesh for agent spawn location and pathfinding goal
@@ -249,6 +293,7 @@ def sample_scene_trajectories(SCENE_DIR, SCENE_OUT_DIR, CONFIG, render_images=Fa
                             rgb_img.save(os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{valid_path_count:010}.{CONFIG["sensor_spec"].getint("sensor_height"):010}.{trajectory_view_count:010}.RGB.{0:010}.png'))
 
 
+                        # Don't use agent state for pose since sensor may be translated from the local origin of the agent (e.g. to simulate agent height)
                         # x, y, z = agent_state.position
                         # quat_w, quat_x, quat_y, quat_z = [agent_state.rotation.real]+list(agent_state.rotation.imag)
 
@@ -260,7 +305,6 @@ def sample_scene_trajectories(SCENE_DIR, SCENE_OUT_DIR, CONFIG, render_images=Fa
                         # Write pose information to file
                         accepted_view_file.write(f'{SCENE_NAME},{valid_path_count:010},{CONFIG["sensor_spec"].getint("sensor_height"):010},{trajectory_view_count:010},{x},{y},{z},{quat_w},{quat_x},{quat_y},{quat_z}\n')
                         accepted_view_file.flush()
-
 
                         trajectory_view_count += 1
                         valid_view_count += 1
@@ -286,9 +330,9 @@ if __name__ == "__main__":
 
 
     parser = argparse.ArgumentParser(
-                    prog='render_trajectories',
-                    usage='python <path to render_trajectories.py> -- [options]',
-                    description='Python script for rendering trajectories from the Matterport 3D semantic dataset using habitat sim',
+                    prog='sample_trajectories',
+                    usage='python <path to sample_trajectories.py> -- [options]',
+                    description='Python script for sampling trajectories from the Matterport 3D semantic dataset using habitat sim',
                     epilog='For more information, see: https://github.com/opipari/ZeroShot_RGB_D/tree/main/zeroshot_rgbd/simulators/habitat-sim')
 
     parser.add_argument('-config', '--config-file', help='path to ini file containing rendering and sampling configuration', type=str)
