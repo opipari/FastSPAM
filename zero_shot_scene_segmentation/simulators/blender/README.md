@@ -28,6 +28,16 @@ This folder contains all blender python scripts for rendering visual imagery and
             -data ./zero_shot_scene_segmentation/datasets/HM3D/example/ \
             -out ./zero_shot_scene_segmentation/datasets/renders/example/
       ```
+    - **Shortcut with Habitat-Sim Trajectories**
+      ```
+      ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64/blender \
+        --python ./zero_shot_scene_segmentation/simulators/blender/sample_views.py \
+        -- \
+        -config zero_shot_scene_segmentation/simulators/blender/configs/render_config.ini \
+        -data zero_shot_scene_segmentation/datasets/raw_data/HM3D/example/ \
+        -out zero_shot_scene_segmentation/datasets/raw_data/samples/example/ \
+        -habitat
+      ```
     - **Visualize Sampled Views**
       ```
       ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64/blender \

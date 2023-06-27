@@ -201,7 +201,7 @@ def sample_scene_trajectories(SCENE_DIR, SCENE_OUT_DIR, CONFIG, render_images=Fa
     points_in_arr_list = lambda start_arr, goal_arr, list_of_start_goal_tuples : any([(start_arr==start).all() and (goal_arr==goal).all() for (start, goal) in list_of_start_goal_tuples])
 
     sim.pathfinder.seed(seed)
-    while valid_path_count < CONFIG['trajectory_settings'].getint('minimum_trajectories_per_scene') and valid_view_count < CONFIG['trajectory_settings'].getint('minimum_frames_per_scene'):
+    while valid_path_count < CONFIG['trajectory_settings'].getint('minimum_trajectories_per_scene') or valid_view_count < CONFIG['trajectory_settings'].getint('minimum_frames_per_scene'):
 
         # Sample valid points on the NavMesh for agent spawn location and pathfinding goal
         sample_start = sim.pathfinder.get_random_navigable_point()
@@ -228,7 +228,7 @@ def sample_scene_trajectories(SCENE_DIR, SCENE_OUT_DIR, CONFIG, render_images=Fa
                                         turn_step=CONFIG['trajectory_settings'].getfloat('turn_step'))
 
             # Only accept the trajectory if it has at least a minimum number of frames
-            if len(path_points) > CONFIG['trajectory_settings'].getint('minimum_frames_per_trajectory'):
+            if len(path_points) > CONFIG['trajectory_settings'].getint('minimum_frames_per_trajectory') and len(path_points) <= CONFIG['trajectory_settings'].getint('maximum_frames_per_trajectory'):
                 
                 trajectory_view_count = 0
                 agent_state = habitat_sim.AgentState()

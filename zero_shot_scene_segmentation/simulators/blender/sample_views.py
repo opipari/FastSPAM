@@ -1,5 +1,6 @@
 import os
 import sys
+import csv
 import argparse
 import configparser
 
@@ -10,7 +11,7 @@ import itertools, functools, operator
 
 import bpy
 import bmesh
-from mathutils import Vector, Euler
+from mathutils import Vector, Euler, Quaternion
 
 import cv2
 
@@ -466,8 +467,8 @@ def sample_scene_views(SCENE_DIR, OUT_DIR, CONFIG, verbose=True):
     all_view_file.flush()
 
 
-    accepted_view_file = open(os.path.join(SCENE_OUT_DIR, f"{SCENE_NAME}.accepted_view_poses.csv"), "w")
-    accepted_view_file.write('Scene-ID,View-ID,Valid-View-ID,Position-ID,Rotation-ID,X-Position,Y-Position,Z-Position,Roll-Z-EulerZXY,Pitch-X-EulerZXY,Yaw-Y-EulerZXY\n')
+    accepted_view_file = open(os.path.join(SCENE_OUT_DIR, f"{SCENE_NAME}.render_view_poses.csv"), "w")
+    accepted_view_file.write('Scene-ID,Valid-View-ID,Position-ID,Rotation-ID,X-Position,Y-Position,Z-Position,W-Quaternion,X-Quaternion,Y-Quaternion,Z-Quaternion\n')
     accepted_view_file.flush()
     
     if verbose:
@@ -505,10 +506,14 @@ def sample_scene_views(SCENE_DIR, OUT_DIR, CONFIG, verbose=True):
                     depth_arr = np.flipud(np.round(depth_arr*1000).astype(np.uint16))
                     cv2.imwrite(os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{valid_view_count:010}.{pos_i:010}.{rot_i:010}.DEPTH.png'), depth_arr)
 
+
+                    camera_quaternion = camera_obj.rotation_euler.to_quaternion()
+                    quat_w, quat_x, quat_y, quat_z = camera_quaternion.w, camera_quaternion.x, camera_quaternion.y, camera_quaternion.z
+
                     all_view_file.write(f'{SCENE_NAME},{(pos_i*num_rot_samples)+rot_i:010},{pos_i:010},{rot_i:010},{x},{y},{z},{roll},{pitch},{yaw},Y\n')
                     all_view_file.flush()
 
-                    accepted_view_file.write(f'{SCENE_NAME},{(pos_i*num_rot_samples)+rot_i:010},{valid_view_count:010},{pos_i:010},{rot_i:010},{x},{y},{z},{roll},{pitch},{yaw}\n')
+                    accepted_view_file.write(f'{SCENE_NAME},{valid_view_count:010},{pos_i:010},{rot_i:010},{x},{y},{z},{quat_w},{quat_x},{quat_y},{quat_z}\n')
                     accepted_view_file.flush()
 
                     valid_view_count += 1
@@ -538,7 +543,7 @@ def sample_scene_views(SCENE_DIR, OUT_DIR, CONFIG, verbose=True):
 
 
 
-def sample_scene_trajectories(SCENE_DIR, OUT_DIR, CONFIG, verbose=True)
+def sample_scene_trajectories(SCENE_DIR, OUT_DIR, CONFIG, verbose=True):
 
 
     SCENE_NAME = SCENE_DIR.split('/')[-1]
@@ -651,21 +656,23 @@ def sample_scene_trajectories(SCENE_DIR, OUT_DIR, CONFIG, verbose=True)
         print()
 
 
-    accepted_view_file = open(os.path.join(SCENE_OUT_DIR, f"{SCENE_NAME}.trajectory_view_poses.csv"), "w")
-    accepted_view_file.write('Scene-ID,Trajectory-ID,View-ID,Sensor-Height,X-Position,Y-Position,Z-Position,W-Quaternion,X-Quaternion,Y-Quaternion,Z-Quaternion,View-Corners-On-Surface-Y-N,Minimum-Depth-Below-Threshold-Y-N,Is-Valid-View-Y-N\n')
+    accepted_view_file = open(os.path.join(SCENE_OUT_DIR, f"{SCENE_NAME}.render_view_poses.csv"), "w")
+    accepted_view_file.write('Scene-ID,Trajectory-ID,Sensor-Height-ID,View-ID,X-Position,Y-Position,Z-Position,W-Quaternion,X-Quaternion,Y-Quaternion,Z-Quaternion,View-Corners-On-Surface-Y-N,Minimum-Depth-Below-Threshold-Y-N,Is-Valid-View-Y-N\n')
     accepted_view_file.flush()
     
     if verbose:
         print()
         print("***********************")
-        print(f"INITIATING SIMULATION OF {num_pos_samples*num_rot_samples} VIEW SAMPLES")
+        print(f"INITIATING SIMULATION OF TRAJECTORY SAMPLES")
 
+
+    with open(os.path.join(SCENE_OUT_DIR, SCENE_TRAJECTORIES_FILE), 'r') as csvfile:
+        num_views = sum(1 for row in csvfile)-1
 
     view_count = 0
-    with open(os.path.join(OUT_DIR, SCENE_TRAJECTORIES_FILE), 'r') as csvfile:
+    with open(os.path.join(SCENE_OUT_DIR, SCENE_TRAJECTORIES_FILE), 'r') as csvfile:
 
         pose_reader = csv.reader(csvfile, delimiter=',')
-        num_views = len(pose_reader)
 
         for pose_meta in pose_reader:
             scene_name, traj_idx, sensor_height, view_idx, x_pos, y_pos, z_pos, quat_w, quat_x, quat_y, quat_z = pose_meta
@@ -687,10 +694,14 @@ def sample_scene_trajectories(SCENE_DIR, OUT_DIR, CONFIG, verbose=True)
             pose_mat[2][3] = z_pos
 
             # Set camera rotation
+            habitat2blender = Euler((math.pi,0,0),'XYZ').to_matrix().to_4x4()
             camera_obj.matrix_world = habitat2blender @ pose_mat
 
             # Update scene view layer to recalculate camera extrensic matrix
             bpy.context.view_layer.update()
+
+            _pos, y_pos, z_pos = camera_obj.location
+            quat_w, quat_x, quat_y, quat_z = camera_obj.rotation_quaternion.w, camera_obj.rotation_quaternion.x, camera_obj.rotation_quaternion.y, camera_obj.rotation_quaternion.z
 
             min_depth, depth_arr = render_depth()
 
@@ -764,9 +775,9 @@ if __name__ == "__main__":
         
         scene_has_semantic_mesh = any([fl.endswith('.semantic.glb') for fl in scene_files])
         scene_has_semantic_txt = any([fl.endswith('.semantic.txt') for fl in scene_files])
-        scene_has_habitat_poses = any([fl.endswith('.habitat_trajectory_poses.csv') for fl in os.listdir(os.path.join(args.output_dir, scene_dir))])
 
         if scene_has_semantic_mesh and scene_has_semantic_txt:
+            scene_has_habitat_poses = any([fl.endswith('.habitat_trajectory_poses.csv') for fl in os.listdir(os.path.join(args.output_dir, scene_dir))])
             if args.use_habitat_poses and scene_has_habitat_poses:
                 sample_scene_trajectories(scene_dir_path, args.output_dir, config, verbose=args.verbose)
             else:    
