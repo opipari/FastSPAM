@@ -537,22 +537,188 @@ def sample_scene_views(SCENE_DIR, OUT_DIR, CONFIG, verbose=True):
 
 
 
-def habitat2blender():
-    camera = bpy.context.scene.camera
 
-    x,y,z =(-5.900082588195801,2.572537660598755,5.613729000091553)
-    quat_w, quat_x, quat_y, quat_z = (0.10381415486335754,-0.033601850271224976,0.9457235932350159,0.30610528588294983)
+def sample_scene_trajectories(SCENE_DIR, OUT_DIR, CONFIG, verbose=True)
 
-    pos = Vector((x,y,z))
-    rot = Quaternion((quat_w, quat_x, quat_y, quat_z))
-    pose_mat = rot.to_matrix().to_4x4()
-    pose_mat[0][3] = pos.x
-    pose_mat[1][3] = pos.y
-    pose_mat[2][3] = pos.z
 
-    hab2blender = Euler((math.pi,0,0),'XYZ').to_matrix().to_4x4()
+    SCENE_NAME = SCENE_DIR.split('/')[-1]
+    SCENE_FILE = SCENE_NAME.split('-')[1]+'.glb'
+    SEMANTIC_SCENE_FILE = SCENE_NAME.split('-')[1]+'.semantic.glb'
+    SCENE_OUT_DIR = os.path.join(OUT_DIR, SCENE_NAME)
+    SCENE_TRAJECTORIES_FILE = SCENE_NAME+'.habitat_trajectory_poses.csv'
 
-    camera.matrix_world = Euler((math.pi,0,0),'XYZ').to_matrix().to_4x4() @ pose_mat
+    if verbose:
+        print()
+        print("********************")
+        print(f"SAMPLING VIEWS FOR SCENE: {SCENE_NAME}")
+        print("********************")
+        print()
+
+    os.makedirs(OUT_DIR, exist_ok=True)
+    os.makedirs(SCENE_OUT_DIR, exist_ok=True)
+
+    if verbose:
+        print()
+        print("********************")
+        print("RESETTING SCENE")
+
+    bpy.ops.wm.read_homefile()
+    reset_blend()
+    
+    general_collection = bpy.context.scene.collection
+
+    building_collection = bpy.data.collections.get("Building")
+    delete_collection(building_collection)
+
+    if verbose:
+        print("DONE RESETTING SCENE")
+        print("********************")
+        print()
+
+
+
+    if verbose:
+        print()
+        print("***********************")
+        print("INITIALIZING SCENE")
+    
+    bpy.ops.import_scene.gltf(filepath=os.path.join(SCENE_DIR,SCENE_FILE))
+
+    building_collection = bpy.data.collections.get("Building")
+    if building_collection is None:
+        building_collection = bpy.data.collections.new("Building")
+        bpy.context.scene.collection.children.link(building_collection)
+    
+    bpy.ops.object.select_all(action='DESELECT')
+    
+    for obj in bpy.data.objects:
+        if obj.type=="MESH":
+            add_object_to_collection(obj, building_collection)
+            for mat in obj.data.materials:
+                mat.use_backface_culling = False
+    
+
+    delete_object(bpy.data.objects.get("Camera"))
+    camera_obj = get_camera(pos=(0,0,0), 
+        rot=(0,0,math.pi), 
+        name="Camera", 
+        rot_mode='QUATERNION',
+        lens_unit=CONFIG['blender.camera']['lens_unit'], # leave units as string
+        angle_x=CONFIG['blender.camera'].getfloat('angle_x'), 
+        clip_start=CONFIG['blender.camera'].getfloat('clip_start'), 
+        clip_end=config['blender.camera'].getfloat('clip_end'))
+    add_object_to_collection(camera_obj, general_collection)
+    bpy.context.scene.camera = camera_obj
+
+
+    bpy.context.scene.render.engine = 'BLENDER_EEVEE'
+    bpy.context.scene.eevee.taa_render_samples = 1
+    bpy.context.scene.eevee.taa_samples = 1
+    bpy.context.scene.eevee.sss_samples = 1
+    bpy.context.scene.render.dither_intensity = 0.0
+    bpy.context.scene.view_settings.view_transform = 'Standard'
+    bpy.context.scene.render.film_transparent = True
+    bpy.context.scene.render.image_settings.color_mode = 'RGBA'
+    bpy.context.scene.render.resolution_x = CONFIG['blender.resolution'].getint('resolution_x') # width
+    bpy.context.scene.render.resolution_y = CONFIG['blender.resolution'].getint('resolution_y') # height
+    
+
+    # Add z pass to view layer for rendering depth
+    bpy.context.view_layer.use_pass_z = True
+
+    # Use compositing nodes for rendering depth
+    bpy.context.scene.use_nodes = True
+    node_tree = bpy.context.scene.node_tree
+
+    # Remove default nodes
+    for node in node_tree.nodes:
+        node_tree.nodes.remove(node)
+
+
+    render_layers = node_tree.nodes.new('CompositorNodeRLayers')
+    node_viewer = node_tree.nodes.new('CompositorNodeViewer')
+    node_viewer.use_alpha = False
+    node_viewer.select = True
+    bpy.context.scene.node_tree.nodes.active = node_viewer
+
+    # Link depth output from z_pass to node viewier Image input
+    node_tree.links.new(render_layers.outputs['Depth'], node_viewer.inputs['Image']) # link Z to output
+
+
+    if verbose:
+        print("DONE INITIALIZING SCENE")
+        print("***********************")
+        print()
+
+
+    accepted_view_file = open(os.path.join(SCENE_OUT_DIR, f"{SCENE_NAME}.trajectory_view_poses.csv"), "w")
+    accepted_view_file.write('Scene-ID,Trajectory-ID,View-ID,Sensor-Height,X-Position,Y-Position,Z-Position,W-Quaternion,X-Quaternion,Y-Quaternion,Z-Quaternion,View-Corners-On-Surface-Y-N,Minimum-Depth-Below-Threshold-Y-N,Is-Valid-View-Y-N\n')
+    accepted_view_file.flush()
+    
+    if verbose:
+        print()
+        print("***********************")
+        print(f"INITIATING SIMULATION OF {num_pos_samples*num_rot_samples} VIEW SAMPLES")
+
+
+    view_count = 0
+    with open(os.path.join(OUT_DIR, SCENE_TRAJECTORIES_FILE), 'r') as csvfile:
+
+        pose_reader = csv.reader(csvfile, delimiter=',')
+        num_views = len(pose_reader)
+
+        for pose_meta in pose_reader:
+            scene_name, traj_idx, sensor_height, view_idx, x_pos, y_pos, z_pos, quat_w, quat_x, quat_y, quat_z = pose_meta
+            
+            # Skip information line if it is first
+            if scene_name=='Scene-ID':
+                continue
+
+            # Parse pose infomration out of string type
+            traj_idx, sensor_height, view_idx,  = int(traj_idx), int(sensor_height), int(view_idx)
+            x_pos, y_pos, z_pos = float(x_pos), float(y_pos), float(z_pos)
+            quat_w, quat_x, quat_y, quat_z = float(quat_w), float(quat_x), float(quat_y), float(quat_z)
+
+
+            rot = Quaternion((quat_w, quat_x, quat_y, quat_z))
+            pose_mat = rot.to_matrix().to_4x4()
+            pose_mat[0][3] = x_pos
+            pose_mat[1][3] = y_pos
+            pose_mat[2][3] = z_pos
+
+            # Set camera rotation
+            camera_obj.matrix_world = habitat2blender @ pose_mat
+
+            # Update scene view layer to recalculate camera extrensic matrix
+            bpy.context.view_layer.update()
+
+            min_depth, depth_arr = render_depth()
+
+            # Determine if rejection sampling criteria is met
+            # Valid view defined as one where corner and center rays view inner mesh surface and at least 0.25m from camera origin
+            corners_viewing_surface = 'Y' if camera_viewing_valid_surface(camera_obj, dist_threshold=0) else 'N'
+            min_depth_passes_threshold = 'Y' if min_depth>=CONFIG['view_sampling'].getfloat('surface_distance_threshold') else 'N'
+            is_valid_view = 'Y' if corners_viewing_surface and min_depth_passes_threshold else 'N'
+                
+            depth_arr = np.flipud(np.round(depth_arr*1000).astype(np.uint16))
+            cv2.imwrite(os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{traj_idx:010}.{sensor_height:010}.{view_idx:010}.DEPTH.png'), depth_arr)
+
+            accepted_view_file.write(f'{SCENE_NAME},{traj_idx:010},{sensor_height:010},{view_idx:010},{x_pos},{y_pos},{z_pos},{quat_w},{quat_x},{quat_y},{quat_z},{corners_viewing_surface},{min_depth_passes_threshold},{is_valid_view}\n')
+            accepted_view_file.flush()
+
+            view_count += 1
+
+            if view_count%100==0:
+                print(f'{view_count}/{num_views} view samples finished simulating')
+    
+
+    accepted_view_file.close()
+
+    if verbose:
+        print("***********************")
+        print(f"DONE SIMULATING {view_count} TRAJECTORY SAMPLES")
+        print("***********************")
+        print()
 
 
 if __name__ == "__main__":
@@ -574,6 +740,8 @@ if __name__ == "__main__":
     parser.add_argument('-config', '--config-file', help='path to ini file containing rendering and sampling configuration', type=str)
     parser.add_argument('-data', '--dataset-dir', help='path to directory of Matterport semantic dataset directory formatted as one sub-directory per scene', type=str)
     parser.add_argument('-out', '--output-dir', help='path to directory where output dataset should be stored', type=str)
+    parser.add_argument('-habitat', '--use-habitat-poses', help='bool specifying whether trajectory poses have been created from habitat-sim and should be used for view generation', action='store_true')
+    parser.set_defaults(use_habitat_poses=False)
     parser.add_argument('-v', '--verbose', help='whether verbose output printed to stdout', type=int, default=1)
 
     args = parser.parse_args(argv)
@@ -596,9 +764,13 @@ if __name__ == "__main__":
         
         scene_has_semantic_mesh = any([fl.endswith('.semantic.glb') for fl in scene_files])
         scene_has_semantic_txt = any([fl.endswith('.semantic.txt') for fl in scene_files])
-        
+        scene_has_habitat_poses = any([fl.endswith('.habitat_trajectory_poses.csv') for fl in os.listdir(os.path.join(args.output_dir, scene_dir))])
+
         if scene_has_semantic_mesh and scene_has_semantic_txt:
-            sample_scene_views(scene_dir_path, args.output_dir, config, verbose=args.verbose)
+            if args.use_habitat_poses and scene_has_habitat_poses:
+                sample_scene_trajectories(scene_dir_path, args.output_dir, config, verbose=args.verbose)
+            else:    
+                sample_scene_views(scene_dir_path, args.output_dir, config, verbose=args.verbose)
             
     if args.verbose:
         print()
