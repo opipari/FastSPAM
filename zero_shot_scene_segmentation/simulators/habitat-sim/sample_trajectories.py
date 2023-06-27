@@ -72,6 +72,21 @@ def make_cfg(scene, scene_config, CONFIG):
     return habitat_sim.Configuration(sim_cfg, [agent_cfg])
 
 
+
+def euclidean_distance(arr_a, arr_b):
+    print(np.sqrt(np.sum((arr_a-arr_b)**2)))
+    print(np.linalg.norm(arr_a-arr_b))
+
+def smooth_path(path_points, forward=0.1, turn=15):
+    expanded_targets = []
+    for ix, point in enumerate(path_points):
+        if ix < len(path_points) - 1:
+            tangent = path_points[ix + 1] - point
+            
+            euclidean_distance(path_points[ix + 1], point)
+            print(type(tangent), point, path_points[ix+1])
+
+            raise
 #python zero_shot_scene_segmentation/simulators/habitat-sim/render_trajectories.py -- -config zero_shot_scene_segmentation/simulators/habitat-sim/configs/render_config.ini -data zero_shot_scene_segmentation/datasets/raw_data/HM3D/train -out zero_shot_scene_segmentation/datasets/raw_data/samples/train/
 def render_scene_trajectories(SCENE_DIR, SCENE_OUT_DIR, CONFIG, verbose=True):
     
@@ -126,8 +141,8 @@ def render_scene_trajectories(SCENE_DIR, SCENE_OUT_DIR, CONFIG, verbose=True):
     
     
         
-    accepted_view_file = open(os.path.join(SCENE_OUT_DIR, f"{SCENE_NAME}.accepted_view_poses.csv"), "w")
-    accepted_view_file.write('Scene-ID,View-ID,Valid-View-ID,Position-ID,Rotation-ID,X-Position,Y-Position,Z-Position,Roll-Z-EulerZXY,Pitch-X-EulerZXY,Yaw-Y-EulerZXY\n')
+    accepted_view_file = open(os.path.join(SCENE_OUT_DIR, f"{SCENE_NAME}.habitat_trajectory_poses.csv"), "w")
+    accepted_view_file.write('Scene-ID,Trajectory-ID,Valid-View-ID,X-Position,Y-Position,Z-Position,W-Quaternion,X-Quaternion,Y-Quaternion,Z-Quaternion\n')
     accepted_view_file.flush()
     
 
@@ -159,6 +174,7 @@ def render_scene_trajectories(SCENE_DIR, SCENE_OUT_DIR, CONFIG, verbose=True):
         print(len(path_points), sample1, sample2)
         # Display trajectory (if found) on a topdown map of ground floor
         if found_path and len(path_points) > CONFIG['trajectory_settings'].getint('minimum_frames_per_trajectory'):
+            smooth_path(path_points)
             trajectory_view_count = 0
             tangent = path_points[1] - path_points[0]
             agent_state = habitat_sim.AgentState()
@@ -181,31 +197,21 @@ def render_scene_trajectories(SCENE_DIR, SCENE_OUT_DIR, CONFIG, verbose=True):
                     rgb_img = Image.fromarray(rgb, mode="RGBA")
                     rgb_img.save(os.path.join(SCENE_OUT_DIR, f"{SCENE_NAME}.{valid_path_count:010}.{trajectory_view_count:010}.RGB.png"))
 
-                    print(type(semantic))
-                    print(type(depth))
 
-                    x, y, z = agent_state.position
-                    pitch, yaw, roll = R.from_quat(list(agent_state.rotation.imag)+[agent_state.rotation.real]).as_euler('ZXY')
-                    
-                    accepted_view_file.write(f'{SCENE_NAME},{valid_path_count:010},{trajectory_view_count:010},{x},{y},{z},{roll},{pitch},{yaw}\n')
+                    # x, y, z = agent_state.position
+                    # quat_w, quat_x, quat_y, quat_z = [agent_state.rotation.real]+list(agent_state.rotation.imag)
+
+                    sensor_pose = agent.get_state().sensor_states['color_sensor']
+                    x, y, z = sensor_pose.position
+                    quat_w, quat_x, quat_y, quat_z = [sensor_pose.rotation.real]+list(sensor_pose.rotation.imag)
+
+                    accepted_view_file.write(f'{SCENE_NAME},{valid_path_count:010},{trajectory_view_count:010},{x},{y},{z},{quat_w},{quat_x},{quat_y},{quat_z}\n')
                     accepted_view_file.flush()
 
 
                     trajectory_view_count += 1
                     valid_view_count += 1
             valid_path_count += 1
-
-                    # depth_arr = np.flipud(np.round(depth_arr*1000).astype(np.uint16))
-                    # cv2.imwrite(os.path.join(SCENE_OUT_DIR, f'{SCENE_NAME}.{valid_view_count:010}.{pos_i:010}.{rot_i:010}.DEPTH.png'), depth_arr)
-
-                    # all_view_file.write(f'{SCENE_NAME},{(pos_i*num_rot_samples)+rot_i:010},{pos_i:010},{rot_i:010},{x},{y},{z},{roll},{pitch},{yaw},Y\n')
-                    # all_view_file.flush()
-
-                    
-
-                    # valid_view_count += 1
-                    # is_valid_view = True
-
 
     accepted_view_file.close()
 

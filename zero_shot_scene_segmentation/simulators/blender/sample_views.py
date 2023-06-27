@@ -537,6 +537,23 @@ def sample_scene_views(SCENE_DIR, OUT_DIR, CONFIG, verbose=True):
 
 
 
+def habitat2blender():
+    camera = bpy.context.scene.camera
+
+    x,y,z =(-5.900082588195801,2.572537660598755,5.613729000091553)
+    quat_w, quat_x, quat_y, quat_z = (0.10381415486335754,-0.033601850271224976,0.9457235932350159,0.30610528588294983)
+
+    pos = Vector((x,y,z))
+    rot = Quaternion((quat_w, quat_x, quat_y, quat_z))
+    pose_mat = rot.to_matrix().to_4x4()
+    pose_mat[0][3] = pos.x
+    pose_mat[1][3] = pos.y
+    pose_mat[2][3] = pos.z
+
+    hab2blender = Euler((math.pi,0,0),'XYZ').to_matrix().to_4x4()
+
+    camera.matrix_world = Euler((math.pi,0,0),'XYZ').to_matrix().to_4x4() @ pose_mat
+
 
 if __name__ == "__main__":
 
