@@ -310,6 +310,7 @@ def sample_scene_trajectories(SCENE_DIR, SCENE_OUT_DIR, CONFIG, render_images=Fa
                         valid_view_count += 1
                 valid_path_count += 1
 
+    sim.close()
     accepted_view_file.close()
 
     if verbose:
