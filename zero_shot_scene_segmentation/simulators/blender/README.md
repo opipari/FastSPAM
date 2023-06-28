@@ -66,13 +66,13 @@ This folder contains all blender python scripts for rendering visual imagery and
     - **Shortcut**
         ````
         ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64/blender \
-        --background \
-        --python ./zero_shot_scene_segmentation/simulators/blender/render_color.py \
-        -- \
-        -config ./zero_shot_scene_segmentation/simulators/blender/configs/render_config.ini \
-        -light-config ./zero_shot_scene_segmentation/simulators/blender/configs/illumination_0000000000_config.ini \
-        -data ./zero_shot_scene_segmentation/datasets/HM3D/example/ \
-        -out ./zero_shot_scene_segmentation/datasets/renders/example/
+          --background \
+          --python ./zero_shot_scene_segmentation/simulators/blender/render_color.py \
+            -- \
+            -config ./zero_shot_scene_segmentation/simulators/blender/configs/render_config.ini \
+            -light-config ./zero_shot_scene_segmentation/simulators/blender/configs/illumination_0000000000_config.ini \
+            -data ./zero_shot_scene_segmentation/datasets/HM3D/example/ \
+            -out ./zero_shot_scene_segmentation/datasets/renders/example/
         ````
 
 
