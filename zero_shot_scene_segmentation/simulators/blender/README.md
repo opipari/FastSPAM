@@ -54,11 +54,15 @@ This folder contains all blender python scripts for rendering visual imagery and
     - Output: one directory per scene containing semantic images in png format which are mappable by name to corresponding pose
     - **Shortcut**
         ```
-        ./blender-3.3.7-linux-x64/3.3/python/bin/python3.10 ./zero_shot_scene_segmentation/simulators/blender/post_process_semantics.py \
-            -- \
-            -data ./zero_shot_scene_segmentation/datasets/HM3D/example/ \
-            -out ./zero_shot_scene_segmentation/datasets/renders/example/ 
+         ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64/blender \
+           --background \
+           --python ./zero_shot_scene_segmentation/simulators/blender/render_semantics.py \
+             -- \
+             -config ./zero_shot_scene_segmentation/simulators/blender/configs/render_config.ini \
+             -data ./zero_shot_scene_segmentation/datasets/raw_data/HM3D/example/ \
+             -out ./zero_shot_scene_segmentation/datasets/raw_data/trajectory_renders/example/
         ```
+
 4. Render visual images
     - Run a blender command line script to render visual RGB images given valid view metadata
     - Input: meta data generated from step 1 and lighting parameters (i.e. spot light strength)
