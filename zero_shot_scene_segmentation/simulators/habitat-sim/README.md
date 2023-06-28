@@ -30,9 +30,9 @@ This folder contains all source code for sampling (or rendering) pose trajectori
         ```
         python zero_shot_scene_segmentation/simulators/habitat-sim/sample_trajectories.py \
           -- \
-	  -config zero_shot_scene_segmentation/simulators/habitat-sim/configs/trajectory_config.ini \
-	  -data zero_shot_scene_segmentation/datasets/raw_data/HM3D/example/ \
-	  -out zero_shot_scene_segmentation/datasets/raw_data/trajectory_renders/example/
+          -config zero_shot_scene_segmentation/simulators/habitat-sim/configs/trajectory_config.ini \
+          -data zero_shot_scene_segmentation/datasets/raw_data/HM3D/example/ \
+          -out zero_shot_scene_segmentation/datasets/raw_data/trajectory_renders/example/
         ```
     - If you'd like to render RGB images using the habitat-sim render, simply add the `-render` flag to the above script.
     - **Expected Output**
@@ -51,9 +51,9 @@ This folder contains all source code for sampling (or rendering) pose trajectori
         ```
         python zero_shot_scene_segmentation/simulators/habitat-sim/sample_trajectories.py \
           -- \
-	  -config zero_shot_scene_segmentation/simulators/habitat-sim/configs/trajectory_config.ini \
-	  -data zero_shot_scene_segmentation/datasets/raw_data/HM3D/example/ \
-	  -out zero_shot_scene_segmentation/datasets/raw_data/trajectory_renders/example/
-        -append
+          -config zero_shot_scene_segmentation/simulators/habitat-sim/configs/trajectory_config.ini \
+          -data zero_shot_scene_segmentation/datasets/raw_data/HM3D/example/ \
+          -out zero_shot_scene_segmentation/datasets/raw_data/trajectory_renders/example/
+          -append
         ```
 6. Follow blender simulation workflow, but use the `-habitat` flag when running the [`../blender/sample_views.py`](https://github.com/opipari/ZeroShotSceneSegmentation/blob/main/zero_shot_scene_segmentation/simulators/blender/sample_views.py) script. **Note** all other steps in the [blender simulation workflow](https://github.com/opipari/ZeroShotSceneSegmentation/blob/main/zero_shot_scene_segmentation/simulators/blender/README.md#simulation-workflow) remain unchanged.
