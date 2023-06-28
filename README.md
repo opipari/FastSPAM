@@ -85,7 +85,7 @@ python3.8 -m venv ./envs/data-processing && \
   - [MSRA10K](https://mmcheng.net/msra10k/)
       ```
       aws s3 cp s3://prism-intern-anthony/raw_data/pretraining/static/MSRA10K/MSRA10K_Imgs_GT.zip ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/MSRA10K/ && \
-        unzip ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/MSRA10K/MSRA10K_Imgs_GT.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/MSRA10K && \
+        unzip ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/MSRA10K/MSRA10K_Imgs_GT.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/MSRA10K/ && \
           rm ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/MSRA10K/MSRA10K_Imgs_GT.zip
       ```
   - [ECSSD](http://www.cse.cuhk.edu.hk/leojia/projects/hsaliency/dataset.html)
@@ -98,12 +98,18 @@ python3.8 -m venv ./envs/data-processing && \
       ```
   - [PASCAL-S](http://cbs.ic.gatech.edu/salobj/download/salObj.zip)
       ```
-
+      aws s3 cp s3://prism-intern-anthony/raw_data/pretraining/static/PASCAL-S/salObj.zip ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCAL-S/ && \
+        unzip ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCAL-S/salObj.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCAL-S/ && \
+          rm ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCAL-S/salObj.zip
       ```
   - [PASCAL VOC2012](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/)
       ```
-
-      ```
+      aws s3 cp s3://prism-intern-anthony/raw_data/pretraining/static/PASCAL-VOC2012/VOCtrainval_11-May-2012.tar ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCAL-VOC2012/ && \
+        tar -xvf ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCAL-VOC2012/VOCtrainval_11-May-2012.tar -C ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCAL-VOC2012/ && \
+          rm ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCAL-VOC2012/VOCtrainval_11-May-2012.tar && \
+            mv ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCAL-VOC2012/VOCdevkit/VOC2012/* ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCAL-VOC2012/ && \
+              rm -r ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCAL-VOC2012/VOCdevkit/
+      ``` 
   - [COCO 2017](https://cocodataset.org/#download)
     See here for confirmation of 2017: https://github.com/xmlyqing00/AFB-URR/issues/15
 
@@ -114,9 +120,9 @@ python3.8 -m venv ./envs/data-processing && \
 <summary>Download From AWS Cloud</summary>
     
 ```
-aws s3 cp s3://prism-intern-anthony/raw_data/pretraining/DAVIS-2017-trainval-480p.zip ./zero_shot_scene_segmentation/datasets/raw_data/ && \
-  unzip ./zero_shot_scene_segmentation/datasets/raw_data/DAVIS-2017-trainval-480p.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/ && \
-    rm ./zero_shot_scene_segmentation/datasets/raw_data/DAVIS-2017-trainval-480p.zip
+aws s3 cp s3://prism-intern-anthony/raw_data/pretraining/DAVIS/DAVIS-2017-trainval-480p.zip ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/DAVIS/ && \
+  unzip ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/DAVIS/DAVIS-2017-trainval-480p.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/DAVIS/ && \
+    rm ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/DAVIS/DAVIS-2017-trainval-480p.zip
 ```
 
 </details>
