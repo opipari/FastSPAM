@@ -58,6 +58,16 @@ python3.8 -m venv ./envs/segment-anything && \
         wget -P ./zero_shot_scene_segmentation/models/segment-anything/segment-anything/checkpoints/ https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
 ```
 
+### Pyramid / Panoptic Associating Objects with Transformers (PAOT)
+
+```
+python3.8 -m venv ./envs/paot-benchmark && \
+  source ./envs/paot-benchmark/bin/activate && \
+    pip install -r ./envs/requirements/paot-benchmark/base.txt &&
+    pip install -r ./envs/requirements/paot-benchmark/deps.txt && \
+      deactivate
+```
+
 ## Datasets
 
 ### Generic Data Processing Environment
