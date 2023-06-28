@@ -82,8 +82,8 @@ python3.8 -m venv ./envs/data-processing && \
 
 #### [VIPOSeg-Benchmark](https://aihabitat.org/datasets/hm3d-semantics/)
 
-<details>
-<summary open> Download From AWS Cloud</summary>
+<details open>
+<summary>Download From AWS Cloud</summary>
     
 ```
 export UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE && \
