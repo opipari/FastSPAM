@@ -1,13 +1,13 @@
+# Habitat-Sim Simulation Pipeline
+
+This folder contains all source code for sampling (or rendering) pose trajectories for an agent simulated by the [Habitat Simulator](https://aihabitat.org/) using scene assets from the [Matterport 3D Semantic dataset](https://aihabitat.org/datasets/hm3d-semantics/).
+
+## Prerequisites
+
+1. Follow the conda environment installation process detailed on the main repository [README.md#habitat-sim](https://github.com/opipari/ZeroShotSceneSegmentation/tree/main#habitat-sim).
 
 
-## Setup
-
-Follow the conda environment installation process detailed on the main repository [README.md#habitat-sim](https://github.com/opipari/ZeroShotSceneSegmentation/tree/main#habitat-sim).
-
-
-
-
-## Workflow
+## Simulation Workflow
 
 1. Initialize the `habitat` conda environment that you installed during [setup](#Setup) 
 
@@ -16,6 +16,15 @@ Follow the conda environment installation process detailed on the main repositor
     ```
 2. Configure Sampling Parameters
     - Set any specific sampling parameters you'd like to use in a `.ini` configuration file located in `./configs/`
+    - These include:
+        - `minimum_trajectories_per_scene`: Integer controlling the minimum threshold number of trajectories to sample for each scene. Additional trajectories will be sampled until this condition is met.
+          ```
+          minimum_frames_per_scene:      Integer controlling the minimum number of images to sample for each scene. Additional trajectories will be sampled until this condition is met.
+          minimum_frames_per_trajectory: Integer controlling the minimum number of images needed to accept a trajectory. Used to avoid extremely *short* sequences.
+          maximum_frames_per_trajectory: Integer controlling the maximum number of images needed to accept a trajectory. Used to avoid extremely *long* sequences.
+          forward_step:                  Float controlling the maximum linear step size, in *meters*, for moving the agent forward in simulation.
+          turn_step:                     Float controlling the maximum rotational step size, in *degrees*, for rotating the agent along an axis-angle rotation in simulation.
+          ```
 3. Sample Trajectories
 	- **Shortcut**
         ```
@@ -26,7 +35,12 @@ Follow the conda environment installation process detailed on the main repositor
         ```
     - If you'd like to render RGB images using the habitat-sim render, simply add the `-render` flag to the above script.
     - **Expected Output**
-        The above command should create a new directory for each scene in the example set of matterport that includes a semantic label mesh. For each of these scenes, there will be a sub-directory each containing a `<scene name>.habitat_trajectory_poses.csv` file describing the camera pose for each sampled trajectory.
+        - The above command should create a new directory for each scene in the `example` set of matterport that includes a semantic label mesh (currently, only `00861-GLAQ4DNUx5U`). For each of these scenes, the script will create a sub-directory each containing a `<scene_name>.habitat_trajectory_poses.csv` file describing the camera poses in each sampled trajectory.
+        - The output `csv` file will have the following columns:
+            ```
+            Scene-ID, Trajectory-ID, Sensor-Height, View-ID, X-Position, Y-Position, Z-Position, W-Quaternion, X-Quaternion, Y-Quaternion, Z-Quaternion
+            ```
+        - **Note** These poses are in the habitat-sim coordinate frame.
 4. Modify Sampling Parameters
     - Edit the parameters specified in the `./configs/trajectory_config.ini` configuration file.
     - Useful, for example, if you want to simulate data from multiple agent heights.
