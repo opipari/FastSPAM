@@ -45,7 +45,7 @@ This repository is setup to contain a centralized python package, `ZeroShotScene
     ```
 
 
-
+<hr>
 
 ### Datasets
 
@@ -82,9 +82,25 @@ python3.8 -m venv ./envs/data-processing && \
 
 #### [VIPOSeg-Benchmark](https://aihabitat.org/datasets/hm3d-semantics/)
 
+<details>
+<summary open> Download From AWS Cloud</summary>
+    
+```
+export UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE && \
+  aws s3 sync s3://prism-intern-anthony/raw_data/VIPOSeg/ ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
+    unzip ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_train.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
+      rm ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_train.zip && \
+    unzip ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_valid.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
+      rm ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_valid.zip && \
+unset UNZIP_DISABLE_ZIPBOMB_DETECTION
+```
+
+</details>
+
 
 <details>
-<summary> Setup From Open Internet</summary>
+<summary> Download From Open Internet</summary>
+    
 ```
 export UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE && \
   source ./envs/data-processing/bin/activate && \
@@ -97,22 +113,13 @@ export UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE && \
   deactivate && \
 unset UNZIP_DISABLE_ZIPBOMB_DETECTION
 ```
+
 </details>
 
 
-<details>
-<summary> Setup From AWS Cloud</summary>
-```
-export UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE && \
-  aws s3 sync s3://prism-intern-anthony/raw_data/VIPOSeg/ ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
-    unzip ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_train.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
-      rm ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_train.zip && \
-    unzip ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_valid.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
-      rm ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_valid.zip && \
-unset UNZIP_DISABLE_ZIPBOMB_DETECTION
-```
-</details>
 
+
+<hr>
 
 ### Models
 
@@ -136,7 +143,7 @@ python3.8 -m venv ./envs/paot-benchmark && \
       deactivate
 ```
 
-
+<hr>
 
 ### Simulators
 
