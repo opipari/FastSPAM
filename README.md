@@ -83,16 +83,35 @@ python3.8 -m venv ./envs/data-processing && \
 #### [VIPOSeg-Benchmark](https://aihabitat.org/datasets/hm3d-semantics/)
 
 
+<details>
+<summary> Setup From Open Internet</summary>
 ```
-source ./envs/data-processing/bin/activate && \
-  gdown 1GdhTyV8s6wJi8HnlncBWoI2gb_CmrbS1 -O ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
+export UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE && \
+  source ./envs/data-processing/bin/activate && \
+    gdown 1GdhTyV8s6wJi8HnlncBWoI2gb_CmrbS1 -O ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
+      unzip ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_train.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
+        rm ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_train.zip && \
+    gdown 1E6cB6FqXhLKT6N5_NEXO7QckwH45IWU2 -O zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
+      unzip ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_valid.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
+        rm ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_valid.zip && \
+  deactivate && \
+unset UNZIP_DISABLE_ZIPBOMB_DETECTION
+```
+</details>
+
+
+<details>
+<summary> Setup From AWS Cloud</summary>
+```
+export UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE && \
+  aws s3 sync s3://prism-intern-anthony/raw_data/VIPOSeg/ ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
     unzip ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_train.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
       rm ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_train.zip && \
-  gdown 1E6cB6FqXhLKT6N5_NEXO7QckwH45IWU2 -O zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
     unzip ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_valid.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
       rm ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_valid.zip && \
-  deactivate
+unset UNZIP_DISABLE_ZIPBOMB_DETECTION
 ```
+</details>
 
 
 ### Models
