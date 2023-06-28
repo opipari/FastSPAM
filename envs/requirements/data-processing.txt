@@ -7,4 +7,5 @@ opencv-python==4.7.0.72
 numpy
 matplotlib
 scipy
+urllib3==1.26.6 
 gdown==4.7.1
