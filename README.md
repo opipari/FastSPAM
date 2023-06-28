@@ -46,31 +46,10 @@ This repository is setup to contain a centralized python package, `ZeroShotScene
 
 
 
-## Models
 
-### Segment Anything Model (SAM)
+### Datasets
 
-```
-python3.8 -m venv ./envs/segment-anything && \
-  source ./envs/segment-anything/bin/activate && \
-    pip install -r ./envs/requirements/segment-anything.txt && \
-      deactivate && \
-        wget -P ./zero_shot_scene_segmentation/models/segment-anything/segment-anything/checkpoints/ https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
-```
-
-### Pyramid / Panoptic Associating Objects with Transformers (PAOT)
-
-```
-python3.8 -m venv ./envs/paot-benchmark && \
-  source ./envs/paot-benchmark/bin/activate && \
-    pip install -r ./envs/requirements/paot-benchmark/base.txt &&
-    pip install -r ./envs/requirements/paot-benchmark/deps.txt && \
-      deactivate
-```
-
-## Datasets
-
-### Generic Data Processing Environment
+#### Generic Data Processing Environment
 
 This environment is to be used for dataset preprocessing since Blender's version of python3.10 is not compatible with needed cocotools api.
 
@@ -81,9 +60,7 @@ python3.8 -m venv ./envs/data-processing && \
       deactivate
 ```
 
-### [Habitat Matterport 3D Semantic Dataset](https://aihabitat.org/datasets/hm3d-semantics/)
-
-#### Setup
+#### [Habitat Matterport 3D Semantic Dataset](https://aihabitat.org/datasets/hm3d-semantics/)
 
 1. Create an account on [Matterport website](https://buy.matterport.com/free-account-register?_ga=2.183460966.1764739312.1687379653-577208820.1687379653)
 2. Request access to the dataset by accepting [the terms and conditions](https://matterport.com/matterport-end-user-license-agreement-academic-use-model-data)
@@ -103,11 +80,48 @@ python3.8 -m venv ./envs/data-processing && \
     └── val                                                       # Directory containing scenes to be used for model validation (chosen by dataset authors)
     ```
 
-## Simulators
+#### [VIPOSeg-Benchmark](https://aihabitat.org/datasets/hm3d-semantics/)
 
-### Blender
 
-#### Setup
+```
+source ./envs/data-processing/bin/activate && \
+  gdown 1GdhTyV8s6wJi8HnlncBWoI2gb_CmrbS1 -O ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
+    unzip ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_train.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
+      rm ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_train.zip && \
+  gdown 1E6cB6FqXhLKT6N5_NEXO7QckwH45IWU2 -O zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
+    unzip ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_valid.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
+      rm ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_valid.zip && \
+  deactivate
+```
+
+
+### Models
+
+#### Segment Anything Model (SAM)
+
+```
+python3.8 -m venv ./envs/segment-anything && \
+  source ./envs/segment-anything/bin/activate && \
+    pip install -r ./envs/requirements/segment-anything.txt && \
+      deactivate && \
+        wget -P ./zero_shot_scene_segmentation/models/segment-anything/segment-anything/checkpoints/ https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
+```
+
+#### Pyramid / Panoptic Associating Objects with Transformers (PAOT)
+
+```
+python3.8 -m venv ./envs/paot-benchmark && \
+  source ./envs/paot-benchmark/bin/activate && \
+    pip install -r ./envs/requirements/paot-benchmark/base.txt &&
+    pip install -r ./envs/requirements/paot-benchmark/deps.txt && \
+      deactivate
+```
+
+
+
+### Simulators
+
+#### Blender
 
 ```
 wget -P ./zero_shot_scene_segmentation/simulators/blender/ https://mirrors.ocf.berkeley.edu/blender/release/Blender3.3/blender-3.3.7-linux-x64.tar.xz && \
@@ -117,7 +131,7 @@ wget -P ./zero_shot_scene_segmentation/simulators/blender/ https://mirrors.ocf.b
         ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64/3.3/python/bin/python3.10 -m pip install -r ./envs/requirements/blender.txt
 ```
 
-### Habitat-Sim
+#### Habitat-Sim
 
 
 <!-- ```
@@ -126,8 +140,6 @@ python3.9 -m venv ./envs/habitat-sim && \
     python -m pip install -r ./envs/requirements/habitat-sim.txt && \
       deactivate
 ``` -->
-
-#### Setup
 
 ```
 # Update the dependency solver for base conda for faster install
@@ -140,12 +152,4 @@ conda create -n habitat python=3.9 cmake=3.14.0
 conda activate habitat
 conda install habitat-sim withbullet -c conda-forge -c aihabitat
 pip install -r ./envs/requirements/habitat.txt
-```
-
-## ZeroShotSceneSegmentation Package
-
-#### Setup
-
-```
-pip install -e .
 ```
