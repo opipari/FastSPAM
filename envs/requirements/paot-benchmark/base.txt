@@ -7,3 +7,5 @@ matplotlib==3.7.1
 pycocotools==2.0.6
 tqdm==4.65.0
 scipy==1.10.1
+urllib3==1.26.6 
+tensorboard==2.13.0
