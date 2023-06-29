@@ -104,15 +104,27 @@ python3.8 -m venv ./envs/data-processing && \
       ```
   - [PASCAL VOC2012](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/)
       ```
-      aws s3 cp s3://prism-intern-anthony/raw_data/pretraining/static/PASCAL-VOC2012/VOCtrainval_11-May-2012.tar ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCAL-VOC2012/ && \
-        tar -xvf ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCAL-VOC2012/VOCtrainval_11-May-2012.tar -C ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCAL-VOC2012/ && \
-          rm ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCAL-VOC2012/VOCtrainval_11-May-2012.tar && \
-            mv ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCAL-VOC2012/VOCdevkit/VOC2012/* ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCAL-VOC2012/ && \
-              rm -r ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCAL-VOC2012/VOCdevkit/
+      aws s3 cp s3://prism-intern-anthony/raw_data/pretraining/static/PASCALVOC2012/VOCtrainval_11-May-2012.tar ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCALVOC2012/ && \
+        tar -xvf ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCALVOC2012/VOCtrainval_11-May-2012.tar -C ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCALVOC2012/ && \
+          rm ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCALVOC2012/VOCtrainval_11-May-2012.tar && \
+            mv ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCALVOC2012/VOCdevkit/VOC2012/* ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCALVOC2012/ && \
+              rm -r ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCALVOC2012/VOCdevkit/
       ``` 
   - [COCO 2017](https://cocodataset.org/#download)
+    
     See here for confirmation of 2017: https://github.com/xmlyqing00/AFB-URR/issues/15
 
+      ```
+      aws s3 sync s3://prism-intern-anthony/raw_data/pretraining/static/COCO/ ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/COCO/ && \
+        unzip ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/COCO/train2017.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/COCO/ && \
+          rm ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/COCO/train2017.zip
+        unzip ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/COCO/val2017.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/COCO/ && \
+          rm ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/COCO/val2017.zip
+        unzip ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/COCO/annotations_trainval2017.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/COCO/ && \
+          rm ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/COCO/annotations_trainval2017.zip
+      ```
+
+  - Preprocess 
 
 #### DAVIS
 
