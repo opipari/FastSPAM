@@ -125,6 +125,14 @@ python3.8 -m venv ./envs/data-processing && \
       ```
 
   - Preprocess 
+      ```
+      source ./envs/paot-benchmark/bin/activate
+      python ./zero_shot_scene_segmentation/models/AFB-URR/AFB-URR/unify_pretrain_dataset.py --name MSRA10K --src ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/MSRA10K/ --dst ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/unified/
+      python ./zero_shot_scene_segmentation/models/AFB-URR/AFB-URR/unify_pretrain_dataset.py --name ECSSD --src ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/ECSSD/ --dst ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/unified/
+      python ./zero_shot_scene_segmentation/models/AFB-URR/AFB-URR/unify_pretrain_dataset.py --name PASCAL-S --src ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCAL-S/ --dst ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/unified/
+      python ./zero_shot_scene_segmentation/models/AFB-URR/AFB-URR/unify_pretrain_dataset.py --name PASCALVOC2012 --src ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/PASCALVOC2012/ --dst ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/unified/
+      python ./zero_shot_scene_segmentation/models/AFB-URR/AFB-URR/unify_pretrain_dataset.py --name COCO --src ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/COCO/ --dst ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/unified/
+      ```
 
 #### DAVIS
 
