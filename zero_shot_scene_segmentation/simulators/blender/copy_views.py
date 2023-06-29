@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
 
     parser = argparse.ArgumentParser(
-                    prog='sample_views',
+                    prog='copy_views',
                     usage='python <path to copy_views.py> -- [options]',
                     description='Python script for copying view samples between machines',
                     epilog='For more information, see: https://github.com/opipari/ZeroShot_RGB_D/tree/main/zeroshot_rgbd/simulators/blender')
@@ -34,20 +34,15 @@ if __name__ == "__main__":
 
     scene_directories = [path for path in os.listdir(args.source_dataset_dir) if os.path.isdir(os.path.join(args.source_dataset_dir, path))]
     for scene_dir in scene_directories:
-        scene_dir_path = os.path.join(args.source_dataset_dir, scene_dir)
+        scene_src_path = os.path.join(args.source_dataset_dir, scene_dir)
+        scene_dst_path = os.path.join(args.destination_dataset_dir, scene_dir)        
 
-        scene_files = os.listdir(scene_dir_path)
+        os.makedirs(scene_dst_path, exist_ok=True)
 
-        scene_out_path = os.path.join(args.destination_dataset_dir, scene_dir)
-        scene_view_all_poses_path = scene_dir+'.all_view_poses.csv'
-        scene_view_accepted_poses_path = scene_dir+'.accepted_view_poses.csv'
-
-        scene_has_sampled_views = os.path.isfile(os.path.join(scene_dir_path, scene_view_all_poses_path)) and os.path.isfile(os.path.join(scene_dir_path, scene_view_accepted_poses_path))
-
-        if scene_has_sampled_views:
-            os.makedirs(scene_out_path, exist_ok=True)
-            shutil.copyfile(os.path.join(scene_dir_path, scene_view_all_poses_path), os.path.join(scene_out_path, scene_view_all_poses_path))
-            shutil.copyfile(os.path.join(scene_dir_path, scene_view_accepted_poses_path), os.path.join(scene_out_path, scene_view_accepted_poses_path))
+        for fl in os.listdir(scene_src_path):
+            if fl.endswith('.csv'):
+                shutil.copyfile(os.path.join(scene_src_path, fl), os.path.join(scene_dst_path, fl))
+        
 
     if args.verbose:
         print()
