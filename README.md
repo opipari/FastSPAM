@@ -138,7 +138,7 @@ python3.8 -m venv ./envs/data-processing && \
       
       python ./zero_shot_scene_segmentation/models/AFB-URR/AFB-URR/unify_pretrain_dataset.py --name COCO --src ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/COCO/ --dst ./zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/unified/ --palette ./zero_shot_scene_segmentation/models/AFB-URR/AFB-URR/assets/mask_palette.png
 
-      ln -s ~/ZeroShotSceneSegmentation/zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/unified/* ./zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark/datasets/Static/
+      ln -s $PWD/zero_shot_scene_segmentation/datasets/raw_data/pretraining/static/unified/* ./zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark/datasets/Static/
       ```
 
 #### DAVIS
@@ -208,6 +208,9 @@ export UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE && \
     unzip ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_valid.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
       rm ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_valid.zip && \
 unset UNZIP_DISABLE_ZIPBOMB_DETECTION
+
+
+ln -s $PWD/zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ ./zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark/datasets/
 ```
 
 </details>
