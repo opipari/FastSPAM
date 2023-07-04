@@ -108,17 +108,7 @@ python3.8 -m venv ./envs/paot-benchmark && \
       deactivate
 ```
 
-Install pretrained models:
-
-```
-wget -P ./zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark/pretrain_models/ https://download.pytorch.org/models/mobilenet_v2-b0353104.pth
-wget -P ./zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark/pretrain_models/ https://download.pytorch.org/models/mobilenet_v3_large-8738ca79.pth
-wget -P ./zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark/pretrain_models/ https://download.pytorch.org/models/resnet50-0676ba61.pth
-wget -P ./zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark/pretrain_models/ https://download.pytorch.org/models/resnet101-63fe2227.pth
-wget -P ./zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark/pretrain_models/ https://github.com/zhanghang1989/ResNeSt/releases/download/weights_step1/resnest50-528c19ca.pth
-wget -P ./zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark/pretrain_models/ https://github.com/zhanghang1989/ResNeSt/releases/download/weights_step1/resnest101-22405ba7.pth
-wget -P ./zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark/pretrain_models/ https://github.com/SwinTransformer/storage/releases/download/v1.0.0/swin_base_patch4_window7_224_22k.pth
-```
+For reproducing published results on the VIPOSeg dataset, refer to the [paot-benchmark.md](https://github.com/opipari/ZeroShotSceneSegmentation/blob/main/paot-benchmark.md) file.
 
 
 <hr>
