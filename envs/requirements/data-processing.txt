@@ -9,3 +9,4 @@ matplotlib
 scipy
 urllib3==1.26.6 
 gdown==4.7.1
+git+https://github.com/cocodataset/panopticapi.git
