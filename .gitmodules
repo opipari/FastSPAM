@@ -13,14 +13,6 @@
 [submodule "zero_shot_scene_segmentation/simulators/habitat-sim/habitat-lab"]
 	path = zero_shot_scene_segmentation/simulators/habitat-sim/habitat-lab
 	url = git@github.com:facebookresearch/habitat-lab.git
-[submodule "zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark"]
-	path = zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark
-	url = git@github.com:yoxu515/aot-benchmark.git
-	branch = paot
-[submodule "zero_shot_scene_segmentation/models/aot-benchmark/aot-benchmark"]
-	path = zero_shot_scene_segmentation/models/aot-benchmark/aot-benchmark
-	url = git@github.com:yoxu515/aot-benchmark.git
-	branch = main
 [submodule "zero_shot_scene_segmentation/models/MobileSAM/MobileSAM"]
 	path = zero_shot_scene_segmentation/models/MobileSAM/MobileSAM
 	url = git@github.com:ChaoningZhang/MobileSAM.git
