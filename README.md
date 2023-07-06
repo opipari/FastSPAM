@@ -147,3 +147,11 @@ conda activate habitat
 conda install habitat-sim withbullet -c conda-forge -c aihabitat
 pip install -r ./envs/requirements/habitat.txt
 ```
+
+
+
+### Add New model submodule
+
+```
+git submodule add -b <branch name> <remote.git> ./zero_shot_scene_segmentation/models/<model_name>/<model_name>/
+```
