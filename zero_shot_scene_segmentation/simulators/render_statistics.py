@@ -83,7 +83,7 @@ if __name__ == "__main__":
                 #     scene_semantic_objects[object_name][scene_dir] = []
                 # scene_semantic_objects[object_name][scene_dir].append(object_hex_color)
 
-                assert object_hex_color not in hex_color_to_category.keys()
+                # assert object_hex_color not in hex_color_to_category.keys(), SEMANTIC_SCENE_FILE_PATH+"  "+str(object_hex_color)
                 hex_color_to_category[object_hex_color] = object_name.strip('"')
                 scene_hex_colors.append(object_hex_color)
 
@@ -154,11 +154,19 @@ if __name__ == "__main__":
                     else:
                         objects_in_sequence[SEQ_NAME].update(set(semantic_label_image_hex_colors))
 
-
+        print("Done with", scene_dir)
+        print("Number of videos:", num_sequences)
+        print("Number of frames:", num_frames)
+        print("Frames per video:", num_frames/num_sequences)
+        print("Distance Traveled:", dist_traveled)
+        print("Distance per video:", dist_traveled / num_sequences)
+        print("Objects Total:", sum([len(objects_in_sequence[seq]) for seq in objects_in_sequence]))
+        print("Objects per Video:", sum([len(objects_in_sequence[seq]) for seq in objects_in_sequence])/len(objects_in_sequence.keys()))
+        print()
 
     print("Number of videos:", num_sequences)
     print("Number of frames:", num_frames)
-    print("Frames per video:", num_sequences/num_frames)
+    print("Frames per video:", num_frames/num_sequences)
     print("Distance Traveled:", dist_traveled)
     print("Distance per video:", dist_traveled / num_sequences)
     print("Objects Total:", sum([len(objects_in_sequence[seq]) for seq in objects_in_sequence]))

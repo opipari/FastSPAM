@@ -194,31 +194,22 @@ if __name__ == "__main__":
                     
                     OUT_RGB_DIR = os.path.join(OUT_DIR, "JPEGImages", SEQ_NAME)
                     OUT_SEM_DIR = os.path.join(OUT_DIR, "Annotations", SEQ_NAME)
-                    OUT_DEPTH_DIR = os.path.join(OUT_DIR, "PNGDepthImages", SEQ_NAME)
-                    OUT_PANO_DIR = os.path.join(OUT_DIR, "panomasks", SEQ_NAME)
 
                     os.makedirs(OUT_RGB_DIR, exist_ok=True)
                     os.makedirs(OUT_SEM_DIR, exist_ok=True)
-                    os.makedirs(OUT_DEPTH_DIR, exist_ok=True)
-                    os.makedirs(OUT_PANO_DIR, exist_ok=True)
 
                     object_ids_in_seq = set()
 
                     sequence_object_hex_color_to_id = {}
-
+                    obj_class_map[SEQ_NAME] = {}
 
 
                 rgb_file = f"{'.'.join(info_ID)}.RGB.{0:010}.png"
                 rgb_image = Image.open(os.path.join(SCENE_DIR, rgb_file)).convert("RGB")
                 rgb_image.save(os.path.join(OUT_RGB_DIR, view_id+".jpg"))
 
-                depth_file = f"{'.'.join(info_ID)}.DEPTH.png"
-                shutil.copyfile(os.path.join(SCENE_DIR, depth_file), os.path.join(OUT_DEPTH_DIR, view_id+".png"))
 
                 sem_file = f"{'.'.join(info_ID)}.SEM.png"
-                shutil.copyfile(os.path.join(SCENE_DIR, sem_file), os.path.join(OUT_SEM_DIR, view_id+".png"))
-
-
                 semantic_label_image = Image.open(os.path.join(SCENE_DIR, sem_file)).convert('RGB')
                 semantic_label_image =  torchvision.transforms.functional.pil_to_tensor(semantic_label_image)
                 if torch.cuda.is_available():
@@ -238,7 +229,7 @@ if __name__ == "__main__":
                 semantic_label_mask = torch.all(semantic_label_image.unsqueeze(0) == semantic_label_image_rgb_colors.reshape(-1,3,1,1), dim=1).bool()
                 
 
-                obj_class_map[SEQ_NAME] = {}
+                
                 category_ids = []
                 instance_ids = []
                 for object_hex_color, object_name in zip(semantic_label_image_hex_colors, semantic_label_image_object_names):
@@ -281,7 +272,7 @@ if __name__ == "__main__":
 
                 panomask = torch.sum(torch.tensor(instance_ids).reshape(-1,1,1).to(semantic_label_mask.device) * semantic_label_mask, dim=0).to(torch.uint8).cpu()
                 panomask = Image.fromarray(np.array(panomask).astype(np.uint8))
-                panomask.save(os.path.join(OUT_PANO_DIR, view_id+".png"))
+                panomask.save(os.path.join(OUT_SEM_DIR, view_id+".png"))
 
     with open(os.path.join(OUT_DIR, "obj_class.json"), "w") as outfile:
         json.dump(obj_class_map, outfile)
