@@ -10,14 +10,14 @@ This repository is setup to contain a centralized python package, `ZeroShotScene
 .                                   # Root project directory
 ├── README.md                       # This readme file
 ├── setup.py                        # Setup script using setuptools to install the ZeroShotSceneSegmentation package
+├── requirements                    # Directory containing the specification of package dependency requirements
+│   └── segment-anything.txt        # Package requirements for segment anything model package
 ├── envs                            # Directory containing virtual environment source files and package dependency requirements
-│   ├── requirements                # Directory containing the specification of package dependency requirements
-│   │   └── segment-anything.txt    # Package requirements for segment anything model package
 │   └── segment-anything            # Directory for segment anything's virtual environment
 └── zero_shot_scene_segmentation    # The central python package for ZeroShotSceneSegmentation package
     ├── models                      # Directory containing source code for model development, training and evaluation
     │   └── segment-anything        # Directory containing all source for training and evaluating segment anything model
-    ├── datasets                    # Directory containing source code for dataset processing as well as PyTorch Dataset classes
+    ├── datasets                    # Directory containing raw datasets (DO NOT ADD TO GIT TRACKING)
     └── simulators                  # Directory containing source code for data simulationa and rendering
         └── blender                 # Directory containing source code for blender-based rendering
 ```
