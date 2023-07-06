@@ -138,15 +138,15 @@ Link for 2019: https://drive.google.com/drive/folders/1BWzrCWyPEmBEKm0lOHe5KLuBu
     
 ```
 export UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE && \
-  aws s3 sync s3://prism-intern-anthony/raw_data/VIPOSeg/ ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
-    unzip ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_train.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
-      rm ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_train.zip && \
-    unzip ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_valid.zip -d ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ && \
-      rm ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/VIPOSeg_valid.zip && \
+  aws s3 sync s3://prism-intern-anthony/datasets/VIPOSeg/ ./zero_shot_scene_segmentation/datasets/VIPOSeg/ && \
+    unzip ./zero_shot_scene_segmentation/datasets/VIPOSeg/VIPOSeg_train.zip -d ./zero_shot_scene_segmentation/datasets/VIPOSeg/ && \
+      rm ./zero_shot_scene_segmentation/datasets/VIPOSeg/VIPOSeg_train.zip && \
+    unzip ./zero_shot_scene_segmentation/datasets/VIPOSeg/VIPOSeg_valid.zip -d ./zero_shot_scene_segmentation/datasets/VIPOSeg/ && \
+      rm ./zero_shot_scene_segmentation/datasets/VIPOSeg/VIPOSeg_valid.zip && \
 unset UNZIP_DISABLE_ZIPBOMB_DETECTION
 
 
-ln -s $PWD/zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg/ ./zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark/datasets/
+ln -s $PWD/zero_shot_scene_segmentation/datasets/VIPOSeg/ ./zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark/datasets/
 ```
 
 </details>
@@ -176,9 +176,20 @@ unset UNZIP_DISABLE_ZIPBOMB_DETECTION
 ```
 source ./envs/data-processing/bin/activate
 
-python zero_shot_scene_segmentation/simulators/render_to_VIPOSeg.py -- -data ./zero_shot_scene_segmentation/datasets/raw_data/trajectory_renders/train/ -out ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg_rendered/train/
+python zero_shot_scene_segmentation/simulators/render_to_VIPOSeg.py -- -data ./zero_shot_scene_segmentation/datasets/trajectory_renders/train/ -out ./zero_shot_scene_segmentation/datasets/HM3D_2_VIPOSeg/train/
 
-ln -s $PWD/zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg_rendered/ ./zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark/datasets/
+ln -s $PWD/zero_shot_scene_segmentation/datasets/HM3D_2_VIPOSeg/ ./zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark/datasets/
 
 deactivate
+```
+
+
+#### HM3D_2_VIPOSeg
+
+```
+aws s3 cp s3://prism-intern-anthony/datasets/HM3D_2_VIPOSeg/HM3D_2_VIPOSeg.tar.gz ./zero_shot_scene_segmentation/datasets/
+
+tar -xvf ./zero_shot_scene_segmentation/datasets/HM3D_2_VIPOSeg.tar.gz -C ./zero_shot_scene_segmentation/datasets/
+
+rm ./zero_shot_scene_segmentation/datasets/HM3D_2_VIPOSeg.tar.gz
 ```
