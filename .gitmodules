@@ -20,3 +20,11 @@
 	path = zero_shot_scene_segmentation/models/GAPS/GAPS
 	url = git@github.com:opipari/ZeroShotSceneSegmentation.git
 	branch = model
+[submodule "zero_shot_scene_segmentation/models/aot-benchmark/aot-benchmark"]
+	path = zero_shot_scene_segmentation/models/aot-benchmark/aot-benchmark
+	url = git@github.com:opipari/aot-benchmark.git
+	branch = main
+[submodule "zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark"]
+	path = zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark
+	url = git@github.com:opipari/aot-benchmark.git
+	branch = paot
