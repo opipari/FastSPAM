@@ -91,7 +91,7 @@ python3.8 -m venv ./envs/data-processing && \
 ```
 python3.8 -m venv ./envs/segment-anything && \
   source ./envs/segment-anything/bin/activate && \
-    pip install -r ./envs/requirements/segment-anything.txt && \
+    pip install -r ./requirements/segment-anything.txt && \
       deactivate && \
         wget -P ./zero_shot_scene_segmentation/models/segment-anything/segment-anything/checkpoints/ https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
 ```
@@ -103,8 +103,8 @@ Setup environments:
 ```
 python3.8 -m venv ./envs/paot-benchmark && \
   source ./envs/paot-benchmark/bin/activate && \
-    pip install -r ./envs/requirements/paot-benchmark/base.txt &&
-    pip install -r ./envs/requirements/paot-benchmark/deps.txt && \
+    pip install -r ./requirements/paot-benchmark/base.txt &&
+    pip install -r ./requirements/paot-benchmark/deps.txt && \
       deactivate
 ```
 
