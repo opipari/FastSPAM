@@ -169,3 +169,16 @@ unset UNZIP_DISABLE_ZIPBOMB_DETECTION
 ```
 
 </details>
+
+
+#### Convert HM3D Renderings to VIPOSeg Format
+
+```
+source ./envs/data-processing/bin/activate
+
+python zero_shot_scene_segmentation/simulators/render_to_VIPOSeg.py -- -data ./zero_shot_scene_segmentation/datasets/raw_data/trajectory_renders/train/ -out ./zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg_rendered/train/
+
+ln -s $PWD/zero_shot_scene_segmentation/datasets/raw_data/VIPOSeg_rendered/ ./zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark/datasets/
+
+deactivate
+```
