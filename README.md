@@ -56,7 +56,7 @@ This environment is to be used for dataset preprocessing since Blender's version
 ```
 python3.8 -m venv ./envs/data-processing && \
   source ./envs/data-processing/bin/activate && \
-    pip install -r ./envs/requirements/data-processing.txt && \
+    pip install -r ./requirements/data-processing.txt && \
       deactivate
 ```
 
@@ -109,6 +109,17 @@ python3.8 -m venv ./envs/paot-benchmark && \
 ```
 
 For reproducing published results on the VIPOSeg dataset, refer to the [paot-benchmark.md](https://github.com/opipari/ZeroShotSceneSegmentation/blob/main/paot-benchmark.md) file.
+
+#### Gemoetry Aware Panoptic Segmentation (GAPS)
+
+Setup environments:
+
+```
+python3.8 -m venv ./envs/gaps && \
+  source ./envs/gaps/bin/activate && \
+    pip install -r ./requirements/gaps.txt && \
+      deactivate
+```
 
 
 <hr>

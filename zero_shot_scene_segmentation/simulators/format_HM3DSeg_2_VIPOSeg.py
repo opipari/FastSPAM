@@ -15,42 +15,7 @@ import torch
 import torchvision
 
 
-def get_raw_category_to_mpcat40_map():
 
-    # RAW_CATEGORY_TO_MPCAT40_MAPPING represents a many to one mapping to identify the keys to use for mapping labeled categories to matterport categories
-    category_to_mpcat40_mapping = {}
-
-    # RAW_CATEGORY_TO_CATEGORY_MAPPING represents a many to one mapping to identify the keys to use for mapping raw categories to labeled cattegories
-    raw_category_to_category_mapping ={}
-    
-    CATEGORY_TO_MPCAT40_MAPPING_FILE = os.path.join(os.getcwd(), './zero_shot_scene_segmentation/simulators/matterport_category_mappings.tsv')
-    with open(CATEGORY_TO_MPCAT40_MAPPING_FILE, 'r') as csvfile:
-
-        map_reader = csv.reader(csvfile, delimiter='\t')
-
-        for object_meta in map_reader:
-            if object_meta[0]=='index':
-                continue
-            # print(object_meta)
-            
-            object_raw_category = object_meta[1]
-            object_category = object_meta[2]
-            # print(object_meta[16])
-            object_mpcat40index = int(object_meta[16])
-            object_mpcat40 = object_meta[17]
-
-            if object_raw_category not in raw_category_to_category_mapping:
-                raw_category_to_category_mapping[object_raw_category] = object_category
-            else:
-                assert raw_category_to_category_mapping[object_raw_category]==object_category
-
-            if object_category in category_to_mpcat40_mapping:
-                assert category_to_mpcat40_mapping[object_category] == (object_mpcat40index, object_mpcat40)
-            else:
-                category_to_mpcat40_mapping[object_category] = (object_mpcat40index, object_mpcat40)
- 
-
-    return raw_category_to_category_mapping, category_to_mpcat40_mapping
 
 
 def hex_color_to_category_map(SEMANTIC_SCENE_FILE_PATH):
@@ -70,26 +35,18 @@ def hex_color_to_category_map(SEMANTIC_SCENE_FILE_PATH):
 
 
 if __name__ == "__main__":
-
-    # Read command line arguments
-    argv = sys.argv
-
-    # Ignore Blender executable and Blender-specific command line arguments
-    if "--" in argv:
-        argv = argv[argv.index("--") + 1:]
-
-
     parser = argparse.ArgumentParser(
-                    prog='postprocess_dataset',
-                    usage='python <path to postprocess_dataset.py> -- [options]',
-                    description='Python script for rendering color images under active spot light illumination from the Matterport 3D semantic dataset assuming valid views have already been sampled',
+                    prog='format_HM3DSeg_2_VIPOSeg',
+                    usage='python <path to format_HM3DSeg_2_VIPOSeg.py> -- [options]',
+                    description='Python script for converting format of rendered data from Matterport scans into VIPOSeg format needed for PAOT Benchmark',
                     epilog='For more information, see: https://github.com/opipari/ZeroShot_RGB_D/tree/main/zeroshot_rgbd/simulators/blender')
 
-    parser.add_argument('-data', '--dataset-dir', help='path to directory of Matterport semantic dataset directory formatted as one sub-directory per scene', type=str)
+    parser.add_argument('-data', '--dataset-dir', help='path to directory of rendered HM3D images', type=str)
     parser.add_argument('-out', '--output-dir', help='path to directory where output dataset should be stored', type=str)
+    parser.add_argument('-mode', '--training-mode', help='path to directory where output dataset should be stored', type=str)
     parser.add_argument('-v', '--verbose', help='whether verbose output printed to stdout', type=int, default=1)
 
-    args = parser.parse_args(argv)
+    args = parser.parse_args()
 
 
     if args.verbose:
@@ -100,7 +57,7 @@ if __name__ == "__main__":
     
 
     rgb2hex = lambda r,g,b: '%02X%02X%02X' % (r,g,b)
-    hex2rgb = lambda hex: tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+    hex2rgb = lambda hexs: tuple(int(hexs[i:i+2], 16) for i in (0, 2, 4))
 
     OUT_DIR = args.output_dir
 
@@ -112,8 +69,10 @@ if __name__ == "__main__":
         CATEGORY_TO_MPCAT40_MAPPING['void'] = (0, 'void')
 
     obj_class_map = {}
+    meta = {'videos': {}}
     scene_directories = sorted([path for path in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, path))])
-    # scene_directories = ['00006-HkseAnWCgqk']
+    scene_directories = [scene_directories[0]]
+    print(scene_directories)
     tot_scenes = 0
     for scene_dir in scene_directories:
         scene_dir_path = os.path.join(args.dataset_dir, scene_dir)
@@ -126,6 +85,7 @@ if __name__ == "__main__":
         if not os.path.isfile(SEMANTIC_SCENE_FILE_PATH):
             continue
 
+        print(scene_dir)
         SCENE_VIEWS_FILE = os.path.join(scene_dir_path, scene_dir+'.render_view_poses.csv')
 
         tot_scenes+=1
@@ -133,35 +93,6 @@ if __name__ == "__main__":
 
         
         scene_hex_color_to_category_map = hex_color_to_category_map(SEMANTIC_SCENE_FILE_PATH)
-
-
-        # found_in_cat_in_raw = 0
-        # found_in_cat_not_raw = 0
-        # found_not_cat_in_raw = 0
-        # found_not_cat_not_raw = 0
-        # for object_hex_color, object_name in hex_color_to_raw_category_map.items():
-        #     if object_name in CATEGORY_TO_MPCAT40_MAPPING:
-        #         if object_name in RAW_CATEGORY_TO_CATEGORY_MAPPING:
-        #             found_in_cat_in_raw += 1
-        #         else:
-        #             found_in_cat_not_raw += 1
-        #     else:
-        #         if object_name in RAW_CATEGORY_TO_CATEGORY_MAPPING:
-        #             found_not_cat_in_raw += 1
-        #         else:
-        #             found_not_cat_not_raw += 1
-        # print("Found in both:", found_in_cat_in_raw)
-        # print("Found in cat:", found_in_cat_not_raw)
-        # print("Found in raw:", found_not_cat_in_raw)
-        # print("Found neither:", found_not_cat_not_raw)
-        # print()
-            # if object_name not in RAW_CATEGORY_TO_CATEGORY_MAPPING:
-            #     if object_name not in CATEGORY_TO_MPCAT40_MAPPING:
-            #         not_found += 1
-            #     else:
-                    
-            # if object_name not in CATEGORY_TO_MPCAT40_MAPPING and object_name not in RAW_CATEGORY_TO_CATEGORY_MAPPING:
-            #     CATEGORY_TO_MPCAT40_MAPPING[object_name] = (0, 'void')
 
         
         extracting_sequence = None 
@@ -194,19 +125,18 @@ if __name__ == "__main__":
                     
                     OUT_RGB_DIR = os.path.join(OUT_DIR, "JPEGImages", SEQ_NAME)
                     OUT_SEM_DIR = os.path.join(OUT_DIR, "Annotations", SEQ_NAME)
+                    OUT_SEM_GT_DIR = os.path.join(OUT_DIR, "Annotations_gt", SEQ_NAME)
 
                     os.makedirs(OUT_RGB_DIR, exist_ok=True)
                     os.makedirs(OUT_SEM_DIR, exist_ok=True)
+                    os.makedirs(OUT_SEM_GT_DIR, exist_ok=True)
 
                     object_ids_in_seq = set()
 
                     sequence_object_hex_color_to_id = {}
                     obj_class_map[SEQ_NAME] = {}
+                    meta['videos'][SEQ_NAME] = {'objects': {}}
 
-
-                rgb_file = f"{'.'.join(info_ID)}.RGB.{0:010}.png"
-                rgb_image = Image.open(os.path.join(SCENE_DIR, rgb_file)).convert("RGB")
-                rgb_image.save(os.path.join(OUT_RGB_DIR, view_id+".jpg"))
 
 
                 sem_file = f"{'.'.join(info_ID)}.SEM.png"
@@ -232,20 +162,24 @@ if __name__ == "__main__":
                 
                 category_ids = []
                 instance_ids = []
+                is_new_instance = []
                 for object_hex_color, object_name in zip(semantic_label_image_hex_colors, semantic_label_image_object_names):
                     if object_name in CATEGORY_TO_MPCAT40_MAPPING:
                         class_id = CATEGORY_TO_MPCAT40_MAPPING[object_name][0]
                         category_ids.append(class_id)
                         
+                        is_new_inst = 0
                         if class_id!=0:
                             if object_hex_color not in sequence_object_hex_color_to_id:
                                 sequence_object_hex_color_to_id[object_hex_color] = len(sequence_object_hex_color_to_id.keys())+1
+                                is_new_inst = 1
                             instance_id = sequence_object_hex_color_to_id[object_hex_color]
 
                             obj_class_map[SEQ_NAME][str(instance_id)] = str(class_id)
                         else:
                             instance_id = 0
                         instance_ids.append(instance_id)
+                        is_new_instance.append(is_new_inst)
 
                     elif object_name in RAW_CATEGORY_TO_CATEGORY_MAPPING:
                         class_id = CATEGORY_TO_MPCAT40_MAPPING[RAW_CATEGORY_TO_CATEGORY_MAPPING[object_name]][0]
@@ -254,12 +188,14 @@ if __name__ == "__main__":
                         if class_id!=0:
                             if object_hex_color not in sequence_object_hex_color_to_id:
                                 sequence_object_hex_color_to_id[object_hex_color] = len(sequence_object_hex_color_to_id.keys())+1
+                                is_new_inst = 1
                             instance_id = sequence_object_hex_color_to_id[object_hex_color]
 
                             obj_class_map[SEQ_NAME][str(instance_id)] = str(class_id)
                         else:
                             instance_id = 0
                         instance_ids.append(instance_id)
+                        is_new_instance.append(is_new_inst)
                     else:
                         class_id = 0
                         category_ids.append(class_id)
@@ -267,15 +203,61 @@ if __name__ == "__main__":
                         instance_id = 0
                         instance_ids.append(instance_id)
 
-                if max(instance_ids)>255:
-                    raise
+                        is_new_inst = 0
+                        is_new_instance.append(is_new_inst)
 
-                panomask = torch.sum(torch.tensor(instance_ids).reshape(-1,1,1).to(semantic_label_mask.device) * semantic_label_mask, dim=0).to(torch.uint8).cpu()
-                panomask = Image.fromarray(np.array(panomask).astype(np.uint8))
-                panomask.save(os.path.join(OUT_SEM_DIR, view_id+".png"))
+                # print(max(instance_ids), len(instance_ids), SEQ_NAME)
+                if max(instance_ids)>255:
+                    continue
+
+
+                rgb_file = f"{'.'.join(info_ID)}.RGB.{0:010}.png"
+                rgb_image = Image.open(os.path.join(SCENE_DIR, rgb_file)).convert("RGB")
+                rgb_image.save(os.path.join(OUT_RGB_DIR, view_id+".jpg"))
+
+
+                for inst_id in instance_ids:
+                    if inst_id==0:
+                        continue
+
+                    if str(inst_id) not in meta['videos'][SEQ_NAME]['objects']:
+                        meta['videos'][SEQ_NAME]['objects'][str(inst_id)] = {'frames': [], 'color': list(sequence_object_hex_color_to_id.keys())[list(sequence_object_hex_color_to_id.values()).index(inst_id)]}
+                    meta['videos'][SEQ_NAME]['objects'][str(inst_id)]['frames'].append(view_id)
+
+                
+                
+
+                _palette = [[0,0,0]]+[hex2rgb(hex_color) for hex_color in sorted(sequence_object_hex_color_to_id, key=lambda k: sequence_object_hex_color_to_id[k])]
+                _palette = list(itertools.chain.from_iterable(_palette))
+
+                if args.training_mode=='train':
+                    panomask = torch.sum(torch.tensor(instance_ids).reshape(-1,1,1).to(semantic_label_mask.device) * semantic_label_mask, dim=0).cpu()
+                    panomask = Image.fromarray(np.array(panomask).astype(np.uint8))
+                    panomask = panomask.convert('P')
+                    panomask.putpalette(_palette)
+                    panomask.save(os.path.join(OUT_SEM_DIR, view_id+".png"))
+                    
+                else:
+                    if any(is_new_instance):
+                        panomask = torch.sum(torch.tensor(is_new_instance).reshape(-1,1,1).to(semantic_label_mask.device) * torch.tensor(instance_ids).reshape(-1,1,1).to(semantic_label_mask.device) * semantic_label_mask, dim=0).cpu()
+                        panomask = Image.fromarray(np.array(panomask).astype(np.uint8))
+                        panomask = panomask.convert('P')
+                        panomask.putpalette(_palette)
+                        panomask.save(os.path.join(OUT_SEM_DIR, view_id+".png"))
+
+                    panomask = torch.sum(torch.tensor(instance_ids).reshape(-1,1,1).to(semantic_label_mask.device) * semantic_label_mask, dim=0).cpu()
+                    panomask = Image.fromarray(np.array(panomask).astype(np.uint8))
+                    panomask = panomask.convert('P')
+                    panomask.putpalette(_palette)
+                    panomask.save(os.path.join(OUT_SEM_GT_DIR, view_id+".png"))
 
     with open(os.path.join(OUT_DIR, "obj_class.json"), "w") as outfile:
         json.dump(obj_class_map, outfile)
+    with open(os.path.join(OUT_DIR, "meta.json"), "w") as outfile:
+        json.dump(meta, outfile)
+
+
+
                 
 
     if args.verbose:

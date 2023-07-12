@@ -178,7 +178,7 @@ source ./envs/data-processing/bin/activate
 
 python zero_shot_scene_segmentation/simulators/render_to_VIPOSeg.py -- -data ./zero_shot_scene_segmentation/datasets/trajectory_renders/train/ -out ./zero_shot_scene_segmentation/datasets/HM3D_2_VIPOSeg/train/
 
-ln -s $PWD/zero_shot_scene_segmentation/datasets/HM3D_2_VIPOSeg/ ./zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark/datasets/
+ln -s $PWD/zero_shot_scene_segmentation/datasets/HM3DSeg_2_VIPOSeg/ ./zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark/datasets/
 
 deactivate
 ```
@@ -187,9 +187,9 @@ deactivate
 #### HM3D_2_VIPOSeg
 
 ```
-aws s3 cp s3://prism-intern-anthony/datasets/HM3D_2_VIPOSeg/HM3D_2_VIPOSeg.tar.gz ./zero_shot_scene_segmentation/datasets/
+aws s3 cp s3://prism-intern-anthony/datasets/HM3DSeg_2_VIPOSeg/HM3DSeg_2_VIPOSeg.tar.gz ./zero_shot_scene_segmentation/datasets/
 
-tar -xvf ./zero_shot_scene_segmentation/datasets/HM3D_2_VIPOSeg.tar.gz -C ./zero_shot_scene_segmentation/datasets/
+tar -xvf ./zero_shot_scene_segmentation/datasets/HM3DSeg_2_VIPOSeg.tar.gz -C ./zero_shot_scene_segmentation/datasets/
 
-rm ./zero_shot_scene_segmentation/datasets/HM3D_2_VIPOSeg.tar.gz
+rm ./zero_shot_scene_segmentation/datasets/HM3DSeg_2_VIPOSeg.tar.gz
 ```
