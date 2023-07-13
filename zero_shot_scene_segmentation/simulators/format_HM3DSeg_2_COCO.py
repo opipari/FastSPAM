@@ -33,6 +33,7 @@ if __name__ == "__main__":
 
     parser.add_argument('-data', '--dataset-dir', help='path to directory of rendered HM3D images', type=str)
     parser.add_argument('-out', '--output-dir', help='path to directory where output dataset should be stored', type=str)
+    parser.add_argument('-mode', '--training-mode', help='path to directory where output dataset should be stored', type=str)
     parser.add_argument('-v', '--verbose', help='whether verbose output printed to stdout', type=int, default=1)
 
     args = parser.parse_args()
@@ -205,7 +206,15 @@ if __name__ == "__main__":
                         "segments_info" : list(segments_info)
                         })
 
-                
+
+    coco_annotations = {'videos': coco_videos,
+                    'annotations': coco_annotations,
+                    'instances': coco_instances,
+                    'categories': coco_categories,
+                    }
+
+    with open(os.path.join(OUT_DIR, f"panoptic_{args.training_mode}.json"), "w") as outfile:
+        json.dump(coco_annotations, outfile)
 
 
     if args.verbose:
