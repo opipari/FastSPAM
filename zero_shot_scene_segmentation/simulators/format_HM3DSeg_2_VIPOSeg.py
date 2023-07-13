@@ -92,7 +92,7 @@ if __name__ == "__main__":
 
 
         
-        scene_hex_color_to_category_map = hex_color_to_category_map(SEMANTIC_SCENE_FILE_PATH)
+        scene_hex_color_to_category_map = get_hex_color_to_category_map(SEMANTIC_SCENE_FILE_PATH)
 
         
         extracting_sequence = None 
