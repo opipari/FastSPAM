@@ -33,7 +33,6 @@ if __name__ == "__main__":
 
     parser.add_argument('-data', '--dataset-dir', help='path to directory of rendered HM3D images', type=str)
     parser.add_argument('-out', '--output-dir', help='path to directory where output dataset should be stored', type=str)
-    parser.add_argument('-mode', '--training-mode', help='path to directory where output dataset should be stored', type=str)
     parser.add_argument('-v', '--verbose', help='whether verbose output printed to stdout', type=int, default=1)
 
     args = parser.parse_args()
@@ -65,8 +64,8 @@ if __name__ == "__main__":
     matterport_category_maps = get_raw_category_to_mpcat40_map(os.path.join(os.getcwd(), './zero_shot_scene_segmentation/simulators/matterport_category_mappings.tsv'))
 
     scene_directories = sorted([path for path in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, path))])
-    scene_directories = [scene_directories[0]]
-    print(scene_directories)
+    # scene_directories = [scene_directories[0]]
+    # print(scene_directories)
     
     for scene_dir in scene_directories:
         scene_dir_path = os.path.join(args.dataset_dir, scene_dir)
@@ -114,11 +113,13 @@ if __name__ == "__main__":
 
                     # Update variables for new video data
                     current_video_ID = video_ID
-                    OUT_RGB_DIR = os.path.join(OUT_DIR, "images", video_ID)
+                    OUT_RGB_DIR = os.path.join(OUT_DIR, "imagesRGB", video_ID)
                     OUT_SEM_DIR = os.path.join(OUT_DIR, "panomasksRGB", video_ID)
+                    OUT_DEPTH_DIR = os.path.join(OUT_DIR, "imagesDEPTH", video_ID)
 
                     os.makedirs(OUT_RGB_DIR, exist_ok=True)
                     os.makedirs(OUT_SEM_DIR, exist_ok=True)
+                    os.makedirs(OUT_DEPTH_DIR, exist_ok=True)
 
                     coco_id_generator = IdGenerator({el['id']: el for el in coco_categories})
                     coco_video_instance_id_2_color = {}
@@ -126,6 +127,13 @@ if __name__ == "__main__":
                     video_images = []
                     video_annotations = []
                 
+                ###
+                ### Depth Image
+                ###
+                depth_file_src = f"{video_ID}.{view_ID}.DEPTH.png"
+                depth_file_dst = view_ID+".png"
+                shutil.copyfile(os.path.join(scene_dir_path, depth_file_src), os.path.join(OUT_DEPTH_DIR, depth_file_dst))
+
 
                 ###
                 ### RGB Image
@@ -141,10 +149,9 @@ if __name__ == "__main__":
                     "height":           int(rgb_height),
                     "scene_id":         str(scene_dir),
                     "camera_position":  [float(data_el) for data_el in info_position], # x_pos, y_pos, z_pos
-                    "camera_rotation":  [float(data_el) for data_el in info_rotation] # quat_w, quat_x, quat_y, quat_z
+                    "camera_rotation":  [float(data_el) for data_el in info_rotation], # quat_w, quat_x, quat_y, quat_z
+                    "depth_file_name":  str(depth_file_dst),
                     })
-
-
 
                 ###
                 ### Semantic Image
@@ -185,11 +192,13 @@ if __name__ == "__main__":
                         "id":           int(segment_ID),
                         "category_id":  int(mpcat40_index),       
                         "area":         int(torch.sum(instance_mask).item()),
-                        "bbox":         get_bbox_from_numpy_mask(np.array(instance_mask.cpu())),
+                        "bbox":         list(get_bbox_from_numpy_mask(np.array(instance_mask.cpu()))),
                         "iscrowd":      0,
                         "instnace_id":  int(instance_ID)
                         })
 
+                Image.fromarray(pan_format).save(os.path.join(OUT_SEM_DIR, str(view_ID+".png")))
+                
                 video_annotations.append({
                         "image_id"      : int(coco_total_images),
                         "file_name"     : str(view_ID+".png"),
