@@ -48,14 +48,17 @@ def get_rgb_observation(file_path):
 
 
 def get_bbox_from_numpy_mask(mask):
-    print(mask.shape)
-    rows = np.any(img, axis=1)
-    cols = np.any(img, axis=0)
-    print(rows.shape, cols.shape)
+
+    rows = np.any(mask, axis=1)
+    cols = np.any(mask, axis=0)
+
     rmin, rmax = np.where(rows)[0][[0, -1]]
     cmin, cmax = np.where(cols)[0][[0, -1]]
 
-    return rmin, rmax, cmin, cmax
+    x, y = cmin, rmin
+    width, height = cmax-cmin, rmax-rmin
+
+    return x, y, width, height
 
 
 #
