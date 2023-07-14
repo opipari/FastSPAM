@@ -110,6 +110,19 @@ python3.8 -m venv ./envs/paot-benchmark && \
 
 For reproducing published results on the VIPOSeg dataset, refer to the [paot-benchmark.md](https://github.com/opipari/ZeroShotSceneSegmentation/blob/main/paot-benchmark.md) file.
 
+
+#### Geometry-Pyramid / Panoptic Associating Objects with Transformers (GEO-PAOT)
+
+Setup environments:
+
+```
+python3.8 -m venv ./envs/geo-paot-benchmark && \
+  source ./envs/geo-paot-benchmark/bin/activate && \
+    pip install -r ./requirements/geo-paot-benchmark/base.txt &&
+    pip install -r ./requirements/geo-paot-benchmark/deps.txt && \
+      deactivate
+```
+
 #### Gemoetry Aware Panoptic Segmentation (GAPS)
 
 Setup environments:
