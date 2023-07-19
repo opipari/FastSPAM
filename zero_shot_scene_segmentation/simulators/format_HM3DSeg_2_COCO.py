@@ -13,6 +13,7 @@ import itertools, functools, operator
 
 from panopticapi.utils import IdGenerator, save_json
 
+import tqdm
 
 import torch
 import torchvision
@@ -48,35 +49,38 @@ if __name__ == "__main__":
 
     
 
-    OUT_DIR = args.output_dir
-    os.makedirs(OUT_DIR, exist_ok=True)
     
-
-
-
-    coco_total_images = 0
-
-    coco_videos = []
-    coco_annotations = []
-    coco_instances = []
     coco_categories = get_mpcat40_categories(os.path.join(os.getcwd(), './zero_shot_scene_segmentation/simulators/mpcat40.tsv'))
 
 
     matterport_category_maps = get_raw_category_to_mpcat40_map(os.path.join(os.getcwd(), './zero_shot_scene_segmentation/simulators/matterport_category_mappings.tsv'))
 
     scene_directories = sorted([path for path in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, path))])
-    # scene_directories = [scene_directories[0]]
-    # print(scene_directories)
-    
-    for scene_dir in scene_directories:
+    scene_directories = scene_directories[4:]
+    print(len(scene_directories))
+    for scene_dir in tqdm.tqdm(scene_directories):
         scene_dir_path = os.path.join(args.dataset_dir, scene_dir)
 
         scene_view_poses_path = os.path.join(scene_dir_path, scene_dir+'.render_view_poses.csv')
         scene_views_file = os.path.join(scene_dir_path, scene_dir+'.render_view_poses.csv')
         scene_hex_color_to_category_map = get_hex_color_to_category_map(os.path.join(scene_dir_path, scene_dir+'.semantic.txt'))
 
+
+
+
+        OUT_DIR = os.path.join(args.output_dir, scene_dir)
+        os.makedirs(OUT_DIR, exist_ok=True)
         
-        current_video_ID = None 
+
+
+
+        coco_total_images = 0
+
+        coco_videos = []
+        coco_annotations = []
+        coco_instances = []
+        
+        current_video_ID_str = None 
         video_images = []
         video_annotations = []
 
@@ -96,27 +100,31 @@ if __name__ == "__main__":
 
 
                 coco_total_images += 1
-                video_ID = '.'.join(info_ID)
-                if video_ID != current_video_ID:
+                video_ID_str = '.'.join(info_ID)
+                if video_ID_str != current_video_ID_str:
 
                     # Save previous video data if on new video
                     assert len(video_images)==len(video_annotations)
+                    assert len(coco_videos)==len(coco_annotations)
                     if len(video_images)>0:
+                        video_ID_int = len(coco_videos)
                         coco_videos.append({
-                            "video_id": current_video_ID,
-                            "images": video_images
+                            "video_id": video_ID_int,
+                            "images": video_images,
+                            "video_name": current_video_ID_str,
                             })
                         coco_annotations.append({
-                            "video_id": current_video_ID,
-                            "annotations": video_annotations
+                            "video_id": video_ID_int,
+                            "annotations": video_annotations,
+                            "video_name": current_video_ID_str,
                             })
 
 
                     # Update variables for new video data
-                    current_video_ID = video_ID
-                    OUT_RGB_DIR = os.path.join(OUT_DIR, "imagesRGB", video_ID)
-                    OUT_SEM_DIR = os.path.join(OUT_DIR, "panomasksRGB", video_ID)
-                    OUT_DEPTH_DIR = os.path.join(OUT_DIR, "imagesDEPTH", video_ID)
+                    current_video_ID_str = video_ID_str
+                    OUT_RGB_DIR = os.path.join(OUT_DIR, "imagesRGB", video_ID_str)
+                    OUT_SEM_DIR = os.path.join(OUT_DIR, "panomasksRGB", video_ID_str)
+                    OUT_DEPTH_DIR = os.path.join(OUT_DIR, "imagesDEPTH", video_ID_str)
 
                     os.makedirs(OUT_RGB_DIR, exist_ok=True)
                     os.makedirs(OUT_SEM_DIR, exist_ok=True)
@@ -131,7 +139,7 @@ if __name__ == "__main__":
                 ###
                 ### Depth Image
                 ###
-                depth_file_src = f"{video_ID}.{view_ID}.DEPTH.png"
+                depth_file_src = f"{video_ID_str}.{view_ID}.DEPTH.png"
                 depth_file_dst = view_ID+".png"
                 shutil.copyfile(os.path.join(scene_dir_path, depth_file_src), os.path.join(OUT_DEPTH_DIR, depth_file_dst))
 
@@ -139,7 +147,7 @@ if __name__ == "__main__":
                 ###
                 ### RGB Image
                 ###
-                rgb_file = f"{video_ID}.{view_ID}.RGB.{0:010}.png"
+                rgb_file = f"{video_ID_str}.{view_ID}.RGB.{0:010}.png"
                 rgb_image = get_rgb_observation(os.path.join(scene_dir_path, rgb_file))
                 rgb_image.save(os.path.join(OUT_RGB_DIR, view_ID+".jpg"))
                 rgb_width, rgb_height = rgb_image.size
@@ -157,7 +165,7 @@ if __name__ == "__main__":
                 ###
                 ### Semantic Image
                 ###
-                sem_file = f"{video_ID}.{view_ID}.SEM.png"
+                sem_file = f"{video_ID_str}.{view_ID}.SEM.png"
                 semantic_labels = get_semantic_labels(os.path.join(scene_dir_path, sem_file), scene_hex_color_to_category_map)
 
 
@@ -168,7 +176,7 @@ if __name__ == "__main__":
                     mpcat40_index, mpcat40_name = get_mpcat40_from_raw_category(instance_name, matterport_category_maps)
 
                     # Skip empty regions or unlabeled void
-                    if instance_hex_color=='000000' or mpcat40_index==0:
+                    if instance_hex_color=='000000' or mpcat40_index<1 or mpcat40_index>40:
                         continue
 
                     if instance_hex_color not in coco_video_instance_id_2_color:
@@ -207,14 +215,14 @@ if __name__ == "__main__":
                         })
 
 
-    coco_annotations = {'videos': coco_videos,
-                    'annotations': coco_annotations,
-                    'instances': coco_instances,
-                    'categories': coco_categories,
-                    }
+        coco_annotations = {'videos': coco_videos,
+                        'annotations': coco_annotations,
+                        'instances': coco_instances,
+                        'categories': coco_categories,
+                        }
 
-    with open(os.path.join(OUT_DIR, f"panoptic_{args.training_mode}.json"), "w") as outfile:
-        json.dump(coco_annotations, outfile)
+        with open(os.path.join(OUT_DIR, f"panoptic_{args.training_mode}.json"), "w") as outfile:
+            json.dump(coco_annotations, outfile)
 
 
     if args.verbose:

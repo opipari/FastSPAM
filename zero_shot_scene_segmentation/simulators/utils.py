@@ -58,7 +58,7 @@ def get_bbox_from_numpy_mask(mask):
     x, y = cmin, rmin
     width, height = cmax-cmin, rmax-rmin
 
-    return x, y, width, height
+    return int(x), int(y), int(width), int(height)
 
 
 #
