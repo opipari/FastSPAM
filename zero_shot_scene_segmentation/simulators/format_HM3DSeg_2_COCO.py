@@ -23,42 +23,15 @@ from utils import get_hex_color_to_category_map, get_mpcat40_categories, get_mpc
 
 
 
+def func(scene_directories):
 
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-                    prog='format_HM3DSeg_2_VIPOSeg',
-                    usage='python <path to format_HM3DSeg_2_VIPOSeg.py> -- [options]',
-                    description='Python script for converting format of rendered data from Matterport scans into VIPOSeg format needed for PAOT Benchmark',
-                    epilog='For more information, see: https://github.com/opipari/ZeroShot_RGB_D/tree/main/zeroshot_rgbd/simulators/blender')
-
-    parser.add_argument('-data', '--dataset-dir', help='path to directory of rendered HM3D images', type=str)
-    parser.add_argument('-out', '--output-dir', help='path to directory where output dataset should be stored', type=str)
-    parser.add_argument('-mode', '--training-mode', help='path to directory where output dataset should be stored', type=str)
-    parser.add_argument('-v', '--verbose', help='whether verbose output printed to stdout', type=int, default=1)
-
-    args = parser.parse_args()
-
-
-    if args.verbose:
-        print()
-        print(args)
-        print()
-
-    
-
-    
-
-    
     coco_categories = get_mpcat40_categories(os.path.join(os.getcwd(), './zero_shot_scene_segmentation/simulators/mpcat40.tsv'))
 
 
     matterport_category_maps = get_raw_category_to_mpcat40_map(os.path.join(os.getcwd(), './zero_shot_scene_segmentation/simulators/matterport_category_mappings.tsv'))
 
-    scene_directories = sorted([path for path in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, path))])
-    scene_directories = scene_directories[4:]
-    print(len(scene_directories))
     for scene_dir in tqdm.tqdm(scene_directories):
+        print(scene_dir)
         scene_dir_path = os.path.join(args.dataset_dir, scene_dir)
 
         scene_view_poses_path = os.path.join(scene_dir_path, scene_dir+'.render_view_poses.csv')
@@ -224,6 +197,79 @@ if __name__ == "__main__":
         with open(os.path.join(OUT_DIR, f"panoptic_{args.training_mode}.json"), "w") as outfile:
             json.dump(coco_annotations, outfile)
 
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+                    prog='format_HM3DSeg_2_VIPOSeg',
+                    usage='python <path to format_HM3DSeg_2_VIPOSeg.py> -- [options]',
+                    description='Python script for converting format of rendered data from Matterport scans into VIPOSeg format needed for PAOT Benchmark',
+                    epilog='For more information, see: https://github.com/opipari/ZeroShot_RGB_D/tree/main/zeroshot_rgbd/simulators/blender')
+
+    parser.add_argument('-data', '--dataset-dir', help='path to directory of rendered HM3D images', type=str)
+    parser.add_argument('-out', '--output-dir', help='path to directory where output dataset should be stored', type=str)
+    parser.add_argument('-mode', '--training-mode', help='path to directory where output dataset should be stored', type=str)
+    parser.add_argument('-v', '--verbose', help='whether verbose output printed to stdout', type=int, default=1)
+
+    args = parser.parse_args()
+
+
+    if args.verbose:
+        print()
+        print(args)
+        print()
+
+    
+
+    
+
+    
+    
+
+    scene_directories = sorted([path for path in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, path))])
+    already_scenes = ['00006-HkseAnWCgqk',
+                        '00009-vLpv2VX547B',
+                        '00016-qk9eeNeR4vw',
+                        '00017-oEPjPNSPmzL',
+                        '00020-XYyR54sxe6b',
+                        '00022-gmuS7Wgsbrx',
+                        '00023-zepmXAdrpjR',
+                        '00025-ixTj1aTMup2',
+                        '00031-Wo6kuutE9i7',
+                        '00033-oPj9qMxrDEa',
+                        '00034-6imZUJGRUq4',
+                        '00035-3XYAD64HpDr',
+                        '00043-Jfyvj3xn2aJ',
+                        '00055-HxmXPBbFCkH',
+                        '00057-1UnKg1rAb8A',
+                        '00059-kJxT5qssH4H',
+                        '00062-ACZZiU6BXLz',
+                        '00064-gQgtJ9Stk5s',##
+                        '00081-5biL7VEkByM',
+                        '00087-YY8rqV6L6rf',##
+                        '00096-6HRFAUDqpTb',
+                        '00105-xWvSkKiWQpC',
+                        '00108-oStKKWkQ1id',
+                        '00109-GTV2Y73Sn5t',
+                        '00135-HeSYRw7eMtG',
+                        '00141-iigzG1rtanx',
+                        '00143-5Kw4nGdqYtS',
+                        '00149-UuwwmrTsfBN',
+                        '00150-LcAd9dhvVwh',
+                        '00155-iLDo95ZbDJq',
+                        '00164-XfUxBGTFQQb',
+                        '00166-RaYrxWt5pR1'
+                        ]
+    scene_directories = [scene for scene in scene_directories if scene not in already_scenes]
+    print(len(scene_directories))
+    
+    from multiprocessing import Pool
+
+    with Pool(4) as p:
+        p.map(func, [scene_directories[0::4],
+                    scene_directories[1::4],
+                    scene_directories[2::4],
+                    scene_directories[3::4]])
 
     if args.verbose:
         print()
