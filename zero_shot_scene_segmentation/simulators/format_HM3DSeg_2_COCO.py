@@ -243,6 +243,13 @@ if __name__ == "__main__":
     
 
     scene_directories = sorted([path for path in os.listdir(args.dataset_dir) if os.path.isdir(os.path.join(args.dataset_dir, path))])
+    already_scenes = [  '00006-HkseAnWCgqk',
+                        '00009-vLpv2VX547B',
+                        '00016-qk9eeNeR4vw',
+                        '00064-gQgtJ9Stk5s',##
+                        '00087-YY8rqV6L6rf',##
+                        ]
+    scene_directories = [scene for scene in scene_directories if scene not in already_scenes]
     print(len(scene_directories))
     
     from multiprocessing import Pool
