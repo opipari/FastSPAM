@@ -7,6 +7,7 @@ import numpy as np
 
 import zero_shot_scene_segmentation.metrics.utils as metric_utils
 
+from tqdm import tqdm
 
 
 
@@ -19,12 +20,15 @@ def evaluate_metrics(anno_dir_seqs, pred_dir_seqs, dataset):
 
     results = {}
 
-    for sequence in anno_sequences:
+    for sequence in tqdm(anno_sequences):
         annotations = next(v for v in dataset["annotations"] if v["video_name"]==sequence)["annotations"]
 
-        results[sequence] = {}
+        results[sequence] = []
 
         for anno in annotations:
+
+            anno_result = {}
+
             file_path = os.path.join(sequence, anno["file_name"])
 
             anno_file_path = os.path.join(anno_dir, file_path)
@@ -61,10 +65,13 @@ def evaluate_metrics(anno_dir_seqs, pred_dir_seqs, dataset):
                 mask_metrics = {"Mask-"+key: value for key,value in metric_utils.segment_metrics(anno_mask, pred_mask).items()}
                 boundary_metrics = {"Boundary-"+key: value for key,value in metric_utils.segment_metrics(anno_boundary, pred_boundary).items()}
 
-                
+                anno_result[int(segment_id)] = {**mask_metrics, **boundary_metrics}
+                anno_result[int(segment_id)]["category_id"] = int(category_id)
 
-            # print(anno_arr.shape, pred_arr.shape)
+            results[sequence].append(anno_result)
 
+
+    return results
 
 
 
@@ -83,10 +90,13 @@ if __name__=='__main__':
     anno_sequences = sorted([v["video_name"] for v in dataset["videos"]])
     assert all(os.path.isdir(os.path.join(args.data_path,"panomasksRGB",fldr)) for fldr in anno_sequences)
 
-    pred_sequences = [fldr for fldr in os.listdir(args.pred_path) if os.path.isdir(os.path.join(args.pred_path, fldr))]
+    pred_sequences = [fldr for fldr in os.listdir(os.path.join(args.pred_path,"panomasksRGB")) if os.path.isdir(os.path.join(args.pred_path, "panomasksRGB", fldr))]
     assert len(anno_sequences)==len(pred_sequences)
     assert set(anno_sequences)==set(pred_sequences)
 
     result_dict = evaluate_metrics((os.path.join(args.data_path,"panomasksRGB"), anno_sequences),
-                                    (args.pred_path, pred_sequences),
+                                    (os.path.join(args.pred_path,"panomasksRGB"), pred_sequences),
                                     dataset)
+
+    with open(os.path.join(args.pred_path, "metrics.json"),"w") as fl:
+        json.dump(result_dict, fl)

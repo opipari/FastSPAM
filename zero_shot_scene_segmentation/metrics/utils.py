@@ -51,21 +51,21 @@ def segment_metrics(true_segment, pred_segment):
     intersection = np.sum((true_segment * pred_segment) > 0)
     precision_denominator = np.sum(pred_segment>0)
     recall_denominator = np.sum(true_segment>0)
+    assert recall_denominator>0
 
-
-    precision = intersection / precision_denominator
+    precision = intersection / precision_denominator if precision_denominator > 0 else 0
     recall = intersection / recall_denominator
     F_score = (2 * precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
     IOU_score = intersection / (precision_denominator + recall_denominator - intersection) if (precision_denominator + recall_denominator - intersection) > 0 else 0
 
 
-    results = {"Precision": precision,
-                "Recall": recall,
-                "F-Score": F_score,
-                "IOU": IOU_score,
-                "Intersection": intersection,
-                "Precision-Denominator": precision_denominator,
-                "Recall-Denominator": recall_denominator
+    results = {"Precision": float(precision),
+                "Recall": float(recall),
+                "F-Score": float(F_score),
+                "IOU": float(IOU_score),
+                "Intersection": float(intersection),
+                "Precision-Denominator": float(precision_denominator),
+                "Recall-Denominator": float(recall_denominator)
                 }
     return results
 
