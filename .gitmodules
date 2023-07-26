@@ -35,3 +35,7 @@
 [submodule "zero_shot_scene_segmentation/models/Video-K-Net/Video-K-Net"]
 	path = zero_shot_scene_segmentation/models/Video-K-Net/Video-K-Net
 	url = git@github.com:lxtGH/Video-K-Net.git
+[submodule "zero_shot_scene_segmentation/models/aot-benchmark/paot-control-against-geo-noise"]
+	path = zero_shot_scene_segmentation/models/aot-benchmark/paot-control-against-geo-noise
+	url = git@github.com:opipari/aot-benchmark.git
+	branch = paot-control-against-geo-noise
