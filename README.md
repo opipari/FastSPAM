@@ -135,42 +135,7 @@ python3.8 -m venv ./envs/gaps && \
 ```
 
 
-<hr>
 
-### Simulators
-
-#### Blender
-
-```
-wget -P ./zero_shot_scene_segmentation/simulators/blender/ https://mirrors.ocf.berkeley.edu/blender/release/Blender3.3/blender-3.3.7-linux-x64.tar.xz && \
-  tar -xf ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64.tar.xz -C ./zero_shot_scene_segmentation/simulators/blender/ && \
-    rm ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64.tar.xz && \
-      ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64/3.3/python/bin/python3.10 -m ensurepip && \
-        ./zero_shot_scene_segmentation/simulators/blender/blender-3.3.7-linux-x64/3.3/python/bin/python3.10 -m pip install -r ./envs/requirements/blender.txt
-```
-
-#### Habitat-Sim
-
-
-<!-- ```
-python3.9 -m venv ./envs/habitat-sim && \
-  source ./envs/habitat-sim/bin/activate && \
-    python -m pip install -r ./envs/requirements/habitat-sim.txt && \
-      deactivate
-``` -->
-
-```
-# Update the dependency solver for base conda for faster install
-conda update -n base conda
-conda install -n base conda-libmamba-solver
-conda config --set solver libmamba
-
-# Create environment for habitat-sim and habitat-lab
-conda create -n habitat python=3.9 cmake=3.14.0
-conda activate habitat
-conda install habitat-sim withbullet -c conda-forge -c aihabitat
-pip install -r ./envs/requirements/habitat.txt
-```
 
 
 
