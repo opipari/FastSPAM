@@ -1,8 +1,8 @@
 from distutils.core import setup
 
 setup(
-    name='ZeroShotSceneSegmentation',
+    name='VideoPanopticSegmentation',
     version='0.1dev',
-    packages=['zero_shot_scene_segmentation', ],
+    packages=['video_panoptic_segmentation', ],
     license='MIT license',
 )
