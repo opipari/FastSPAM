@@ -162,7 +162,7 @@ cython_debug/
 
 
 # Datasets
-zero_shot_scene_segmentation/datasets/*
+video_panoptic_segmentation/datasets/*
 
 
 # Python virtual environments

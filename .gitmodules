@@ -39,3 +39,6 @@
 	path = video_panoptic_segmentation/models/aot-benchmark/paot-control-against-geo-noise
 	url = git@github.com:opipari/aot-benchmark.git
 	branch = paot-control-against-geo-noise
+[submodule "video_panoptic_segmentation/datasets/MVPd"]
+	path = video_panoptic_segmentation/datasets/MVPd
+	url = git@github.com:opipari/MVPd.git
