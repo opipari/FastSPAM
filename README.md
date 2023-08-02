@@ -1,26 +1,24 @@
-# Panoptic Memory Clouds
-## Experiment Branch
+# Panoptic Memory Clouds <br/> Experiment Branch
 
-## Repository Structure
+## Branch Structure
 
-This repository is setup to contain a centralized python package, `ZeroShotSceneSegmentation`, that stores all code for data simulation, data processing, model training, and model evaluation. Correspondingly, the code for these core functions is spread across sub-directories.
+This branch of the repository is setup to track all code for the experiments including data processing, model training, and model evaluation. Correspondingly, the code for these core functions is spread across sub-directories.
 
 #### Directory Structure
 
 ```
 .                                   # Root project directory
 ├── README.md                       # This readme file
-├── setup.py                        # Setup script using setuptools to install the ZeroShotSceneSegmentation package
+├── setup.py                        # Setup script using setuptools to install the VideoPanopticSegmentation experiment package
 ├── requirements                    # Directory containing the specification of package dependency requirements
 │   └── segment-anything.txt        # Package requirements for segment anything model package
 ├── envs                            # Directory containing virtual environment source files and package dependency requirements
 │   └── segment-anything            # Directory for segment anything's virtual environment
-└── zero_shot_scene_segmentation    # The central python package for ZeroShotSceneSegmentation package
+└── video_panoptic_segmentation     # The central python package for VideoPanopticSegmentation package experiments
     ├── models                      # Directory containing source code for model development, training and evaluation
     │   └── segment-anything        # Directory containing all source for training and evaluating segment anything model
-    ├── datasets                    # Directory containing raw datasets (DO NOT ADD TO GIT TRACKING)
-    └── simulators                  # Directory containing source code for data simulationa and rendering
-        └── blender                 # Directory containing source code for blender-based rendering
+    ├── datasets                    # Directory containing raw datasets (DO NOT ADD DATA TO GIT TRACKING)
+    └── metrics                     # Directory containing code for evaluation
 ```
 
 
