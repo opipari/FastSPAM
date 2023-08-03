@@ -38,3 +38,7 @@
 [submodule "video_panoptic_segmentation/datasets/MVPd"]
 	path = video_panoptic_segmentation/datasets/MVPd
 	url = git@github.com:opipari/MVPd.git
+[submodule "video_panoptic_segmentation/models/PanopticMemoryClouds/PanopticMemoryClouds"]
+	path = video_panoptic_segmentation/models/PanopticMemoryClouds/PanopticMemoryClouds
+	url = git@github.com:opipari/PanopticMemoryClouds.git
+	branch = model

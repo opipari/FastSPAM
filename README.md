@@ -102,14 +102,14 @@ python3.8 -m venv ./envs/geo-paot-benchmark && \
       deactivate
 ```
 
-#### Gemoetry Aware Panoptic Segmentation (GAPS)
+#### Panoptic Memory Clouds (GAPS)
 
 Setup environments:
 
 ```
-python3.8 -m venv ./envs/gaps && \
-  source ./envs/gaps/bin/activate && \
-    pip install -r ./requirements/gaps.txt && \
+python3.8 -m venv ./envs/panoptic-memory-clouds && \
+  source ./envs/panoptic-memory-clouds/bin/activate && \
+    pip install -r ./requirements/panoptic-memory-clouds.txt && \
       deactivate
 ```
 
