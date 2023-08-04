@@ -200,16 +200,18 @@ class MVPVideo(Dataset):
         W2C, C2W = self.get_pose_matrices(rotation_sequence, position_sequence)
         
         sample['camera'] = {
-            'K': np.tile(np.array([[[fx,  0.0, cx],
-                                        [0.0, fy,  cy],
-                                        [0.0, 0.0, 1.0]]], 
-                                        dtype=np.float32),
+            'K': np.tile(np.array([[[fx,  0.0, cx,  0.0],
+                                    [0.0, fy,  cy,  0.0],
+                                    [0.0, 0.0, 0.0, 1.0], 
+                                    [0.0, 0.0, 1.0, 0.0]]],
+                                    dtype=np.float32),
                               (self.window_size,1,1)),
-            'K_': np.tile(np.array([[[1/fx,  0.0,  -cx/fx],
-                                        [0.0,   1/fy, -cy/fy],
-                                        [0.0,   0.0,  1.0]]], 
-                                        dtype=np.float32),
-                              (self.window_size,1,1)),
+            # 'K_': np.tile(np.array([[[1/fx,  0.0,  -cx/fx, 0.0],
+            #                          [0.0,   1/fy, -cy/fy, 0.0],
+            #                          [0.0,   0.0,  0.0,    1.0], 
+            #                          [0.0,   0.0,  1.0,    0.0]]],
+            #                         dtype=np.float32),
+            #                   (self.window_size,1,1)),
             'W2C_pose': np.array(W2C),
             'C2W_pose': np.array(C2W)
         }
@@ -224,7 +226,8 @@ class MVPVideo(Dataset):
             'video_name': self.video_meta['video_name'],
             'window_idxs': np.array([sub_idx for sub_idx in range(start_idx, end_idx)]),
             'window_names': [self.video_meta['images'][sub_idx]["file_name"] for sub_idx in range(start_idx, end_idx)],
-            'class_dict': class_dict
+            'class_dict': class_dict,
+            'image_size': np.array([img.shape[:2] for img in image_sequence])
         }
         
         if self.transform is not None:
