@@ -5,28 +5,28 @@
 	path = video_panoptic_segmentation/models/PanopticMemoryClouds/PanopticMemoryClouds
 	url = git@github.com:opipari/PanopticMemoryClouds.git
 	branch = model
-[submodule "zero_shot_scene_segmentation/models/segment-anything/segment-anything"]
+[submodule "video_panoptic_segmentation/models/segment-anything/segment-anything"]
 	path = video_panoptic_segmentation/models/segment-anything/segment-anything
 	url = git@github.com:facebookresearch/segment-anything.git
-[submodule "zero_shot_scene_segmentation/models/MobileSAM/MobileSAM"]
+[submodule "video_panoptic_segmentation/models/MobileSAM/MobileSAM"]
 	path = video_panoptic_segmentation/models/MobileSAM/MobileSAM
 	url = git@github.com:ChaoningZhang/MobileSAM.git
-[submodule "zero_shot_scene_segmentation/models/aot-benchmark/aot-benchmark"]
+[submodule "video_panoptic_segmentation/models/aot-benchmark/aot-benchmark"]
 	path = video_panoptic_segmentation/models/aot-benchmark/aot-benchmark
 	url = git@github.com:opipari/aot-benchmark.git
 	branch = main
-[submodule "zero_shot_scene_segmentation/models/aot-benchmark/paot-benchmark"]
+[submodule "video_panoptic_segmentation/models/aot-benchmark/paot-benchmark"]
 	path = video_panoptic_segmentation/models/aot-benchmark/paot-benchmark
 	url = git@github.com:opipari/aot-benchmark.git
 	branch = paot
-[submodule "zero_shot_scene_segmentation/models/aot-benchmark/geo-paot"]
+[submodule "video_panoptic_segmentation/models/aot-benchmark/geo-paot"]
 	path = video_panoptic_segmentation/models/aot-benchmark/geo-paot
 	url = git@github.com:opipari/aot-benchmark.git
 	branch = geo-paot
-[submodule "zero_shot_scene_segmentation/models/Video-K-Net/Video-K-Net"]
+[submodule "video_panoptic_segmentation/models/Video-K-Net/Video-K-Net"]
 	path = video_panoptic_segmentation/models/Video-K-Net/Video-K-Net
 	url = git@github.com:lxtGH/Video-K-Net.git
-[submodule "zero_shot_scene_segmentation/models/aot-benchmark/paot-control-against-geo-noise"]
+[submodule "video_panoptic_segmentation/models/aot-benchmark/paot-control-against-geo-noise"]
 	path = video_panoptic_segmentation/models/aot-benchmark/paot-control-against-geo-noise
 	url = git@github.com:opipari/aot-benchmark.git
 	branch = paot-control-against-geo-noise
