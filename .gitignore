@@ -164,6 +164,9 @@ cython_debug/
 # Datasets
 video_panoptic_segmentation/datasets/*
 
+# Results
+video_panoptic_segmentation/results/*
+
 
 # Python virtual environments
 envs/*
