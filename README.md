@@ -118,8 +118,17 @@ python3.8 -m venv ./envs/panoptic-memory-clouds && \
 
 
 
-### Add New model submodule
+### How to use submodules
 
 ```
-git submodule add -b <branch name> <remote.git> ./zero_shot_scene_segmentation/models/<model_name>/<model_name>/
+git submodule add -b <branch name> <remote.git> ./video_panoptic_segmentation/models/<model_name>/<model_name>/
+```
+
+### Updating a submodule to point to latest commit
+```
+cd <path_to_submodule>
+git pull
+cd ..
+git commit -m "Updating <submodule>" <path_to_submodule>
+git push
 ```
