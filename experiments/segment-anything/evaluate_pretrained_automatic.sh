@@ -1,15 +1,17 @@
 
 DATA_DIR="./video_panoptic_segmentation/datasets/MVPd/MVPd"
-OUT_DIR="./video_panoptic_segmentation/m"
+OUT_DIR="./video_panoptic_segmentation/models/segment-anything/output"
 
+
+echo "Setting up virtualenvironment"
 # Setup virtualenvironment
 python3.8 -m venv ./envs/segment-anything
 source ./envs/segment-anything/bin/activate
 pip install -r ./requirements/segment-anything.txt
 
-
+echo "Downloading data"
 cd video_panoptic_segmentation/datasets/MVPd && \
-./download.sh
+./data/download.sh -s val
 cd ../../..
 
 
