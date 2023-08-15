@@ -1,6 +1,8 @@
 EXPERIMENT_NAME="evaluate_pretrained_sam_automatic"
 OUTPUT_DIR="./video_panoptic_segmentation/results/segment-anything/"
 
+echo "Searching for aws"
+which aws
 
 echo "Setting up virtualenvironment"
 # Setup virtualenvironment
@@ -14,7 +16,7 @@ cd video_panoptic_segmentation/datasets/MVPd
 cd ../../..
 
 # Download pre-trained model
-/opt/amazon/bin/aws s3 cp s3://prism-intern-anthony/models/segment-anything/pretrained/sam_vit_h_4b8939.pth ./video_panoptic_segmentation/models/segment-anything/segment-anything/checkpoints/
+aws s3 cp s3://prism-intern-anthony/models/segment-anything/pretrained/sam_vit_h_4b8939.pth ./video_panoptic_segmentation/models/segment-anything/segment-anything/checkpoints/
 # wget -P ./video_panoptic_segmentation/models/segment-anything/segment-anything/checkpoints/ https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
 
 echo "Starting evaluation"
