@@ -3,6 +3,7 @@ OUTPUT_DIR="./video_panoptic_segmentation/results/segment-anything/"
 
 echo "Searching for aws"
 which aws
+echo $(which aws)
 
 echo "Setting up virtualenvironment"
 # Setup virtualenvironment
