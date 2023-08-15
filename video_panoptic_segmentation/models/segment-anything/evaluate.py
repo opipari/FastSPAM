@@ -5,6 +5,7 @@ import argparse
 from tqdm import tqdm
 import math
 
+from PIL import Image
 import numpy as np
 import torch
 
