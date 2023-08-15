@@ -121,6 +121,6 @@ if __name__ == "__main__":
     config = json.load(open(args.config_path, 'r'))
 
     num_gpus = torch.cuda.device_count()
-    torch.multiprocessing.spawn(evaluation_process, args=(num_gpus, config, output_path), nprocs=num_gpus)
+    torch.multiprocessing.spawn(evaluation_process, args=(num_gpus, config, args.output_path), nprocs=num_gpus)
 
     
