@@ -55,9 +55,6 @@ def evaluation_process(index, nprocs, config, output_dir):
                 out_dir = os.path.join(output_dir, config['experiment_name'], 'panomasksRGB', video_name)
                 out_file = sample['meta']['window_names'][0].split('.')[0]+'.png'
 
-                if video_name not in results:
-                    results[video_name] = []
-
                 # Load label data
                 label = sample['label']['mask']    
                 label_one_hot, label_ids = label_to_one_hot(label)
