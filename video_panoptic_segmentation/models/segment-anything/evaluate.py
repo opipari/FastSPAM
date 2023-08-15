@@ -55,6 +55,8 @@ def evaluation_process(index, nprocs, config, output_dir):
             os.makedirs(out_dir, exist_ok=True)
 
             for index, sample in enumerate(video):
+                if index>10:
+                    break
                 # Load metadata
                 video_name = sample['meta']['video_name']
                 out_dir = os.path.join(output_dir, config['experiment_name'], 'panomasksRGB', video_name)
@@ -111,7 +113,7 @@ def evaluation_process(index, nprocs, config, output_dir):
 
             json.dump(results, open(os.path.join(out_dir,'result.json'),'w'))
             print("Finished processing", video_name)
-
+            break
 
 if __name__ == "__main__":
     import argparse
