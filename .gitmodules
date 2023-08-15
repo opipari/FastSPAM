@@ -1,9 +1,9 @@
 [submodule "video_panoptic_segmentation/datasets/MVPd"]
 	path = video_panoptic_segmentation/datasets/MVPd
-	url = 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@github.com:opipari/MVPd.git
+	url = https://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@github.com/opipari/MVPd.git
 [submodule "video_panoptic_segmentation/models/PanopticMemoryClouds/PanopticMemoryClouds"]
 	path = video_panoptic_segmentation/models/PanopticMemoryClouds/PanopticMemoryClouds
-	url = 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@github.com:opipari/PanopticMemoryClouds.git
+	url = https://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@github.com/opipari/PanopticMemoryClouds.git
 	branch = model
 [submodule "video_panoptic_segmentation/models/segment-anything/segment-anything"]
 	path = video_panoptic_segmentation/models/segment-anything/segment-anything
@@ -13,20 +13,20 @@
 	url = git@github.com:ChaoningZhang/MobileSAM.git
 [submodule "video_panoptic_segmentation/models/aot-benchmark/aot-benchmark"]
 	path = video_panoptic_segmentation/models/aot-benchmark/aot-benchmark
-	url = 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@github.com:opipari/aot-benchmark.git
+	url = https://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@github.com/opipari/aot-benchmark.git
 	branch = main
 [submodule "video_panoptic_segmentation/models/aot-benchmark/paot-benchmark"]
 	path = video_panoptic_segmentation/models/aot-benchmark/paot-benchmark
-	url = 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@github.com:opipari/aot-benchmark.git
+	url = https://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@github.com/opipari/aot-benchmark.git
 	branch = paot
 [submodule "video_panoptic_segmentation/models/aot-benchmark/geo-paot"]
 	path = video_panoptic_segmentation/models/aot-benchmark/geo-paot
-	url = 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@github.com:opipari/aot-benchmark.git
+	url = https://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@github.com/opipari/aot-benchmark.git
 	branch = geo-paot
 [submodule "video_panoptic_segmentation/models/Video-K-Net/Video-K-Net"]
 	path = video_panoptic_segmentation/models/Video-K-Net/Video-K-Net
 	url = git@github.com:lxtGH/Video-K-Net.git
 [submodule "video_panoptic_segmentation/models/aot-benchmark/paot-control-against-geo-noise"]
 	path = video_panoptic_segmentation/models/aot-benchmark/paot-control-against-geo-noise
-	url = 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@github.com:opipari/aot-benchmark.git
+	url = https://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@github.com/opipari/aot-benchmark.git
 	branch = paot-control-against-geo-noise
