@@ -1,5 +1,5 @@
 echo "Testing copy"
-aws s3 cp s3://prism-intern-anthony/test.txt ./
+aws s3 cp s3://vesta-intern-anthony/test.txt ./
 echo "$(cat test.txt)"
 
 # EXPERIMENT_NAME="evaluate_pretrained_sam_automatic"
