@@ -2,7 +2,7 @@ import os
 import json
 import argparse
 
-import math
+
 import numpy as np
 
 from . import utils as metric_utils
