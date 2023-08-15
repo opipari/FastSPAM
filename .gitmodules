@@ -7,10 +7,10 @@
 	branch = model
 [submodule "video_panoptic_segmentation/models/segment-anything/segment-anything"]
 	path = video_panoptic_segmentation/models/segment-anything/segment-anything
-	url = git@github.com:facebookresearch/segment-anything.git
+	url = https://github.com/facebookresearch/segment-anything.git
 [submodule "video_panoptic_segmentation/models/MobileSAM/MobileSAM"]
 	path = video_panoptic_segmentation/models/MobileSAM/MobileSAM
-	url = git@github.com:ChaoningZhang/MobileSAM.git
+	url = https://github.com/ChaoningZhang/MobileSAM.git
 [submodule "video_panoptic_segmentation/models/aot-benchmark/aot-benchmark"]
 	path = video_panoptic_segmentation/models/aot-benchmark/aot-benchmark
 	url = https://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@github.com/opipari/aot-benchmark.git
@@ -25,7 +25,7 @@
 	branch = geo-paot
 [submodule "video_panoptic_segmentation/models/Video-K-Net/Video-K-Net"]
 	path = video_panoptic_segmentation/models/Video-K-Net/Video-K-Net
-	url = git@github.com:lxtGH/Video-K-Net.git
+	url = https://github.com/lxtGH/Video-K-Net.git
 [submodule "video_panoptic_segmentation/models/aot-benchmark/paot-control-against-geo-noise"]
 	path = video_panoptic_segmentation/models/aot-benchmark/paot-control-against-geo-noise
 	url = https://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@github.com/opipari/aot-benchmark.git
