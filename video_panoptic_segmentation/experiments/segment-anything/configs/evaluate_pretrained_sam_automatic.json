@@ -1,6 +1,5 @@
 {
     "experiment_name": "evaluate_pretrained_sam_automatic",
-    "output_directory": "./video_panoptic_segmentation/results/segment-anything/",
     "dataset": {
         "root": "./video_panoptic_segmentation/datasets/MVPd/MVPd/",
         "split": "val",

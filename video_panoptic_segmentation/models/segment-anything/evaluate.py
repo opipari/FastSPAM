@@ -31,7 +31,7 @@ def get_model(model_config, device):
     return model
 
 
-def evaluation_process(index, nprocs, config):
+def evaluation_process(index, nprocs, config, output_dir):
     dataset = get_dataset(config['dataset'])
     nvideos_per_proc = math.ceil(len(dataset)/nprocs)
     subset_indices = torch.arange(index*nvideos_per_proc, min(((index+1)*nvideos_per_proc), len(dataset)))
@@ -45,13 +45,13 @@ def evaluation_process(index, nprocs, config):
             results = []
             first_sample = next(iter(video))
             video_name = first_sample['meta']['video_name']
-            out_dir = os.path.join(config['output_directory'], config['experiment_name'], 'panomasksRGB', video_name)
+            out_dir = os.path.join(output_dir, config['experiment_name'], 'panomasksRGB', video_name)
             os.makedirs(out_dir, exist_ok=True)
 
             for index, sample in enumerate(video):
                 # Load metadata
                 video_name = sample['meta']['video_name']
-                out_dir = os.path.join(config['output_directory'], config['experiment_name'], 'panomasksRGB', video_name)
+                out_dir = os.path.join(output_dir, config['experiment_name'], 'panomasksRGB', video_name)
                 out_file = sample['meta']['window_names'][0].split('.')[0]+'.png'
 
                 if video_name not in results:
@@ -115,11 +115,12 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--config-path", dest="config_path")
+    parser.add_argument("--output-path", dest="output_path")
     args = parser.parse_args()
 
     config = json.load(open(args.config_path, 'r'))
 
     num_gpus = torch.cuda.device_count()
-    torch.multiprocessing.spawn(evaluation_process, args=(num_gpus, config), nprocs=num_gpus)
+    torch.multiprocessing.spawn(evaluation_process, args=(num_gpus, config, output_path), nprocs=num_gpus)
 
     
