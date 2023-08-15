@@ -5,7 +5,7 @@ import argparse
 
 import numpy as np
 
-import zero_shot_scene_segmentation.metrics.utils as metric_utils
+from . import utils as metric_utils
 
 from tqdm import tqdm
 

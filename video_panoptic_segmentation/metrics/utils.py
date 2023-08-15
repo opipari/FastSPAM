@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import cv2
 import numpy as np
 
@@ -9,14 +11,19 @@ from PIL import Image
 from panopticapi.utils import rgb2id
 
 
-def read_panomaskRGB(path):
+def read_panomaskRGB(
+    path: str
+) -> np.ndarray:
     label = Image.open(path)
     label = np.array(label, dtype=np.uint8)
     label = rgb2id(label)
     return label
 
 
-def mask_to_boundary(mask, dilation_ratio=0.02):
+def mask_to_boundary(
+    mask: np.ndarray,
+    dilation_ratio: float = 0.02
+) -> np.ndarray:
     """
     Convert binary mask to boundary mask.
     :param mask (numpy array, uint8): binary mask
@@ -37,20 +44,23 @@ def mask_to_boundary(mask, dilation_ratio=0.02):
     return mask - mask_erode
 
 
-def segment_metrics(true_segment, pred_segment):
-    """Calculate pairwise pixel-wise metrics (precision, recall, f-score, iou) between two sets of segments.
+def segment_metrics(
+    true_segment: torch.Tensor,
+    pred_segment: torch.Tensor
+) -> dict:
+    """Calculate pairwise pixel-wise metrics (precision, recall, f-score, iou) between two segments.
 
     Keyword arguments:
-    true_segment -- binary numpy array of shape (H,W)
-    pred_segment -- binary numpy array of shape (H,W)
+    true_segment -- binary tensor of shape (H,W)
+    pred_segment -- binary tensor of shape (H,W)
     eps -- float to avoid numerical overflow for division
     """
-    assert true_segment.dtype == pred_segment.dtype == bool
+    assert true_segment.dtype == pred_segment.dtype == torch.bool
     assert true_segment.shape == pred_segment.shape
 
-    intersection = np.sum((true_segment * pred_segment) > 0)
-    precision_denominator = np.sum(pred_segment>0)
-    recall_denominator = np.sum(true_segment>0)
+    intersection = ((true_segment * pred_segment) > 0).sum().cpu().item()
+    precision_denominator = (pred_segment>0).sum().cpu().item()
+    recall_denominator = (true_segment>0).sum().cpu().item()
     assert recall_denominator>0
 
     precision = intersection / precision_denominator if precision_denominator > 0 else 0
@@ -70,3 +80,71 @@ def segment_metrics(true_segment, pred_segment):
     return results
 
 
+def pairwise_segment_metric(
+    true_segments: torch.Tensor,
+    pred_segments: torch.Tensor, 
+    metric: str = 'F-Score'
+) -> torch.Tensor:
+    """Calculate pairwise pixel-wise metrics (precision, recall, f-score, iou) between two sets of segments.
+
+    Keyword arguments:
+    true_segments -- binary tensor of shape (A,H,W) where A corresponds to number of true segments in a
+    pred_segments -- binary tensor of shape (B,H,W) where B corresponds to number of predicted segments in b
+    metric -- string specifying which segmentation metric to calculate and return
+    """
+    assert true_segments.ndim == pred_segments.ndim == 3
+    assert true_segments.shape[1:] == pred_segments.shape[1:]
+    num_true_segments, num_pred_segments = true_segments.shape[0], pred_segments.shape[0]
+        
+    pairwise_metric = torch.zeros((num_true_segments, num_pred_segments))
+    for idx_a in range(num_true_segments):
+        for idx_b in range(num_pred_segments):
+            pairwise_metric[idx_a,idx_b] = segment_metrics(true_segments[idx_a], pred_segments[idx_b])[metric]
+
+    return pairwise_metric
+
+
+def match_segments(
+    true_segments: torch.Tensor,
+    pred_segments: torch.Tensor, 
+    metric: str = 'F-Score'
+) -> Tuple[torch.Tensor, np.ndarray, torch.Tensor]:
+    """Calculate matched segments given a two segmentation candidates on a single view.
+
+    Keyword arguments:
+    predicted_segments -- binary tensor of shape (A,H,W) where A corresponds to number of predicted segments in a
+    labeled_segments -- binary tensor of shape (B,H,W) where B corresponds to number of predicted segments in b
+    eps -- float to avoid numerical overflow for division
+    """
+
+    pairwise_metric = pairwise_segment_metric(true_segments, pred_segments, metric=metric)
+
+    pred_ind, true_ind = scipy.optimize.linear_sum_assignment(pairwise_metric.transpose(0,1).cpu().numpy(), maximize=True)
+
+    # Account for the possibility that linear sum may assign predicted segments to true segments with no overlap
+    # In this case, remove the assignment from consideration to allow for downstreat merge of prediction into better assignement
+    no_overlap_inds = [idx for idx in range(len(pred_ind)) if pairwise_metric[true_ind[idx],pred_ind[idx]]==0]
+
+    true_ind, pred_ind = np.delete(true_ind, no_overlap_inds), np.delete(pred_ind, no_overlap_inds)
+
+    return true_ind, pred_ind, pairwise_metric
+
+
+def merge_unmatched_segments(
+    pred_segments: torch.Tensor,
+    matched_indices: np.ndarray,
+    metric: str = 'F-Score'
+) -> Tuple[torch.Tensor, np.ndarray, torch.Tensor]:
+
+    unmatched_indices = np.setdiff1d(np.arange(pred_segments.shape[0]), matched_indices, assume_unique=True)
+
+    matched_segments_merged = pred_segments[matched_indices].clone()
+    unmatched_segments = pred_segments[unmatched_indices].clone()
+
+    pairwise_metric  = pairwise_segment_metric(matched_segments_merged, unmatched_segments, metric=metric)
+    merge_indices = np.argmax(pairwise_metric, axis=0)
+
+    for unmatch_idx, match_idx in enumerate(merge_indices):
+        matched_segments_merged[match_idx] = torch.logical_or(unmatched_segments[unmatch_idx], matched_segments_merged[match_idx])
+    
+    return matched_segments_merged, unmatched_indices, merge_indices
