@@ -78,7 +78,7 @@ def evaluation_process(index, nprocs, config, output_dir):
                 # Filter SAM's predictions to 'align' with labeled segments
                 matched_label_ind, matched_pred_ind, _ = metric_utils.match_segments(label_one_hot, pred_masks)
                 unmatched_label_ind = np.setdiff1d(np.arange(label_one_hot.shape[0]), matched_label_ind, assume_unique=True)
-                pred_masks_merged, _, _ = metric_utils.merge_unmatched_segments(predicted_masks, matched_pred_ind)
+                pred_masks_merged, _, _ = metric_utils.merge_unmatched_segments(pred_masks, matched_pred_ind)
                 pred_rgbs = np.array(label_rgbs[matched_label_ind].cpu().numpy())
 
                 # Account for any labeled masks that have no matched prediction
