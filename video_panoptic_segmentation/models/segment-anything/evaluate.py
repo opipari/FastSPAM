@@ -8,6 +8,8 @@ import math
 import numpy as np
 import torch
 
+from panopticapi.utils import id2rgb
+
 from MVPd.utils.MVPdataset import MVPDataset, MVPVideo, MVPdCategories, video_collate
 from MVPd.utils.MVPdHelpers import get_xy_depth, get_RT_inverse, get_pytorch3d_matrix, get_cameras, label_to_one_hot
 from visualize import masks_to_panomasks
