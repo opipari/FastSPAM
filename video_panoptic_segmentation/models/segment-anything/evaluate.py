@@ -18,6 +18,8 @@ from visualize import masks_to_panomasks
 from segment_anything.modeling import Sam
 from segment_anything import sam_model_registry, SamAutomaticMaskGenerator, SamPredictor
 
+from video_panoptic_segmentation.metrics import utils as metric_utils
+
 
 def get_dataset(dataset_config):
     return MVPDataset(root=dataset_config['root'],

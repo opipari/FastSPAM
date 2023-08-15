@@ -18,6 +18,7 @@ aws s3 cp s3://prism-intern-anthony/models/segment-anything/pretrained/sam_vit_h
 
 python video_panoptic_segmentation/models/segment-anything/evaluate.py --config-path ./video_panoptic_segmentation/experiments/segment-anything/configs/evaluate_pretrained_sam_automatic.json --output-path ${OUTPUT_DIR}
 
-# tar -cf 
+tar -C ./video_panoptic_segmentation/results/ -cf segment-anything.tar.gz segment-anything/
+aws s3 cp ./video_panoptic_segmentation/results/segment-anything.tar.gz s3://prism-intern-anthony/results/segment-anything/
 
 echo "Ready to Evaluate"
