@@ -38,7 +38,7 @@ def evaluation_process(index, nprocs, config, output_dir):
     subset_indices = torch.arange(index*nvideos_per_proc, min(((index+1)*nvideos_per_proc), len(dataset)))
     MVPdatasubset = torch.utils.data.Subset(dataset, subset_indices)
 
-    model = get_model(config['model'])
+    model = get_model(config['model'], index)
     
     
     with torch.no_grad():
