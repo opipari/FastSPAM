@@ -1,5 +1,5 @@
 
-EXPERIMENT_NAME="evaluate_pretrained_sam_automatic"
+EXPERIMENT_NAME="evaluate_pretrained_sam_selfprompting"
 OUTPUT_DIR="./video_panoptic_segmentation/results/segment-anything/"
 
 echo "Setting up virtualenvironment"
@@ -18,7 +18,7 @@ aws s3 cp s3://vesta-intern-anthony/models/segment-anything/pretrained/sam_vit_h
 # wget -P ./video_panoptic_segmentation/models/segment-anything/segment-anything/checkpoints/ https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
 
 echo "Starting evaluation"
-python video_panoptic_segmentation/models/segment-anything/evaluate_automatic.py --config-path ./video_panoptic_segmentation/experiments/segment-anything/configs/evaluate_pretrained_sam_automatic.json --output-path ${OUTPUT_DIR}
+python video_panoptic_segmentation/models/segment-anything/evaluate_selfprompting.py --config-path ./video_panoptic_segmentation/experiments/segment-anything/configs/evaluate_pretrained_sam_selfprompting.json --output-path ${OUTPUT_DIR}
 
 echo "Compressing results"
 tar -C ${OUTPUT_DIR} -cf ${EXPERIMENT_NAME}.tar.gz ${EXPERIMENT_NAME}/
