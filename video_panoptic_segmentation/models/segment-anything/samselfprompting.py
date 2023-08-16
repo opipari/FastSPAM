@@ -80,14 +80,11 @@ class SAMSelfPrompting(nn.Module):
             )
         self.render_layer = PointsRenderLayer()
 
-        self.pred_iou_thresh = pred_iou_thresh
-        self.stability_score_thresh = stability_score_thresh
-        self.stability_score_offset = stability_score_offset
         self.box_nms_thresh = box_nms_thresh
-        self.min_mask_region_area = min_mask_region_area
         self.prompts_per_object = prompts_per_object
         self.objects_per_batch = objects_per_batch
-
+        self.randomize_memory_coordinates = True
+        
         self.memory = None
 
     def _process_image(
@@ -130,7 +127,7 @@ class SAMSelfPrompting(nn.Module):
             multimask_output=False,
             return_logits=True,
         )
-        
+
         # Serialize predictions and store in MaskData
         data = MaskData(
             masks=masks.flatten(0, 1),
@@ -138,19 +135,6 @@ class SAMSelfPrompting(nn.Module):
             points=torch.as_tensor(points.repeat(masks.shape[1], axis=0)),
         )
         del masks
-        
-        # Filter by predicted IoU
-        if self.pred_iou_thresh > 0.0:
-            keep_mask = data["iou_preds"] > self.pred_iou_thresh
-            data.filter(keep_mask)
-        
-        # Calculate stability score
-        data["stability_score"] = calculate_stability_score(
-            data["masks"], self.predictor.model.mask_threshold, self.stability_score_offset
-        )
-        if self.stability_score_thresh > 0.0:
-            keep_mask = data["stability_score"] >= self.stability_score_thresh
-            data.filter(keep_mask)
 
         # data["masks_logits"] = data["masks"].clone()
         # Threshold masks and calculate boxes
@@ -201,6 +185,51 @@ class SAMSelfPrompting(nn.Module):
     def reset_memory(self):
         self.memory = None
 
+    def get_screen_coords(self, rendered_mem, camera, randomize=False):
+        _, h, w = rendered_mem.shape
+        if randomize:
+            memory_screen_coords = []
+            for i, bin_mask in enumerate(rendered_mem):
+                sampled_coords = uniform_grid_sample_mask(bin_mask, samples=self.prompts_per_object)
+                if sampled_coords.shape[0]>0:
+                    memory_screen_coords.append(sampled_coords)
+            memory_screen_coords = torch.stack(memory_screen_coords)
+        else:
+            prev_xyz = self.memory.points_list()[0].clone()
+            prev_feats = self.memory.features_list()[0].clone()[:,:-1].reshape(h,w,-1).permute(2,0,1)
+
+            proj_xyz = camera.transform_points(prev_xyz)
+            proj_xy = torch.tensor([[w,h]])-proj_xyz.reshape(h,w,3)[:,:,:2].cpu().permute(1,0,2)
+            proj_coords = proj_xy[self.memory_screen_coords[:,:,0],self.memory_screen_coords[:,:,1]].to(dtype=torch.int)
+
+            tformed_coords = []
+            for inst_id, (new_xy, old_xy) in enumerate(zip(proj_coords, self.memory_screen_coords)):
+                inbound_indices = []
+                for i in range(len(new_xy)):
+                    if new_xy[i,0]>=0 and new_xy[i,0]<w and \
+                        new_xy[i,1]>=0 and new_xy[i,1]<h:
+                        old_inst_feat = float(prev_feats[inst_id,old_xy[i,1],old_xy[i,0]].item())
+                        new_inst_feat = float(rendered_mem[inst_id,new_xy[i,1],new_xy[i,0]].item())
+                        if abs(old_inst_feat-new_inst_feat)<0.1:
+                            inbound_indices.append(i)
+                valid_coordinates_xy = new_xy[np.array(inbound_indices)]
+                
+                if valid_coordinates_xy.shape[0]==0:
+                    continue
+                if valid_coordinates_xy.shape[0]<self.prompts_per_object:
+                    num_to_fill = self.prompts_per_object-valid_coordinates_xy.shape[0]
+                    # replicate_indices = np.random.choice(np.arange(valid_coordinates_xy.shape[0]), size=num_to_fill, replace=True)
+                    # valid_coordinates_xy = torch.cat((valid_coordinates_xy, valid_coordinates_xy[replicate_indices]),dim=0)
+                    sampled_coords = uniform_grid_sample_mask(rendered_mem[inst_id], samples=num_to_fill).to(device=valid_coordinates_xy.device)
+                    valid_coordinates_xy = torch.cat((valid_coordinates_xy, sampled_coords),dim=0)
+
+                tformed_coords.append(valid_coordinates_xy)
+            memory_screen_coords = torch.stack(tformed_coords)
+        memory_screen_coords = memory_screen_coords.to(dtype=torch.int)
+
+        return memory_screen_coords
+            
+
     def forward(
         self,
         image: torch.Tensor,
@@ -216,13 +245,10 @@ class SAMSelfPrompting(nn.Module):
         self.render_layer.set_raster_image_size(image_size)
         self.render_layer.set_cameras(camera)
 
-
-        memory_screen_coords = torch.empty(0,1,2)
-        new_rgn_coords = torch.empty(0,1,2)
-
         if self.memory is None:
             pred = self.automatic_mask_generator.generate(image)
             pred = {"masks": torch.stack([torch.as_tensor(pr["segmentation"]) for pr in pred], axis=0)}
+            self.memory_screen_coords = self.get_screen_coords(pred["masks"], camera, randomize=True)
         else:
             rendered_mem = self.render_layer(self.memory).permute(0,3,1,2)
 
@@ -230,24 +256,25 @@ class SAMSelfPrompting(nn.Module):
             rendered_new_rgn = rendered_mem[:,-1:] < bin_thresh
             rendered_mem = rendered_mem[:,:-1] >= bin_thresh
 
-            memory_screen_coords = []
-            for i, bin_mask in enumerate(rendered_mem[0]):
-                sampled_coords = uniform_grid_sample_mask(bin_mask, samples=self.prompts_per_object)
-                if sampled_coords.shape[0]>0:
-                    memory_screen_coords.append(sampled_coords)
-            memory_screen_coords = torch.stack(memory_screen_coords)
+
+            self.memory_screen_coords = self.get_screen_coords(rendered_mem[0], camera, randomize=self.randomize_memory_coordinates)
             
-            pred = self._process_image(memory_screen_coords.cpu().numpy())
-            
+            pred = self._process_image(self.memory_screen_coords.cpu().numpy())
+
             new_rgn_area = rendered_new_rgn.sum().item()
             if new_rgn_area>0:
-                new_rgn_coords = uniform_grid_sample_mask(rendered_new_rgn[0,0], samples=max((32*32)//new_rgn_area, 1)).unsqueeze(1) # samples x 1 x 2
+                new_rgn_coords = uniform_grid_sample_mask(rendered_new_rgn[0,0], samples=max((32*32)//new_rgn_area, 1)).unsqueeze(1).to(device=self.memory_screen_coords.device) # samples x 1 x 2
                 fill = self._process_image(new_rgn_coords.cpu().numpy())
-
+                if fill["masks"].shape[0]>0:
+                    new_rgn_coords = self.get_screen_coords(fill["masks"], camera, randomize=True).to(device=self.memory_screen_coords.device)
+                else:
+                    new_rgn_coords = torch.empty(0,self.prompts_per_object,2).to(dtype=torch.int)
+                    
                 merged_pred_fill = MaskData(
                     masks=torch.cat([pred["masks"], fill["masks"]],axis=0),
                     iou_preds=torch.cat([pred["iou_preds"], fill["iou_preds"]],axis=0),
                     boxes=torch.cat([pred["boxes"], fill["boxes"]],axis=0).float(),
+                    points=torch.cat([self.memory_screen_coords, new_rgn_coords],axis=0)
                 )
 
                 keep_by_nms = batched_nms(
@@ -256,8 +283,10 @@ class SAMSelfPrompting(nn.Module):
                     torch.zeros_like(merged_pred_fill["boxes"][:, 0]),  # categories
                     iou_threshold=self.box_nms_thresh,
                 )
+
                 merged_pred_fill.filter(keep_by_nms)
                 pred = merged_pred_fill
+                self.memory_screen_coords = pred["points"]
 
         
         xy_depth = get_xy_depth(depth, from_ndc=True).permute(0,2,3,1).reshape(1,-1,3)
@@ -272,8 +301,7 @@ class SAMSelfPrompting(nn.Module):
         pred["rles"] = mask_to_rle_pytorch(pred["masks"])
 
         output = {"coco_rle": [coco_encode_rle(rle) for rle in pred["rles"]],
-                  "memory_coordinates": memory_screen_coords,
-                    "new_region_coordinates": new_rgn_coords
+                  "memory_coordinates": self.memory_screen_coords
                  }
         
         if verbose:

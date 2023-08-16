@@ -62,7 +62,7 @@ def evaluation_process(index, nprocs, config, output_dir):
                 # Run SAM
                 image = np.array(sample['observation']['image'][0]).astype(np.uint8) # 480 x 640 x 3
                 pred = model.generate(image)
-                torch.save([pr['segmentation'] for pr in pred], os.path.join(out_dir, out_file))
+                torch.save({"coco_rle":[pr['segmentation'] for pr in pred]}, os.path.join(out_dir, out_file))
 
             print("Finished processing", video_name)
 
