@@ -229,7 +229,6 @@ class SAMSelfPrompting(nn.Module):
     def automatic_generate(self, image):
         pred = self.automatic_mask_generator.generate(image)
         pred = {"masks": torch.stack([torch.as_tensor(pr["segmentation"]) for pr in pred], axis=0)}
-        self.memory_screen_coords = self.get_screen_coords(pred["masks"], camera, randomize=True)
         return pred
 
     def forward(
@@ -248,7 +247,8 @@ class SAMSelfPrompting(nn.Module):
         self.render_layer.set_cameras(camera)
 
         if self.memory is None:
-            self.automatic_generate(image)
+            pred = self.automatic_generate(image)
+            self.memory_screen_coords = self.get_screen_coords(pred["masks"], camera, randomize=True)
         else:
             rendered_mem = self.render_layer(self.memory).permute(0,3,1,2)
 
@@ -261,6 +261,7 @@ class SAMSelfPrompting(nn.Module):
             
             if len(self.memory_screen_coords)==0:
                 self.automatic_generate(image)
+                self.memory_screen_coords = self.get_screen_coords(pred["masks"], camera, randomize=True)
             else:
                 self.memory_screen_coords = torch.stack(self.memory_screen_coords).to(dtype=torch.int)
                 pred = self._process_image(self.memory_screen_coords.cpu().numpy())
