@@ -1,5 +1,5 @@
 EXPERIMENT_NAME="evaluate_pretrained_sam_automatic"
-OUTPUT_DIR="video_panoptic_segmentation/results/segment-anything/"
+OUTPUT_DIR="video_panoptic_segmentation/models/segment-anything/results"
 
 echo "Setting up virtualenvironment"
 # Setup virtualenvironment
