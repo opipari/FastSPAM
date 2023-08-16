@@ -223,7 +223,7 @@ class SAMSelfPrompting(nn.Module):
 
                 new_memory_screen_coords.append(valid_coordinates_xy)
 
-        return new_memory_screen_coords
+        return torch.stack(new_memory_screen_coords).to(dtype=torch.int)
             
 
     def automatic_generate(self, image):
@@ -260,10 +260,9 @@ class SAMSelfPrompting(nn.Module):
             self.memory_screen_coords = self.get_screen_coords(rendered_mem[0], camera, randomize=self.randomize_memory_coordinates)
             
             if len(self.memory_screen_coords)==0:
-                self.automatic_generate(image)
+                pred = self.automatic_generate(image)
                 self.memory_screen_coords = self.get_screen_coords(pred["masks"], camera, randomize=True)
             else:
-                self.memory_screen_coords = torch.stack(self.memory_screen_coords).to(dtype=torch.int)
                 pred = self._process_image(self.memory_screen_coords.cpu().numpy())
 
                 new_rgn_area = rendered_new_rgn.sum().item()
