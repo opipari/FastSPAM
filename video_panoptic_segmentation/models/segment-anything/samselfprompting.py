@@ -271,7 +271,7 @@ class SAMSelfPrompting(nn.Module):
                     fill = self._process_image(new_rgn_coords.cpu().numpy())
                     if fill["masks"].shape[0]>0:
                         new_rgn_coords = self.get_screen_coords(fill["masks"], camera, randomize=True)
-                        new_rgn_coords = torch.stack(new_rgn_coords).to(dtype=torch.int).to(device=self.memory_screen_coords.device)
+                        new_rgn_coords = new_rgn_coords.to(device=self.memory_screen_coords.device)
                     else:
                         new_rgn_coords = torch.empty(0,self.prompts_per_object,2).to(dtype=torch.int)
                         
