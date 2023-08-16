@@ -187,13 +187,12 @@ class SAMSelfPrompting(nn.Module):
 
     def get_screen_coords(self, rendered_mem, camera, randomize=False):
         _, h, w = rendered_mem.shape
+        new_memory_screen_coords = []
         if randomize:
-            memory_screen_coords = []
             for i, bin_mask in enumerate(rendered_mem):
                 sampled_coords = uniform_grid_sample_mask(bin_mask, samples=self.prompts_per_object)
                 if sampled_coords.shape[0]>0:
-                    memory_screen_coords.append(sampled_coords)
-            memory_screen_coords = torch.stack(memory_screen_coords)
+                    new_memory_screen_coords.append(sampled_coords)
         else:
             prev_xyz = self.memory.points_list()[0].clone()
             prev_feats = self.memory.features_list()[0].clone()[:,:-1].reshape(h,w,-1).permute(2,0,1)
@@ -202,7 +201,6 @@ class SAMSelfPrompting(nn.Module):
             proj_xy = torch.tensor([[w,h]])-proj_xyz.reshape(h,w,3)[:,:,:2].cpu().permute(1,0,2)
             proj_coords = proj_xy[self.memory_screen_coords[:,:,0],self.memory_screen_coords[:,:,1]].to(dtype=torch.int)
 
-            tformed_coords = []
             for inst_id, (new_xy, old_xy) in enumerate(zip(proj_coords, self.memory_screen_coords)):
                 inbound_indices = []
                 for i in range(len(new_xy)):
@@ -223,12 +221,16 @@ class SAMSelfPrompting(nn.Module):
                     sampled_coords = uniform_grid_sample_mask(rendered_mem[inst_id], samples=num_to_fill).to(device=valid_coordinates_xy.device)
                     valid_coordinates_xy = torch.cat((valid_coordinates_xy, sampled_coords),dim=0)
 
-                tformed_coords.append(valid_coordinates_xy)
-            memory_screen_coords = torch.stack(tformed_coords)
-        memory_screen_coords = memory_screen_coords.to(dtype=torch.int)
+                new_memory_screen_coords.append(valid_coordinates_xy)
 
-        return memory_screen_coords
+        return new_memory_screen_coords
             
+
+    def automatic_generate(self, image):
+        pred = self.automatic_mask_generator.generate(image)
+        pred = {"masks": torch.stack([torch.as_tensor(pr["segmentation"]) for pr in pred], axis=0)}
+        self.memory_screen_coords = self.get_screen_coords(pred["masks"], camera, randomize=True)
+        return pred
 
     def forward(
         self,
@@ -246,9 +248,7 @@ class SAMSelfPrompting(nn.Module):
         self.render_layer.set_cameras(camera)
 
         if self.memory is None:
-            pred = self.automatic_mask_generator.generate(image)
-            pred = {"masks": torch.stack([torch.as_tensor(pr["segmentation"]) for pr in pred], axis=0)}
-            self.memory_screen_coords = self.get_screen_coords(pred["masks"], camera, randomize=True)
+            self.automatic_generate(image)
         else:
             rendered_mem = self.render_layer(self.memory).permute(0,3,1,2)
 
@@ -259,34 +259,38 @@ class SAMSelfPrompting(nn.Module):
 
             self.memory_screen_coords = self.get_screen_coords(rendered_mem[0], camera, randomize=self.randomize_memory_coordinates)
             
-            pred = self._process_image(self.memory_screen_coords.cpu().numpy())
+            if len(self.memory_screen_coords)==0:
+                self.automatic_generate(image)
+            else:
+                self.memory_screen_coords = torch.stack(self.memory_screen_coords).to(dtype=torch.int)
+                pred = self._process_image(self.memory_screen_coords.cpu().numpy())
 
-            new_rgn_area = rendered_new_rgn.sum().item()
-            if new_rgn_area>0:
-                new_rgn_coords = uniform_grid_sample_mask(rendered_new_rgn[0,0], samples=max((32*32)//new_rgn_area, 1)).unsqueeze(1).to(device=self.memory_screen_coords.device) # samples x 1 x 2
-                fill = self._process_image(new_rgn_coords.cpu().numpy())
-                if fill["masks"].shape[0]>0:
-                    new_rgn_coords = self.get_screen_coords(fill["masks"], camera, randomize=True).to(device=self.memory_screen_coords.device)
-                else:
-                    new_rgn_coords = torch.empty(0,self.prompts_per_object,2).to(dtype=torch.int)
-                    
-                merged_pred_fill = MaskData(
-                    masks=torch.cat([pred["masks"], fill["masks"]],axis=0),
-                    iou_preds=torch.cat([pred["iou_preds"], fill["iou_preds"]],axis=0),
-                    boxes=torch.cat([pred["boxes"], fill["boxes"]],axis=0).float(),
-                    points=torch.cat([self.memory_screen_coords, new_rgn_coords],axis=0)
-                )
+                new_rgn_area = rendered_new_rgn.sum().item()
+                if new_rgn_area>0:
+                    new_rgn_coords = uniform_grid_sample_mask(rendered_new_rgn[0,0], samples=max((32*32)//new_rgn_area, 1)).unsqueeze(1).to(device=self.memory_screen_coords.device) # samples x 1 x 2
+                    fill = self._process_image(new_rgn_coords.cpu().numpy())
+                    if fill["masks"].shape[0]>0:
+                        new_rgn_coords = self.get_screen_coords(fill["masks"], camera, randomize=True).to(device=self.memory_screen_coords.device)
+                    else:
+                        new_rgn_coords = torch.empty(0,self.prompts_per_object,2).to(dtype=torch.int)
+                        
+                    merged_pred_fill = MaskData(
+                        masks=torch.cat([pred["masks"], fill["masks"]],axis=0),
+                        iou_preds=torch.cat([pred["iou_preds"], fill["iou_preds"]],axis=0),
+                        boxes=torch.cat([pred["boxes"], fill["boxes"]],axis=0).float(),
+                        points=torch.cat([self.memory_screen_coords, new_rgn_coords],axis=0)
+                    )
 
-                keep_by_nms = batched_nms(
-                    merged_pred_fill["boxes"].float(),
-                    merged_pred_fill["iou_preds"],
-                    torch.zeros_like(merged_pred_fill["boxes"][:, 0]),  # categories
-                    iou_threshold=self.box_nms_thresh,
-                )
+                    keep_by_nms = batched_nms(
+                        merged_pred_fill["boxes"].float(),
+                        merged_pred_fill["iou_preds"],
+                        torch.zeros_like(merged_pred_fill["boxes"][:, 0]),  # categories
+                        iou_threshold=self.box_nms_thresh,
+                    )
 
-                merged_pred_fill.filter(keep_by_nms)
-                pred = merged_pred_fill
-                self.memory_screen_coords = pred["points"]
+                    merged_pred_fill.filter(keep_by_nms)
+                    pred = merged_pred_fill
+                    self.memory_screen_coords = pred["points"]
 
         
         xy_depth = get_xy_depth(depth, from_ndc=True).permute(0,2,3,1).reshape(1,-1,3)
