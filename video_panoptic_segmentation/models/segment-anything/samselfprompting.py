@@ -263,7 +263,7 @@ class SAMSelfPrompting(nn.Module):
             if self.fill_region_is=="delta":
                 fill_rgn = rendered_mem[:,-1:] < bin_thresh
             elif self.fill_region_is=="empty":
-                fill_rgn = rendered_mem[:,:-1].sum(1,keep_dim=True) < (1-bin_thresh)
+                fill_rgn = torch.sum(rendered_mem[:,:-1], 1, keep_dim=True) < (1-bin_thresh)
             else:
                 raise NotImplementedError
             rendered_mem = rendered_mem[:,:-1] >= bin_thresh
