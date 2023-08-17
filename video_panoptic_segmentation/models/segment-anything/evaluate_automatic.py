@@ -45,7 +45,7 @@ def evaluation_process(index, nprocs, config, output_dir):
 
     model = get_model(config['model'], index)
     
-    
+    print("Within evaluation process")
     with torch.no_grad():
         for video in tqdm(MVPdatasubset):
             first_sample = next(iter(video))
@@ -66,7 +66,7 @@ def evaluation_process(index, nprocs, config, output_dir):
 
             print("Finished processing", video_name)
             break
-        
+
 
 if __name__ == "__main__":
     import argparse
