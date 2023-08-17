@@ -65,7 +65,9 @@ class SAMSelfPrompting(nn.Module):
         box_nms_thresh: float = 0.7,
         min_mask_region_area: int = 0,
         prompts_per_object: int = 20,
-        objects_per_batch: int = 10
+        objects_per_batch: int = 10,
+        fill_region_is: str = "delta",
+        fill_sampling: str = "proportional"
     ) -> None:
         super().__init__()
         
@@ -84,6 +86,9 @@ class SAMSelfPrompting(nn.Module):
         self.prompts_per_object = prompts_per_object
         self.objects_per_batch = objects_per_batch
         self.randomize_memory_coordinates = True
+
+        self.fill_region_is = fill_region_is
+        self.fill_sampling = fill_sampling
         
         self.memory = None
 
@@ -252,8 +257,15 @@ class SAMSelfPrompting(nn.Module):
         else:
             rendered_mem = self.render_layer(self.memory).permute(0,3,1,2)
 
+            
+
             bin_thresh = 0.95
-            rendered_new_rgn = rendered_mem[:,-1:] < bin_thresh
+            if self.fill_region_is=="delta":
+                fill_rgn = rendered_mem[:,-1:] < bin_thresh
+            elif self.fill_region_is=="empty":
+                fill_rgn = rendered_mem[:,:-1].sum(1,keep_dim=True) < (1-bin_thresh)
+            else:
+                raise NotImplementedError
             rendered_mem = rendered_mem[:,:-1] >= bin_thresh
 
 
@@ -265,9 +277,15 @@ class SAMSelfPrompting(nn.Module):
             else:
                 pred = self._process_image(self.memory_screen_coords.cpu().numpy())
 
-                new_rgn_area = rendered_new_rgn.sum().item()
-                if new_rgn_area>0:
-                    new_rgn_coords = uniform_grid_sample_mask(rendered_new_rgn[0,0], samples=max((32*32)//new_rgn_area, 1)).unsqueeze(1).to(device=self.memory_screen_coords.device) # samples x 1 x 2
+                fill_rgn_area = fill_rgn.sum().item()
+                if fill_rgn_area>0:
+                    if self.fill_sampling=="proportional":
+                        fill_rgn_sample_number = max((32*32)//fill_rgn_area, 1)
+                    elif self.fill_sampling=="dense":
+                        fill_rgn_sample_number = 32*32
+                    else:
+                        raise NotImplementedError
+                    new_rgn_coords = uniform_grid_sample_mask(fill_rgn[0,0], samples=fill_rgn_sample_number).unsqueeze(1).to(device=self.memory_screen_coords.device) # samples x 1 x 2
                     fill = self._process_image(new_rgn_coords.cpu().numpy())
                     if fill["masks"].shape[0]>0:
                         new_rgn_coords = self.get_screen_coords(fill["masks"], camera, randomize=True)
