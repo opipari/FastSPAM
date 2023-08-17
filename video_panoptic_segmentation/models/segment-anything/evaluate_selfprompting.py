@@ -33,7 +33,9 @@ def get_model(model_config, device):
     
     model = SAMSelfPrompting(sam, 
                             prompts_per_object = 20,
-                            objects_per_batch = 10
+                            objects_per_batch = 10,
+                            fill_region_is = model_config["fill_region_is"],
+                            fill_sampling = model_config["fill_sampling"]
                            )
 
     return model
@@ -61,7 +63,7 @@ def evaluation_process(index, nprocs, config, output_dir):
                 video_name = sample['meta']['video_name']
                 out_dir = os.path.join(output_dir, config['experiment_name'], 'panomasksRLE', video_name)
                 out_file = sample['meta']['window_names'][0].split('.')[0]+'.pt'
-                
+
                 image = torch.tensor(sample['observation']['image']).permute(0,3,1,2).to('cuda')
                 depth = torch.tensor(sample['observation']['depth']).unsqueeze(1).to('cuda')
                 camera = get_cameras(sample['camera']['K'],
@@ -72,7 +74,7 @@ def evaluation_process(index, nprocs, config, output_dir):
                 torch.save(out, os.path.join(out_dir, out_file))
 
             print("Finished processing", video_name)
-
+            break
 
 if __name__ == "__main__":
     import argparse
