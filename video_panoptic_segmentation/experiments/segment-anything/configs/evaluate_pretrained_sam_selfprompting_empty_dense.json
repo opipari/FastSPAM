@@ -1,5 +1,5 @@
 {
-    "experiment_name": "evaluate_pretrained_sam_selfprompting",
+    "experiment_name": "evaluate_pretrained_sam_selfprompting_empty_dense",
     "dataset": {
         "root": "./video_panoptic_segmentation/datasets/MVPd/MVPd/",
         "split": "val",
