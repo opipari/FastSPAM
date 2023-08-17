@@ -276,11 +276,11 @@ class SAMSelfPrompting(nn.Module):
                 self.memory_screen_coords = self.get_screen_coords(pred["masks"], camera, randomize=True)
             else:
                 pred = self._process_image(self.memory_screen_coords.cpu().numpy())
-
+                print(fill_rgn.shape.shape)
                 fill_rgn_area = fill_rgn.sum().item()
                 if fill_rgn_area>0:
                     if self.fill_sampling=="proportional":
-                        fill_rgn_sample_number = max((32*32)//fill_rgn_area, 1)
+                        fill_rgn_sample_number = int(max((32*32)*(fill_rgn_area/(640*480)), 1))
                     elif self.fill_sampling=="dense":
                         fill_rgn_sample_number = 32*32
                     else:

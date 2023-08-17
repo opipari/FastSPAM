@@ -9,7 +9,7 @@ import scipy
 from PIL import Image
 
 from panopticapi.utils import rgb2id
-
+from pycocotools import mask as mask_utils
 
 def read_panomaskRGB(
     path: str
@@ -18,6 +18,33 @@ def read_panomaskRGB(
     label = np.array(label, dtype=np.uint8)
     label = rgb2id(label)
     return label
+
+def read_panomaskRLE(
+    pt_file_path: str
+) -> torch.Tensor:
+    return torch.stack([torch.as_tensor(mask_utils.decode(rle),dtype=torch.int) for rle in torch.load(pt_file_path,map_location='cpu')['coco_rle']])
+
+def binmasks_to_panomask(
+    binmasks: np.ndarray,
+    colors: np.ndarray
+) -> np.ndarray:
+    _, h, w = binmasks.shape
+
+    panomask = np.zeros((h,w,3))
+    if len(binmasks) > 0:
+        sorted_indices = np.argsort([int(mask.sum()) for mask in binmasks])[::-1]
+        for sort_idx in sorted_indices:
+            panomask[binmasks[sort_idx]] = colors[sort_idx]
+
+    return panomask
+
+
+def match_and_merge_segments(true_segments, pred_segments):
+    matched_true_ind, matched_pred_ind, _ = match_segments(true_segments, pred_segments)
+    unmatched_true_ind = np.setdiff1d(np.arange(true_segments.shape[0]), matched_true_ind, assume_unique=True)
+    pred_segments_merged, merged_matched_pred_ind, merged_unmatched_pred_ind = merge_unmatched_segments(pred_segments, matched_pred_ind)
+    
+    return (matched_true_ind, unmatched_true_ind, matched_pred_ind), (merged_matched_pred_ind, merged_unmatched_pred_ind), pred_segments_merged
 
 
 def mask_to_boundary(
@@ -147,4 +174,4 @@ def merge_unmatched_segments(
     for unmatch_idx, match_idx in enumerate(merge_indices):
         matched_segments_merged[match_idx] = torch.logical_or(unmatched_segments[unmatch_idx], matched_segments_merged[match_idx])
     
-    return matched_segments_merged, unmatched_indices, merge_indices
+    return matched_segments_merged, merge_indices, unmatched_indices

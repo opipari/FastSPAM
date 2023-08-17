@@ -77,7 +77,7 @@ def evaluate_metrics(anno_dir_seqs, pred_dir_seqs, dataset):
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_path',type=str, default='./VIPOSeg/valid')
+    parser.add_argument('--true_path',type=str, default='./VIPOSeg/valid')
     parser.add_argument('--pred_path',type=str, required=True)
     args = parser.parse_args()
     
@@ -90,7 +90,14 @@ if __name__=='__main__':
     anno_sequences = sorted([v["video_name"] for v in dataset["videos"]])
     assert all(os.path.isdir(os.path.join(args.data_path,"panomasksRGB",fldr)) for fldr in anno_sequences)
 
-    pred_sequences = [fldr for fldr in os.listdir(os.path.join(args.pred_path,"panomasksRGB")) if os.path.isdir(os.path.join(args.pred_path, "panomasksRGB", fldr))]
+    if 'panomasksRLE' in os.listdir():
+        pred_format = 'panomasksRLE'
+    elif 'panomasksRGB' in os.istdir():
+        pred_format = 'panomasksRGB'
+    else:
+        raise ValueError("Prediction directory must be formatted in RLE (default) or RGB specification")
+
+    pred_sequences = [fldr for fldr in os.listdir(os.path.join(args.pred_path, pred_format)) if os.path.isdir(os.path.join(args.pred_path, "panomasksRGB", fldr))]
     assert len(anno_sequences)==len(pred_sequences)
     assert set(anno_sequences)==set(pred_sequences)
 
