@@ -1,0 +1,16 @@
+{
+    "experiment_name": "evaluate_pretrained_sam_reprojection_empty_dense",
+    "dataset": {
+        "root": "./video_panoptic_segmentation/datasets/MVPd/MVPd/",
+        "split": "val",
+        "training": false,
+        "window_size": 1,
+        "image_root": "imagesRGB.0000000000"
+    },
+    "model": {
+        "sam_checkpoint": "./video_panoptic_segmentation/models/segment-anything/segment-anything/checkpoints/sam_vit_h_4b8939.pth",
+        "model_type": "vit_h",
+        "fill_region_is": "empty",
+        "fill_sampling": "dense"
+    }
+}
