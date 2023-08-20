@@ -65,7 +65,7 @@ def evaluation_process(index, nprocs, config, output_dir):
                 torch.save({"coco_rle":[pr['segmentation'] for pr in pred]}, os.path.join(out_dir, out_file))
 
             print("Finished processing", video_name)
-            break
+            
 
 
 if __name__ == "__main__":
