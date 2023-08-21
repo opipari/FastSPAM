@@ -34,7 +34,7 @@ def get_model(model_config, device):
     sam_checkpoint = model_config['sam_checkpoint']
     sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
     sam = sam.to(device=device)
-    model = SamAutomaticMaskGenerator(sam, output_mode="coco_rle")
+    model = SamAutomaticMaskGenerator(sam, output_mode="coco_rle", points_per_side=model_config['points_per_side'])
     return model
 
 
