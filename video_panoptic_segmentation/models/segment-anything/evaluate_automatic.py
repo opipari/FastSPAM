@@ -2,6 +2,7 @@ import os
 import json
 import argparse
 
+import time
 from tqdm import tqdm
 import math
 
@@ -44,12 +45,10 @@ def evaluation_process(index, nprocs, config, output_dir):
     MVPdatasubset = torch.utils.data.Subset(dataset, subset_indices)
 
     model = get_model(config['model'], index)
-    import time
-    vtimes = []
-    vi = 0
+
     print("Within evaluation process")
     with torch.no_grad():
-        for video in tqdm(MVPdatasubset):
+        for vi, video in enumerate(MVPdatasubset):
             vitime = time.time()
             first_sample = next(iter(video))
             video_name = first_sample['meta']['video_name']
@@ -66,12 +65,9 @@ def evaluation_process(index, nprocs, config, output_dir):
                 image = np.array(sample['observation']['image'][0]).astype(np.uint8) # 480 x 640 x 3
                 pred = model.generate(image)
                 torch.save({"coco_rle":[pr['segmentation'] for pr in pred]}, os.path.join(out_dir, out_file))
-            vi+=1
-            vtimes.append(time.time()-vitime)
-            print("Finished processing", video_name, flush=True)
-            if vi>25:
-                break
-    print(vtimes, flusth=True)
+
+            print(f"Finished processing {vi}/{len(MVPdatasubset)}: ", video_name, f"in {time.time()-vitime}s", flush=True)
+
 
 if __name__ == "__main__":
     import argparse
