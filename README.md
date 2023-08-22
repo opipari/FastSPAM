@@ -27,8 +27,9 @@ This branch of the repository is setup to track all code for the experiments inc
 1. Clone repository and submodules
 
     ```
-    git clone --recurse-submodules git@github.com:opipari/ZeroShotSceneSegmentation.git && \
-    cd ZeroShotSceneSegmentation
+    git clone --recurse-submodules -b experiments git@github.com:opipari/PanopticMemoryClouds.git && \
+
+    cd PanopticMemoryClouds
     ```
 
 2. Install Python v3.8
