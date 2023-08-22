@@ -10,6 +10,7 @@
     "model": {
         "sam_checkpoint": "./video_panoptic_segmentation/models/segment-anything/segment-anything/checkpoints/sam_vit_h_4b8939.pth",
         "model_type": "vit_h",
+        "use_fill": true,
         "fill_region_is": "empty",
         "fill_sampling": "proportional"
     }
