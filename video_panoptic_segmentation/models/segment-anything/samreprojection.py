@@ -55,7 +55,7 @@ def uniform_grid_sample_mask(bin_mask, samples=100):
     
     return grid_indices
 
-class SAMSelfPrompting(nn.Module):
+class SAMReprojection(nn.Module):
     def __init__(
         self,
         model: Sam,
@@ -66,6 +66,7 @@ class SAMSelfPrompting(nn.Module):
         min_mask_region_area: int = 0,
         prompts_per_object: int = 20,
         objects_per_batch: int = 10,
+        use_fill: bool = True,
         fill_region_is: str = "delta",
         fill_sampling: str = "proportional"
     ) -> None:
@@ -87,6 +88,7 @@ class SAMSelfPrompting(nn.Module):
         self.objects_per_batch = objects_per_batch
         self.randomize_memory_coordinates = True
 
+        self.use_fill = use_fill
         self.fill_region_is = fill_region_is
         self.fill_sampling = fill_sampling
         
@@ -222,46 +224,48 @@ class SAMSelfPrompting(nn.Module):
             if self.fill_region_is=="delta":
                 fill_rgn = rendered_mem[:,-1:] < bin_thresh
             elif self.fill_region_is=="empty":
-                fill_rgn = torch.sum(rendered_mem[:,:-1], 1, keep_dim=True) < (1-bin_thresh)
+                fill_rgn = torch.sum(rendered_mem[:,:-1], 1, keepdim=True) < (1-bin_thresh)
             else:
                 raise NotImplementedError
             rendered_mem = rendered_mem[:,:-1] >= bin_thresh
 
             # Serialize predictions and store in MaskData
             pred = MaskData(
-                masks=rendered_mem.flatten(0, 1),
-                iou_preds=self.memory_iou.flatten(0, 1),
+                masks=rendered_mem.flatten(0, 1)
             )
             pred["boxes"] = batched_mask_to_box(pred["masks"])
 
-       
-            fill_rgn_area = fill_rgn.sum().item()
-            if fill_rgn_area>0:
-                if self.fill_sampling=="proportional":
-                    fill_rgn_sample_number = int(max((32*32)*(fill_rgn_area/(640*480)), 1))
-                elif self.fill_sampling=="dense":
-                    fill_rgn_sample_number = 32*32
-                else:
-                    raise NotImplementedError
-                new_rgn_coords = uniform_grid_sample_mask(fill_rgn[0,0], samples=fill_rgn_sample_number).unsqueeze(1) # samples x 1 x 2
-                fill = self._process_image(new_rgn_coords.cpu().numpy())
+            if self.use_fill:
+                pred["predicted_iou"] = iou_preds=self.memory_iou.flatten(0, 1)
+                fill_rgn_area = fill_rgn.sum().item()
+                if fill_rgn_area>0:
+                    if self.fill_sampling=="proportional":
+                        fill_rgn_sample_number = int(max((32*32)*(fill_rgn_area/(640*480)), 1))
+                    elif self.fill_sampling=="dense":
+                        fill_rgn_sample_number = 32*32
+                    else:
+                        raise NotImplementedError
+                    new_rgn_coords = uniform_grid_sample_mask(fill_rgn[0,0], samples=fill_rgn_sample_number).unsqueeze(1) # samples x 1 x 2
+                    fill = self._process_image(new_rgn_coords.cpu().numpy())
 
-                merged_pred_fill = MaskData(
-                    masks=torch.cat([pred["masks"], fill["masks"]],axis=0),
-                    iou_preds=torch.cat([pred["iou_preds"], fill["iou_preds"]],axis=0),
-                    boxes=torch.cat([pred["boxes"], fill["boxes"]],axis=0).float(),
-                )
+                    merged_pred_fill = MaskData(
+                        masks=torch.cat([pred["masks"], fill["masks"]],axis=0),
+                        iou_preds=torch.cat([pred["iou_preds"], fill["iou_preds"]],axis=0),
+                        boxes=torch.cat([pred["boxes"], fill["boxes"]],axis=0).float(),
+                    )
 
-                keep_by_nms = batched_nms(
-                    merged_pred_fill["boxes"].float(),
-                    merged_pred_fill["iou_preds"],
-                    torch.zeros_like(merged_pred_fill["boxes"][:, 0]),  # categories
-                    iou_threshold=self.box_nms_thresh,
-                )
+                    keep_by_nms = batched_nms(
+                        merged_pred_fill["boxes"].float(),
+                        merged_pred_fill["iou_preds"],
+                        torch.zeros_like(merged_pred_fill["boxes"][:, 0]),  # categories
+                        iou_threshold=self.box_nms_thresh,
+                    )
 
-                merged_pred_fill.filter(keep_by_nms)
-                pred = merged_pred_fill
-
+                    merged_pred_fill.filter(keep_by_nms)
+                    pred = merged_pred_fill
+            else:
+                if fill_rgn.sum().item()==0:
+                    pred = self.automatic_generate(image)
         
         xy_depth = get_xy_depth(depth, from_ndc=True).permute(0,2,3,1).reshape(1,-1,3)
         xyz = camera.unproject_points(xy_depth, from_ndc=True, world_coordinates=True)
@@ -269,7 +273,8 @@ class SAMSelfPrompting(nn.Module):
         seg = torch.cat([seg, torch.ones(1,seg.shape[1],1).to(device=xyz.device)], dim=2)
         
         self.memory = Pointclouds(points=xyz, features=seg)
-        self.memory_iou = pred["iou_preds"]
+        if self.use_fill:
+            self.memory_iou = pred["iou_preds"]
 
         self.predictor.reset_image()
 

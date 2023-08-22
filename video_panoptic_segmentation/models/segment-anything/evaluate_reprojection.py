@@ -34,6 +34,7 @@ def get_model(model_config, device):
     model = SAMReprojection(sam, 
                             prompts_per_object = 20,
                             objects_per_batch = 10,
+                            use_fill = model_config["use_fill"],
                             fill_region_is = model_config["fill_region_is"],
                             fill_sampling = model_config["fill_sampling"]
                            )
@@ -55,6 +56,11 @@ def evaluation_process(index, nprocs, config, output_dir):
             
             first_sample = next(iter(video))
             video_name = first_sample['meta']['video_name']
+            if video_name not in ['00800-TEEsavR23oF.0000000000.0000000100',
+                                    '00802-wcojb4TFT35.0000000000.0000000100',
+                                    '00803-k1cupFYWXJ6.0000000000.0000000100',
+                                    '00808-y9hTuugGdiq.0000000000.0000000100']:
+                continue
             out_dir = os.path.join(output_dir, config['experiment_name'], 'panomasksRLE', video_name)
             os.makedirs(out_dir, exist_ok=True)
 
@@ -74,7 +80,7 @@ def evaluation_process(index, nprocs, config, output_dir):
                 torch.save(out, os.path.join(out_dir, out_file))
 
             print("Finished processing", video_name)
-            break
+            
 
 if __name__ == "__main__":
     import argparse
