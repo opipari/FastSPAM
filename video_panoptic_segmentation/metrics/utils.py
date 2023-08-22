@@ -11,6 +11,10 @@ from PIL import Image
 from panopticapi.utils import rgb2id
 from pycocotools import mask as mask_utils
 
+
+
+
+
 def read_panomaskRGB(
     path: str
 ) -> np.ndarray:
@@ -24,27 +28,51 @@ def read_panomaskRLE(
 ) -> torch.Tensor:
     return torch.stack([torch.as_tensor(mask_utils.decode(rle),dtype=torch.int) for rle in torch.load(pt_file_path,map_location='cpu')['coco_rle']])
 
+
+def alpha_compose(
+    nsrc,
+    ndst
+):
+    # Based on: https://stackoverflow.com/questions/60398939/how-to-do-alpha-compositing-with-a-list-of-rgba-data-in-numpy-arrays
+
+    # Extract the RGB channels
+    srcRGB = nsrc[...,:3]
+    dstRGB = ndst[...,:3]
+
+    # Extract the alpha channels and normalise to range 0..1
+    srcA = nsrc[...,3]/255.0
+    dstA = ndst[...,3]/255.0
+
+    # Work out resultant alpha channel
+    outA = srcA + dstA*(1-srcA)
+
+    # Work out resultant RGB
+    outRGB = (srcRGB*srcA[...,np.newaxis] + dstRGB*dstA[...,np.newaxis]*(1-srcA[...,np.newaxis])) / outA[...,np.newaxis]
+
+    # Merge RGB and alpha (scaled back up to 0..255) back into single image
+    outRGBA = np.dstack((outRGB,outA*255)).astype(np.uint8)
+    return outRGBA
+
+
 def binmasks_to_panomask(
     binmasks: np.ndarray,
     colors: np.ndarray
 ) -> np.ndarray:
     _, h, w = binmasks.shape
 
-    panomask = np.zeros((h,w,3))
+    panomask = np.zeros((h,w,colors.shape[1]))
+    if panomask.shape[2]==4:
+        panomask[:,:,3]=255
     if len(binmasks) > 0:
         sorted_indices = np.argsort([int(mask.sum()) for mask in binmasks])[::-1]
         for sort_idx in sorted_indices:
-            panomask[binmasks[sort_idx]] = colors[sort_idx]
+            if panomask.shape[2]==4:
+                panomask = alpha_compose(np.expand_dims(binmasks[sort_idx],2)*colors[sort_idx], panomask)
+            else:
+                panomask[binmasks[sort_idx]] = colors[sort_idx]
 
     return panomask
 
-
-def match_and_merge_segments(true_segments, pred_segments):
-    matched_true_ind, matched_pred_ind, _ = match_segments(true_segments, pred_segments)
-    unmatched_true_ind = np.setdiff1d(np.arange(true_segments.shape[0]), matched_true_ind, assume_unique=True)
-    pred_segments_merged, merged_matched_pred_ind, merged_unmatched_pred_ind = merge_unmatched_segments(pred_segments, matched_pred_ind)
-    
-    return (matched_true_ind, unmatched_true_ind, matched_pred_ind), (merged_matched_pred_ind, merged_unmatched_pred_ind), pred_segments_merged
 
 
 def mask_to_boundary(
@@ -146,15 +174,18 @@ def match_segments(
 
     pairwise_metric = pairwise_segment_metric(true_segments, pred_segments, metric=metric)
 
-    pred_ind, true_ind = scipy.optimize.linear_sum_assignment(pairwise_metric.transpose(0,1).cpu().numpy(), maximize=True)
+    matched_true_ind, matched_pred_ind = scipy.optimize.linear_sum_assignment(pairwise_metric.cpu().numpy(), maximize=True)
 
     # Account for the possibility that linear sum may assign predicted segments to true segments with no overlap
     # In this case, remove the assignment from consideration to allow for downstreat merge of prediction into better assignement
-    no_overlap_inds = [idx for idx in range(len(pred_ind)) if pairwise_metric[true_ind[idx],pred_ind[idx]]==0]
+    no_overlap_inds = [idx for idx in range(len(matched_pred_ind)) if pairwise_metric[matched_true_ind[idx],matched_pred_ind[idx]]==0]
 
-    true_ind, pred_ind = np.delete(true_ind, no_overlap_inds), np.delete(pred_ind, no_overlap_inds)
+    matched_true_ind, matched_pred_ind = np.delete(matched_true_ind, no_overlap_inds), np.delete(matched_pred_ind, no_overlap_inds)
 
-    return true_ind, pred_ind, pairwise_metric
+    unmatched_true_ind = np.setdiff1d(np.arange(true_segments.shape[0]), matched_true_ind, assume_unique=True)
+    unmatched_pred_ind = np.setdiff1d(np.arange(pred_segments.shape[0]), matched_pred_ind, assume_unique=True)
+   
+    return (matched_true_ind, unmatched_true_ind), (matched_pred_ind, unmatched_pred_ind), pairwise_metric
 
 
 def merge_unmatched_segments(
