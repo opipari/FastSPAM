@@ -28,7 +28,6 @@ This branch of the repository is setup to track all code for the experiments inc
 
     ```
     git clone --recurse-submodules -b experiments git@github.com:opipari/PanopticMemoryClouds.git && \
-
     cd PanopticMemoryClouds
     ```
 
