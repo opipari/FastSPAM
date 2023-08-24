@@ -8,7 +8,9 @@ import math
 
 from PIL import Image
 import numpy as np
+
 import torch
+import lightning as L
 
 from MVPd2SA1B import MVPd2SA1B
 
@@ -30,13 +32,20 @@ if __name__ == "__main__":
     # config = json.load(open(args.config_path, 'r'))
 
     num_gpus = torch.cuda.device_count()
+
+    fabric = L.Fabric()
+    fabric.launch()
+
     
     dataset = MVPd2SA1B(root = './video_panoptic_segmentation/datasets/MVPd/MVPd',
                         split = 'train')
 
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
+    dataloader = fabric.setup_dataloaders(dataloader)
 
-    for batch in dataloader:
+
+    for batch_i, batch in enumerate(dataloader):
         print(batch['image'].shape, batch['points'].shape)
-    
-    
+        print(batch['image'].device)
+        if batch_i>10:
+            break
