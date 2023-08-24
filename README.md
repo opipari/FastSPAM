@@ -114,6 +114,17 @@ python3.8 -m venv ./envs/panoptic-memory-clouds && \
       deactivate
 ```
 
+#### Video K-Net
+
+Setup environments:
+
+```
+python3.8 -m venv ./envs/video-k-net && \
+  source ./envs/video-k-net/bin/activate && \
+    pip install -r ./requirements/video-k-net.txt && \
+      deactivate
+```
+
 
 
 
