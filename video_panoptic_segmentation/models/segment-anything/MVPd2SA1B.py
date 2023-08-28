@@ -5,22 +5,36 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+import torchvision as tv
+from torchvision import datapoints
+
+import torchvision.transforms.v2.functional as F
 
 from MVPd.utils.MVPdataset import MVPDataset, MVPVideo, MVPdCategories, video_collate
 from MVPd.utils.MVPdHelpers import get_xy_depth, get_RT_inverse, get_pytorch3d_matrix, get_cameras, label_to_one_hot
 
 
-# def simulate_interactive_prompt():
-
 
 def sample_point_from_mask(bin_mask, samples=1):
     height, width = bin_mask.shape
-    xv, yv = np.meshgrid(np.arange(width), np.arange(height), indexing='xy')
-    grid = np.stack([xv,yv], axis=-1)
     bin_mask = bin_mask.reshape(-1)
-    grid_indices = grid.reshape(-1,2)[bin_mask.astype(bool)]
+
+    if isinstance(bin_mask, np.ndarray):
+        lib = np
+        bin_mask = bin_mask.astype(bool)
+    elif isinstance(bin_mask, torch.Tensor):
+        lib = torch
+        bin_mask = bin_mask.bool()
+    else:
+        raise NotImplementedError
+
+    xv, yv = lib.meshgrid(lib.arange(width), lib.arange(height), indexing='xy')
+    grid = lib.stack([xv,yv], axis=-1)
+    grid_indices = grid.reshape(-1,2)[bin_mask]
     assert grid_indices.shape[0]>0, "Invalid binary mask, cannot be empty"
+
     shuffle_indices = np.random.choice(np.arange(grid_indices.shape[0]), size=samples, replace=True)
+    
     grid_indices = grid_indices[shuffle_indices]
     return grid_indices
 
@@ -33,6 +47,72 @@ def bbox_from_mask(bin_mask):
     cmin, cmax = np.where(cols)[0][[0, -1]]
 
     return np.array([cmin, rmin, cmax, rmax])
+
+
+
+
+class SanitizeMasksPointsBoxes(torch.nn.Module):
+    def __init__(self, min_size):
+        super().__init__()
+        self.min_size = min_size
+
+    def forward(self, sample):
+        masks = sample['masks']
+        point_coords = sample['point_coords']
+        point_labels = sample['point_labels']
+        boxes = sample['boxes']
+        to_keep_indices = []
+        for i in range(len(masks)):
+            if masks[i].sum()>self.min_size:
+                to_keep_indices.append(i)
+
+        sample['masks'] = masks[to_keep_indices]
+        sample['point_coords'] = point_coords[to_keep_indices]
+        sample['point_labels'] = point_labels[to_keep_indices]
+        sample['boxes'] = boxes[to_keep_indices]
+
+        return sample
+
+class RecomputeBoxes(torch.nn.Module):
+    def forward(self, sample):
+        sample['boxes'] = datapoints.BoundingBox(tv.ops.masks_to_boxes(sample['masks']),
+                                                    format=datapoints.BoundingBoxFormat.XYXY,
+                                                    spatial_size=F.get_spatial_size(sample['image']))
+        return sample
+
+class ResamplePoints(torch.nn.Module):
+    def forward(self, sample):
+
+        # Sample point
+        point_samples = []
+        for i in range(len(sample['masks'])):
+            point = sample_point_from_mask(sample['masks'][i])
+            point = torch.cat([point, torch.zeros_like(point)], axis=1)
+            point_samples.append(point)
+        point_samples = torch.stack(point_samples)
+
+        sample['point_coords'] = datapoints.BoundingBox(point_samples,
+                                                    format=datapoints.BoundingBoxFormat.XYWH,
+                                                    spatial_size=F.get_spatial_size(sample['image']))
+        sample['point_labels'] = torch.ones(point_samples.shape[:2])
+        
+        return sample
+
+class RandomDropPointsOrBoxes(torch.nn.Module):
+    def __init__(self,p_points):
+        super().__init__()
+        self.p_points = p_points
+
+    def forward(self, sample):
+        if torch.rand(1).item()<self.p_points:
+            del sample['point_coords']
+            del sample['point_labels']
+        else:
+            del sample['boxes']
+            sample['point_coords'] = sample['point_coords'][:,:,:2]
+        return sample
+
+
 
 
 class MVPd2SA1B(Dataset):
@@ -62,11 +142,11 @@ class MVPd2SA1B(Dataset):
         return len(self.MVPd)
 
 
-    def filter_masks(self, masks, max_=0.9):
+    def filter_masks(self, masks, min_=0.001, max_=0.9):
         area = masks.shape[1]*masks.shape[2]
         to_keep_indices = []
         for i in range(len(masks)):
-            if masks[i].sum()>0 and masks[i].sum()<(max_*area):
+            if masks[i].sum()>(min_*area) and masks[i].sum()<(max_*area):
                 to_keep_indices.append(i)
         return masks[to_keep_indices]
 
@@ -79,17 +159,19 @@ class MVPd2SA1B(Dataset):
         MVPd_sample = self.MVPd[idx]
 
 
-        image = MVPd_sample['observation']['image'][0]
-        masks = MVPd_sample['label']['mask'][0]
+        image = MVPd_sample['observation']['image'][0].astype(np.uint8)
+        image = np.transpose(image, axes=(2,0,1)) # C x H x W
 
-        masks, ids = label_to_one_hot(masks)
-        
-        masks = self.filter_masks(masks)
+        masks = MVPd_sample['label']['mask'][0]
+        masks, ids = label_to_one_hot(masks, filter_void=True)
+        masks = self.filter_masks(masks) # C x H x W
 
         # Sample point
         point_samples = []
         for i in range(len(masks)):
-            point_samples.append(sample_point_from_mask(masks[i]))
+            point = sample_point_from_mask(masks[i])
+            point = np.concatenate([point, np.zeros_like(point)], axis=1)
+            point_samples.append(point)
         point_samples = np.stack(point_samples)
 
 
@@ -98,11 +180,19 @@ class MVPd2SA1B(Dataset):
             box_samples.append(bbox_from_mask(masks[i]))
         box_samples = np.stack(box_samples)
 
+
+
         sample = {}
-        sample['image'] = image
-        sample['masks'] = masks
-        sample['bbox'] = box_samples
-        sample['points'] = point_samples
+        sample['image'] = datapoints.Image(image)
+        sample['masks'] = datapoints.Mask(masks)
+        sample['original_size'] = (image.shape[1], image.shape[2])
+        sample['boxes'] = datapoints.BoundingBox(box_samples,
+                                                    format=datapoints.BoundingBoxFormat.XYXY,
+                                                    spatial_size=F.get_spatial_size(sample['image']))
+        sample['point_coords'] = datapoints.BoundingBox(point_samples,
+                                                    format=datapoints.BoundingBoxFormat.XYWH,
+                                                    spatial_size=F.get_spatial_size(sample['image']))
+        sample['point_labels'] = torch.ones(point_samples.shape[:2])
 
         if self.transform:
             sample = self.transform(sample)
