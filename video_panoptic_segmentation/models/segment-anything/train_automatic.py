@@ -120,7 +120,7 @@ if __name__ == "__main__":
         iter_loss = 0
         for i in range(isam.interactive_iterations+1):
             batch, loss = isam.forward_interactive(batch, multimask_output=True)
-            print(loss.device)
+            fabric.print(f"[rank: {fabric.global_rank}] {loss.device}")
             iter_loss += loss.detach().item()
             fabric.backward(loss, retain_graph=True)
             del loss
@@ -171,7 +171,7 @@ if __name__ == "__main__":
             if iteration%10==0:
                 fabric.log("loss", iter_loss, iteration)
                 fabric.log("lr", lr, iteration)
-                fabric.print(f"{iteration}/{cfg.total_iterations} Loss:{iter_loss}")
+                fabric.print(f"[rank: {fabric.global_rank}] Iter:{iteration}/{cfg.total_iterations} Loss:{iter_loss}")
 
             if iteration%cfg.eval_every==0:
                 with torch.no_grad():
@@ -187,7 +187,7 @@ if __name__ == "__main__":
                                 fabric.save(os.path.join(cfg.output_dir, cfg.experiment_name, f"checkpoints/best_model.ckpt"), isam.state_dict())
                                 best_val_loss = iter_loss
                             if eval_iteration%10==0:
-                                fabric.print(f"{eval_iteration}/{cfg.eval_iterations} Val Loss:{iter_loss}")
+                                fabric.print(f"[rank: {fabric.global_rank}] Iter:{eval_iteration}/{cfg.eval_iterations} Val Loss:{iter_loss}")
                             eval_iteration+=1
                             if eval_iteration>=cfg.eval_iterations:
                                 break
