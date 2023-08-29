@@ -15,7 +15,7 @@ class InitConfig():
         self.weight_decay = 0.1
         self.warmup_iters = 250
         self.lr_decay_iters = 8000
-        self.num_mask_samples = 21
+        self.num_mask_samples = 24
         self.seed = 0
 
 if __name__=="__main__":

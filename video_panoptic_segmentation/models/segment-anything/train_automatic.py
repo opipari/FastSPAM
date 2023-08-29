@@ -47,7 +47,13 @@ if __name__ == "__main__":
 
     cfg = get_cfg(args.config_path)
 
-    fabric = L.Fabric(loggers=L.fabric.loggers.TensorBoardLogger(os.path.join(cfg.output_dir, cfg.experiment_name), name='train_automatic_sam'))
+    num_devices = torch.cuda.device_count()
+    print(f"Trying to use {num_devices} gpus")
+
+    fabric = L.Fabric(
+        devices=num_devices,
+        loggers=L.fabric.loggers.TensorBoardLogger(os.path.join(cfg.output_dir, cfg.experiment_name), name='train_automatic_sam')
+        )
     fabric.launch()
 
 
@@ -120,7 +126,6 @@ if __name__ == "__main__":
         iter_loss = 0
         for i in range(isam.interactive_iterations+1):
             batch, loss = isam.forward_interactive(batch, multimask_output=True)
-            fabric.print(f"[rank: {fabric.global_rank}] {loss.device}")
             iter_loss += loss.detach().item()
             fabric.backward(loss, retain_graph=True)
             del loss
@@ -165,34 +170,39 @@ if __name__ == "__main__":
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr
 
-            optimizer.zero_grad()
-            iter_loss = get_iteration_loss_train(isam, batch)
-            optimizer.step()
+            fabric.print(torch.cuda.memory_summary())
+            try:
+                optimizer.zero_grad()
+                iter_loss = get_iteration_loss_train(isam, batch)
+                optimizer.step()
+            except:
+                fabric.print(torch.cuda.memory_summary())
+                raise
             if iteration%10==0:
                 fabric.log("loss", iter_loss, iteration)
                 fabric.log("lr", lr, iteration)
                 fabric.print(f"[rank: {fabric.global_rank}] Iter:{iteration}/{cfg.total_iterations} Loss:{iter_loss}")
 
-            if iteration%cfg.eval_every==0:
-                with torch.no_grad():
-                    fabric.save(os.path.join(cfg.output_dir, cfg.experiment_name, f"checkpoints/checkpoint_{iteration}.ckpt"), isam.state_dict())
+            # if iteration%cfg.eval_every==0:
+            #     with torch.no_grad():
+            #         fabric.save(os.path.join(cfg.output_dir, cfg.experiment_name, f"checkpoints/checkpoint_{iteration}.ckpt"), isam.state_dict())
 
-                    avg_val_loss = 0
-                    eval_iteration = 0
-                    while eval_iteration < cfg.eval_iterations:
-                        for val_batch in val_dataloader:
-                            iter_loss = get_iteration_loss_val(isam, val_batch)
-                            avg_val_loss += iter_loss
-                            if iter_loss<best_val_loss:
-                                fabric.save(os.path.join(cfg.output_dir, cfg.experiment_name, f"checkpoints/best_model.ckpt"), isam.state_dict())
-                                best_val_loss = iter_loss
-                            if eval_iteration%10==0:
-                                fabric.print(f"[rank: {fabric.global_rank}] Iter:{eval_iteration}/{cfg.eval_iterations} Val Loss:{iter_loss}")
-                            eval_iteration+=1
-                            if eval_iteration>=cfg.eval_iterations:
-                                break
-                    avg_val_loss /= cfg.eval_iterations
-                    fabric.log("val_loss", avg_val_loss, iteration)
+            #         avg_val_loss = 0
+            #         eval_iteration = 0
+            #         while eval_iteration < cfg.eval_iterations:
+            #             for val_batch in val_dataloader:
+            #                 iter_loss = get_iteration_loss_val(isam, val_batch)
+            #                 avg_val_loss += iter_loss
+            #                 if iter_loss<best_val_loss:
+            #                     fabric.save(os.path.join(cfg.output_dir, cfg.experiment_name, f"checkpoints/best_model.ckpt"), isam.state_dict())
+            #                     best_val_loss = iter_loss
+            #                 if eval_iteration%10==0:
+            #                     fabric.print(f"[rank: {fabric.global_rank}] Iter:{eval_iteration}/{cfg.eval_iterations} Val Loss:{iter_loss}")
+            #                 eval_iteration+=1
+            #                 if eval_iteration>=cfg.eval_iterations:
+            #                     break
+            #         avg_val_loss /= cfg.eval_iterations
+            #         fabric.log("val_loss", avg_val_loss, iteration)
 
             iteration+=1
             if iteration>=cfg.total_iterations:
