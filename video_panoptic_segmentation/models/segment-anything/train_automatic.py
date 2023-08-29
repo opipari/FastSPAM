@@ -72,7 +72,7 @@ if __name__ == "__main__":
                             SanitizeMasksPointsBoxes(min_size=(0.001*480*640)),
                             RecomputeBoxes(),
                             ResamplePoints(),
-                            RandomSamplePointsAndBoxes(n_samples=24),
+                            RandomSamplePointsAndBoxes(n_samples=cfg.num_mask_samples),
                             RandomDropPointsOrBoxes(p_points=0.5),
                             tv.transforms.v2.ToDtype(torch.float32),
                         ])
@@ -83,7 +83,7 @@ if __name__ == "__main__":
                             SanitizeMasksPointsBoxes(min_size=(0.001*480*640)),
                             RecomputeBoxes(),
                             ResamplePoints(),
-                            RandomSamplePointsAndBoxes(n_samples=24),
+                            RandomSamplePointsAndBoxes(n_samples=cfg.num_mask_samples),
                             RandomDropPointsOrBoxes(p_points=0.5),
                             tv.transforms.v2.ToDtype(torch.float32),
                         ])
@@ -120,6 +120,7 @@ if __name__ == "__main__":
         iter_loss = 0
         for i in range(isam.interactive_iterations+1):
             batch, loss = isam.forward_interactive(batch, multimask_output=True)
+            print(loss.device)
             iter_loss += loss.detach().item()
             fabric.backward(loss, retain_graph=True)
             del loss
