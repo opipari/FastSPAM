@@ -168,8 +168,8 @@ if __name__ == "__main__":
             iter_loss = get_iteration_loss_train(isam, batch)
             optimizer.step()
             if iteration%10==0:
-                fabric.log("loss", iter_loss)
-                fabric.log("lr", lr)
+                fabric.log("loss", iter_loss, iteration)
+                fabric.log("lr", lr, iteration)
                 fabric.print(f"{iteration}/{cfg.total_iterations} Loss:{iter_loss}")
 
             if iteration%cfg.eval_every==0:
@@ -191,10 +191,11 @@ if __name__ == "__main__":
                             if eval_iteration>=cfg.eval_iterations:
                                 break
                     avg_val_loss /= cfg.eval_iterations
-                    fabric.log("val_loss", avg_val_loss)
+                    fabric.log("val_loss", avg_val_loss, iteration)
 
             iteration+=1
             if iteration>=cfg.total_iterations:
                 break
-            
+    fabric.save(os.path.join(cfg.output_dir, cfg.experiment_name, f"checkpoints/final_checkpoint_{iteration}.ckpt"), isam.state_dict())
+
         
