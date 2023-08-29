@@ -192,7 +192,10 @@ class ISam(Sam):
                 point_samples = []
                 point_labels = []
                 for i in range(len(pred_masks)):
-                    point = sample_point_from_mask(error_region[i].cpu())
+                    if error_region[i].sum().item()>0:
+                        point = sample_point_from_mask(error_region[i].cpu())
+                    else:
+                        point = sample_point_from_mask(true_masks[i].cpu())
                     point_samples.append(point)
                     point_labels.append(true_masks[i, point[0,1], point[0,0]].unsqueeze(0))
                 point_samples = torch.stack(point_samples).to(dtype=torch.float32)
