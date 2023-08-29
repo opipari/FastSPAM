@@ -51,7 +51,7 @@ if __name__ == "__main__":
     print(f"Trying to use {num_devices} gpus")
 
     fabric = L.Fabric(
-        devices=num_devices,
+        devices=[3],
         loggers=L.fabric.loggers.TensorBoardLogger(os.path.join(cfg.output_dir, cfg.experiment_name), name='train_automatic_sam')
         )
     fabric.launch()
@@ -130,7 +130,7 @@ if __name__ == "__main__":
             try:    
                 fabric.backward(loss, retain_graph=True)
             except:
-                print(f"[rank: {fabric.global_rank}] iterloss {i} {torch.cuda.memory_summary()}")
+                print(f"[rank: {fabric.global_rank}] {isam.device} iterloss {i} {torch.cuda.memory_summary()}")
             del loss
 
         for i in range(isam.mask_iterations):
