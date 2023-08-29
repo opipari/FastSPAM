@@ -4,6 +4,7 @@ CONFIG_FILE="video_panoptic_segmentation/models/segment-anything/configs/train_a
 EXPERIMENT_NAME="$(python ${CONFIG_FILE} experiment_name)"
 OUTPUT_DIR="$(python ${CONFIG_FILE} output_dir)"
 
+mkdir -p ${OUTPUT_DIR}/${EXPERIMENT_NAME}
 
 echo "Setting up virtualenvironment"
 # Setup virtualenvironment
