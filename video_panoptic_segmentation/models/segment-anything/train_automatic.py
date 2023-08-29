@@ -51,7 +51,7 @@ if __name__ == "__main__":
     print(f"Trying to use {num_devices} gpus")
 
     fabric = L.Fabric(
-        devices=[3],
+        devices=num_devices,
         loggers=L.fabric.loggers.TensorBoardLogger(os.path.join(cfg.output_dir, cfg.experiment_name), name='train_automatic_sam')
         )
     fabric.launch()
