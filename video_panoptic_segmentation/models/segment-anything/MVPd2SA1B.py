@@ -98,6 +98,23 @@ class ResamplePoints(torch.nn.Module):
         
         return sample
 
+class RandomSamplePointsAndBoxes(torch.nn.Module):
+    def __init__(self, n_samples):
+        super().__init__()
+        self.n_samples = n_samples
+
+    def forward(self, sample):
+        to_keep_indices = np.arange(len(sample['point_coords']))
+        np.random.shuffle(to_keep_indices)
+        to_keep_indices = to_keep_indices[:self.n_samples]
+
+        sample['masks'] = sample['masks'][to_keep_indices]
+        sample['point_coords'] = sample['point_coords'][to_keep_indices]
+        sample['point_labels'] = sample['point_labels'][to_keep_indices]
+        sample['boxes'] = sample['boxes'][to_keep_indices]
+
+        return sample
+
 class RandomDropPointsOrBoxes(torch.nn.Module):
     def __init__(self,p_points):
         super().__init__()
@@ -142,11 +159,11 @@ class MVPd2SA1B(Dataset):
         return len(self.MVPd)
 
 
-    def filter_masks(self, masks, min_=0.001, max_=0.9):
+    def filter_masks(self, masks, min_=0.001):
         area = masks.shape[1]*masks.shape[2]
         to_keep_indices = []
         for i in range(len(masks)):
-            if masks[i].sum()>(min_*area) and masks[i].sum()<(max_*area):
+            if masks[i].sum()>(min_*area):
                 to_keep_indices.append(i)
         return masks[to_keep_indices]
 

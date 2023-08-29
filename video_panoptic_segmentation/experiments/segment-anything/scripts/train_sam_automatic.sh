@@ -1,5 +1,9 @@
-EXPERIMENT_NAME="train_sam_automatic"
-OUTPUT_DIR="video_panoptic_segmentation/models/segment-anything/results"
+CONFIG_FILE="./video_panoptic_segmentation/models/segment-anything/configs/train_automatic_sam_vit_b.py"
+
+
+EXPERIMENT_NAME="$(python -c 'import importlib; config=importlib.import_module(args.config_path); print(config.InitConfig().experiment_name)')"
+OUTPUT_DIR="$(python -c 'import importlib; config=importlib.import_module(args.config_path); print(config.InitConfig().output_dir)')"
+
 
 echo "Setting up virtualenvironment"
 # Setup virtualenvironment
@@ -9,25 +13,31 @@ pip install -r ./requirements/segment-anything.txt
 
 echo "Downloading data"
 cd video_panoptic_segmentation/datasets/MVPd
-./data/download.sh -s train -p
+./data/download.sh -s train -m panomasksRGB -m imagesRGB.0000000000
+./data/download.sh -s val -m panomasksRGB -m imagesRGB.0000000000
 cd ../../..
 
 # Download pre-trained model
 echo "Downloading pretrained model"
 aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/segment-anything/pretrained/sam_vit_b_01ec64.pth ./video_panoptic_segmentation/models/segment-anything/segment-anything/checkpoints/ > /dev/null
-# wget -P ./video_panoptic_segmentation/models/segment-anything/segment-anything/checkpoints/ https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
 
 echo "Starting evaluation"
 python video_panoptic_segmentation/models/segment-anything/train_automatic.py \
-		--config-path ./video_panoptic_segmentation/experiments/segment-anything/configs/evaluate_pretrained_sam_automatic.json \
-		--output-path ${OUTPUT_DIR}
+		--config-path ${CONFIG_FILE}
 
 # Save status of repository for reference
 git log -1 --oneline > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/repo_state.txt
 
-# echo "Compressing results"
-# tar -C ${OUTPUT_DIR} -cf ${EXPERIMENT_NAME}.tar.gz ${EXPERIMENT_NAME}/
-# echo "Uploading results"
-# aws s3 cp ${EXPERIMENT_NAME}.tar.gz s3://vesta-intern-anthony/${OUTPUT_DIR}/ > /dev/null
+echo "The experiment script executed is:" > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/script_state.txt
+echo "basename: [$(basename "$0")]" > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/script_state.txt
+echo "dirname : [$(dirname "$0")]" > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/script_state.txt
+echo "pwd     : [$(pwd)]" > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/script_state.txt
+
+
+echo "Compressing results"
+tar -C ${OUTPUT_DIR} -cf ${EXPERIMENT_NAME}.tar.gz ${EXPERIMENT_NAME}/
+echo "Uploading results"
+uploader=/opt/amazon/compute_grid_utils/output_uploader
+$uploader ${EXPERIMENT_NAME}.tar.gz
 
 echo "Finished"
