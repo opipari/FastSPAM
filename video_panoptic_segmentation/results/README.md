@@ -1,1 +1,0 @@
-This folder will house results from the video panoptic segmentation experiments.
