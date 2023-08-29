@@ -16,3 +16,9 @@ class InitConfig():
         self.warmup_iters = 250
         self.lr_decay_iters = 8000
         self.seed = 0
+
+if __name__=="__main__":
+    import sys
+
+    if len(sys.argv)==2:
+        print(getattr(InitConfig(), sys.argv[1]))

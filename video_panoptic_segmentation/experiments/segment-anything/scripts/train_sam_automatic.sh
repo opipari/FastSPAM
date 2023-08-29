@@ -1,8 +1,8 @@
-CONFIG_FILE="./video_panoptic_segmentation/models/segment-anything/configs/train_automatic_sam_vit_b.py"
+CONFIG_FILE="video_panoptic_segmentation/models/segment-anything/configs/train_automatic_sam_vit_b.py"
 
 
-EXPERIMENT_NAME="$(python -c 'import importlib; config=importlib.import_module(args.config_path); print(config.InitConfig().experiment_name)')"
-OUTPUT_DIR="$(python -c 'import importlib; config=importlib.import_module(args.config_path); print(config.InitConfig().output_dir)')"
+EXPERIMENT_NAME="$(python ${CONFIG_FILE} experiment_name)"
+OUTPUT_DIR="$(python ${CONFIG_FILE} output_dir)"
 
 
 echo "Setting up virtualenvironment"
@@ -29,9 +29,9 @@ python video_panoptic_segmentation/models/segment-anything/train_automatic.py \
 git log -1 --oneline > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/repo_state.txt
 
 echo "The experiment script executed is:" > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/script_state.txt
-echo "basename: [$(basename "$0")]" > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/script_state.txt
-echo "dirname : [$(dirname "$0")]" > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/script_state.txt
-echo "pwd     : [$(pwd)]" > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/script_state.txt
+echo "basename: [$(basename "$0")]" >> ${OUTPUT_DIR}/${EXPERIMENT_NAME}/script_state.txt
+echo "dirname : [$(dirname "$0")]" >> ${OUTPUT_DIR}/${EXPERIMENT_NAME}/script_state.txt
+echo "pwd     : [$(pwd)]" >> ${OUTPUT_DIR}/${EXPERIMENT_NAME}/script_state.txt
 
 
 echo "Compressing results"

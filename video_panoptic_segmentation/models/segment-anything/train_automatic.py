@@ -159,7 +159,7 @@ if __name__ == "__main__":
     best_val_loss = 10000
     while iteration < cfg.total_iterations:
         for batch_i, batch in enumerate(train_dataloader):
- 
+
             lr = get_lr(iteration, learning_rate=cfg.learning_rate, warmup_iters=cfg.warmup_iters, lr_decay_iters=cfg.lr_decay_iters)
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr
@@ -169,6 +169,7 @@ if __name__ == "__main__":
             optimizer.step()
             if iteration%10==0:
                 fabric.log("loss", iter_loss)
+                fabric.log("lr", lr)
                 fabric.print(f"{iteration}/{cfg.total_iterations} Loss:{iter_loss}")
 
             if iteration%cfg.eval_every==0:
