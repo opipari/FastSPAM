@@ -21,6 +21,8 @@ cd ../../..
 echo "Downloading pretrained model"
 aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/segment-anything/pretrained/sam_vit_b_01ec64.pth ./video_panoptic_segmentation/models/segment-anything/segment-anything/checkpoints/ > /dev/null
 
+nvidia-smi > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/nvidia_smi.txt
+
 echo "Starting evaluation"
 python video_panoptic_segmentation/models/segment-anything/train_automatic.py \
 		--config-path ${CONFIG_FILE}

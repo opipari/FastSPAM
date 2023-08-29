@@ -127,7 +127,10 @@ if __name__ == "__main__":
         for i in range(isam.interactive_iterations+1):
             batch, loss = isam.forward_interactive(batch, multimask_output=True)
             iter_loss += loss.detach().item()
-            fabric.backward(loss, retain_graph=True)
+            try:    
+                fabric.backward(loss, retain_graph=True)
+            except:
+                print(f"[rank: {fabric.global_rank}] iterloss {i} {torch.cuda.memory_summary()}")
             del loss
 
         for i in range(isam.mask_iterations):
@@ -170,14 +173,9 @@ if __name__ == "__main__":
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr
 
-            fabric.print(torch.cuda.memory_summary())
-            try:
-                optimizer.zero_grad()
-                iter_loss = get_iteration_loss_train(isam, batch)
-                optimizer.step()
-            except:
-                fabric.print(torch.cuda.memory_summary())
-                raise
+            optimizer.zero_grad()
+            iter_loss = get_iteration_loss_train(isam, batch)
+            optimizer.step()
             if iteration%10==0:
                 fabric.log("loss", iter_loss, iteration)
                 fabric.log("lr", lr, iteration)
