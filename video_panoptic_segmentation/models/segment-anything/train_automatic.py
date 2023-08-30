@@ -127,10 +127,7 @@ if __name__ == "__main__":
         for i in range(isam.interactive_iterations+1):
             batch, loss = isam.forward_interactive(batch, multimask_output=True)
             iter_loss += loss.detach().item()
-            try:    
-                fabric.backward(loss, retain_graph=True)
-            except:
-                print(f"[rank: {fabric.global_rank}] {isam.device} iterloss {i} {torch.cuda.memory_summary()}")
+            fabric.backward(loss, retain_graph=True)
             del loss
 
         for i in range(isam.mask_iterations):
