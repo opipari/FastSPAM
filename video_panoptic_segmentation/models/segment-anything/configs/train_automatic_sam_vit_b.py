@@ -9,13 +9,14 @@ class InitConfig():
         self.use_augmentation = False
         self.total_iterations = 10000
         self.eval_every = 1000
-        self.eval_iterations = 100
+        self.eval_iterations = 50
         self.learning_rate = 8e-4
         self.adam_betas = (0.9, 0.999)
         self.weight_decay = 0.1
         self.warmup_iters = 250
         self.lr_decay_iters = 8000
-        self.num_mask_samples = 24
+        self.num_mask_samples = 8
+        self.min_box_area_pcnt = 0.001
         self.seed = 0
 
 if __name__=="__main__":
