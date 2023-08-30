@@ -191,9 +191,6 @@ if __name__ == "__main__":
                         for val_batch in val_dataloader:
                             iter_loss = get_iteration_loss_val(isam, val_batch)
                             avg_val_loss += iter_loss
-                            if iter_loss<best_val_loss:
-                                fabric.save(os.path.join(cfg.output_dir, cfg.experiment_name, f"checkpoints/best_model.ckpt"), isam.state_dict())
-                                best_val_loss = iter_loss
                             if eval_iteration%10==0:
                                 fabric.print(f"[rank: {fabric.global_rank}] Iter:{eval_iteration}/{cfg.eval_iterations} Val Loss:{iter_loss}", flush=True)
                             eval_iteration+=1
@@ -201,6 +198,9 @@ if __name__ == "__main__":
                                 break
                     avg_val_loss /= cfg.eval_iterations
                     fabric.log("val_loss", avg_val_loss, iteration)
+                    if avg_val_loss<best_val_loss:
+                        fabric.save(os.path.join(cfg.output_dir, cfg.experiment_name, f"checkpoints/best_model.ckpt"), isam.state_dict())
+                        best_val_loss = avg_val_loss
 
             iteration+=1
             if iteration>=cfg.total_iterations:

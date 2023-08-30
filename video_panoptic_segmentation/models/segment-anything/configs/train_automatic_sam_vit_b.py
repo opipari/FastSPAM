@@ -15,7 +15,7 @@ class InitConfig():
         self.weight_decay = 0.1
         self.warmup_iters = 250
         self.lr_decay_iters = 8000
-        self.num_mask_samples = 8
+        self.num_mask_samples = 20
         self.min_box_area_pcnt = 0.001
         self.seed = 0
 
