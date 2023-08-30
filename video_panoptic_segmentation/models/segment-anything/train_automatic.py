@@ -48,19 +48,22 @@ if __name__ == "__main__":
     cfg = get_cfg(args.config_path)
 
     num_devices = torch.cuda.device_count()
-    print(f"Trying to use {num_devices} gpus")
+    print(f"Trying to use {num_devices} gpus", flush=True)
 
     fabric = L.Fabric(
         devices=num_devices,
         loggers=L.fabric.loggers.TensorBoardLogger(os.path.join(cfg.output_dir, cfg.experiment_name), name='train_automatic_sam')
         )
+    print(f"launching...", flush=True)
     fabric.launch()
-
+    print(f"launched", flush=True)
+    
 
     sam = sam_model_registry[cfg.model_type](checkpoint=cfg.sam_checkpoint)
     isam = ISam(sam)
     optimizer = torch.optim.AdamW(sam.parameters(), lr=cfg.learning_rate, betas=cfg.adam_betas, weight_decay=cfg.weight_decay)
     isam, optimizer = fabric.setup(isam, optimizer)
+    print(f"initialized", flush=True)
 
 
     #
@@ -159,7 +162,7 @@ if __name__ == "__main__":
     if master_process:
         os.makedirs(os.path.join(cfg.output_dir, cfg.experiment_name), exist_ok=True)
 
-    
+    print(f"seeding", flush=True)
     fabric.seed_everything(cfg.seed)
     iteration = 0
     best_val_loss = 10000
@@ -176,7 +179,7 @@ if __name__ == "__main__":
             if iteration%10==0:
                 fabric.log("loss", iter_loss, iteration)
                 fabric.log("lr", lr, iteration)
-                fabric.print(f"[rank: {fabric.global_rank}] Iter:{iteration}/{cfg.total_iterations} Loss:{iter_loss}")
+                fabric.print(f"[rank: {fabric.global_rank}] Iter:{iteration}/{cfg.total_iterations} Loss:{iter_loss}", flush=True)
             
             if iteration%cfg.eval_every==0:
                 with torch.no_grad():
@@ -192,7 +195,7 @@ if __name__ == "__main__":
                                 fabric.save(os.path.join(cfg.output_dir, cfg.experiment_name, f"checkpoints/best_model.ckpt"), isam.state_dict())
                                 best_val_loss = iter_loss
                             if eval_iteration%10==0:
-                                fabric.print(f"[rank: {fabric.global_rank}] Iter:{eval_iteration}/{cfg.eval_iterations} Val Loss:{iter_loss}")
+                                fabric.print(f"[rank: {fabric.global_rank}] Iter:{eval_iteration}/{cfg.eval_iterations} Val Loss:{iter_loss}", flush=True)
                             eval_iteration+=1
                             if eval_iteration>=cfg.eval_iterations:
                                 break
