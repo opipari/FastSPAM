@@ -14,8 +14,8 @@ pip install -r ./requirements/segment-anything.txt
 
 echo "Downloading data"
 cd video_panoptic_segmentation/datasets/MVPd
-./data/download.sh -s train -p -d panomasksRGB -d imagesRGB.0000000000
-./data/download.sh -s val -p -d panomasksRGB -d imagesRGB.0000000000
+./data/download.sh -s train -d panomasksRGB -d imagesRGB.0000000000
+./data/download.sh -s val -d panomasksRGB -d imagesRGB.0000000000
 cd ../../..
 
 # Download pre-trained model
