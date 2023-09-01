@@ -117,10 +117,12 @@ if __name__ == "__main__":
         if iter < warmup_iters:
             return learning_rate * iter / warmup_iters
 
-        if iter>lr_decay_iters:
-            return learning_rate * 0.1
+        lr = learning_rate
+        for decay_iter in lr_decay_iters:
+            if iter>decay_iter:
+                lr = lr * 0.1
 
-        return learning_rate 
+        return lr 
 
 
     def get_iteration_loss_train(isam, batch):
