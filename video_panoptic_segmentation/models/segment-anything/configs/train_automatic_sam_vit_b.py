@@ -7,14 +7,14 @@ class InitConfig():
         self.sam_checkpoint = "./video_panoptic_segmentation/models/segment-anything/segment-anything/checkpoints/sam_vit_b_01ec64.pth"
         
         self.use_augmentation = False
-        self.total_iterations = 10000
-        self.eval_every = 1000
+        self.total_iterations = 90000
+        self.eval_every = 5000
         self.eval_iterations = 50
         self.learning_rate = 8e-4
         self.adam_betas = (0.9, 0.999)
         self.weight_decay = 0.1
         self.warmup_iters = 250
-        self.lr_decay_iters = 8000
+        self.lr_decay_iters = [60000, 86666]
         self.num_mask_samples = 16
         self.min_box_area_pcnt = 0.001
         self.seed = 0

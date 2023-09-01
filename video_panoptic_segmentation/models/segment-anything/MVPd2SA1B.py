@@ -173,15 +173,18 @@ class MVPd2SA1B(Dataset):
         idx: int
     ) -> Union[dict, MVPVideo]:
 
-        MVPd_sample = self.MVPd[idx]
+        masks = []
+        while len(masks)==0:
+            MVPd_sample = self.MVPd[idx]
 
+            image = MVPd_sample['observation']['image'][0].astype(np.uint8)
+            image = np.transpose(image, axes=(2,0,1)) # C x H x W
 
-        image = MVPd_sample['observation']['image'][0].astype(np.uint8)
-        image = np.transpose(image, axes=(2,0,1)) # C x H x W
-
-        masks = MVPd_sample['label']['mask'][0]
-        masks, ids = label_to_one_hot(masks, filter_void=True)
-        masks = self.filter_masks(masks) # C x H x W
+            masks = MVPd_sample['label']['mask'][0]
+            masks, ids = label_to_one_hot(masks, filter_void=True)
+            masks = self.filter_masks(masks) # C x H x W
+            if len(masks)==0:
+                idx = np.random.randint(self.len())
 
         # Sample point
         point_samples = []
