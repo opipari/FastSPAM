@@ -72,7 +72,7 @@ python3.8 -m venv ./envs/segment-anything && \
   source ./envs/segment-anything/bin/activate && \
     pip install -r ./requirements/segment-anything.txt && \
       deactivate && \
-        wget -P ./zero_shot_scene_segmentation/models/segment-anything/segment-anything/checkpoints/ https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
+        wget -P ./video_panoptic_segmentation/models/segment-anything/segment-anything/checkpoints/ https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
 ```
 
 #### Pyramid / Panoptic Associating Objects with Transformers (PAOT)
