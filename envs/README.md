@@ -1,1 +1,0 @@
-This folder will house virtualenvironments used in experiments.

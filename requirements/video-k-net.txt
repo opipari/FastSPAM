@@ -1,0 +1,7 @@
+torch==1.13.0
+torchvision==0.14.0
+timm
+scipy
+git+https://github.com/cocodataset/panopticapi.git
+-e ./video_panoptic_segmentation/datasets/MVPd
+-e .
