@@ -184,7 +184,7 @@ class MVPd2SA1B(Dataset):
             masks, ids = label_to_one_hot(masks, filter_void=True)
             masks = self.filter_masks(masks) # C x H x W
             if len(masks)==0:
-                idx = np.random.randint(self.len())
+                idx = np.random.randint(len(self))
 
         # Sample point
         point_samples = []
