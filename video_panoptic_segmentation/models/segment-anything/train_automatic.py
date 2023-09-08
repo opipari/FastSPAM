@@ -165,7 +165,7 @@ if __name__ == "__main__":
         os.makedirs(os.path.join(cfg.output_dir, cfg.experiment_name), exist_ok=True)
 
     print(f"seeding", flush=True)
-    fabric.seed_everything(cfg.seed)
+    fabric.seed_everything(cfg.seed + fabric.global_rank)
     iteration = 0
     best_val_loss = 10000
     while iteration < cfg.total_iterations:

@@ -77,7 +77,7 @@ class ISam(Sam):
         loss_iou = torch.mean(F.mse_loss(output_record["iou_predictions"], true_iou, reduction='none'), dim=1)
 
         loss_focal = torch.mean(tv.ops.sigmoid_focal_loss(pred_logits, true_masks.repeat((1,pred_logits.shape[1],1,1))), dim=(2,3))
-        loss_dice = (2. * true_inter) / (torch.sum(pred_masks, dim=(2,3)) + torch.sum(true_masks, dim=(2,3)))
+        loss_dice = 1 - ((2. * true_inter) / (torch.sum(pred_masks, dim=(2,3)) + torch.sum(true_masks, dim=(2,3))))
         loss_mask, mask_arg = torch.min((20 * loss_focal) + loss_dice, dim=1)
         return torch.mean(loss_mask + loss_iou), mask_arg
       
