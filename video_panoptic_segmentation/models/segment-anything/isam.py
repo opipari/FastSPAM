@@ -258,4 +258,4 @@ class ISam(Sam):
                 image_record['mask_inputs'] = output_record["low_res_logits"][torch.arange(len(output_record["low_res_logits"])), output_record["mask_arg"]].unsqueeze(1).detach()
                 del output_record["mask_arg"]
 
-        return batched_output, loss
+        return batched_input, loss

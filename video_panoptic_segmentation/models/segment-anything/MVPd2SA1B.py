@@ -151,7 +151,6 @@ class MVPd2SA1B(Dataset):
 
         self.MVPd = MVPDataset(root=self.root,
                                 split=self.split,
-                                training=True,
                                 window_size = 1)
     
 

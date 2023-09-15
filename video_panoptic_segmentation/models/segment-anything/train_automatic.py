@@ -136,7 +136,7 @@ if __name__ == "__main__":
             del loss
 
         for i in range(isam.mask_iterations):
-            batch, loss = isam.forward_interactive(batch, multimask_output=True)
+            batch, loss = isam.forward_noninteractive(batch, multimask_output=True)
             iter_loss += loss.detach().item()
             fabric.backward(loss, retain_graph=True)
             del loss
@@ -153,7 +153,7 @@ if __name__ == "__main__":
             iter_loss += loss.detach().item()
 
         for i in range(isam.mask_iterations):
-            batch, loss = isam.forward_interactive(batch, multimask_output=True)
+            batch, loss = isam.forward_noninteractive(batch, multimask_output=True)
             iter_loss += loss.detach().item()
         
         iter_loss /= isam.interactive_iterations+isam.mask_iterations+1
