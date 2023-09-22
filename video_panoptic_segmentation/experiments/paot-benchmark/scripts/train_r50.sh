@@ -21,10 +21,13 @@ cd ../../..
 
 ln -s $PWD/video_panoptic_segmentation/datasets/MVPd/MVPd ./video_panoptic_segmentation/models/aot-benchmark/paot-benchmark/datasets/
 
-nvidia-smi > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/nvidia_smi.txt
 
 echo "Starting training"
 cd video_panoptic_segmentation/models/aot-benchmark/paot-benchmark
+
+mkdir -p ${OUTPUT_DIR}/${EXPERIMENT_NAME}
+nvidia-smi > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/nvidia_smi.txt
+
 
 # Main training stage
 exp="pano_r50"
@@ -47,7 +50,7 @@ echo "pwd     : [$(pwd)]" >> ${OUTPUT_DIR}/${EXPERIMENT_NAME}/script_state.txt
 
 
 echo "Compressing results"
-tar -C ${OUTPUT_DIR} -cf ${EXPERIMENT_NAME}.tar.gz ${EXPERIMENT_NAME}/
+tar -cf ${EXPERIMENT_NAME}.tar.gz ${OUTPUT_DIR}/
 echo "Uploading results"
 uploader=/opt/amazon/compute_grid_utils/output_uploader
 $uploader ${EXPERIMENT_NAME}.tar.gz
