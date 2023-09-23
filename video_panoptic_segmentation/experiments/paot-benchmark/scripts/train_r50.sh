@@ -8,6 +8,9 @@ source ./envs/paot-benchmark/bin/activate
 pip install -r ./requirements/paot-benchmark/base.txt
 pip install -r ./requirements/paot-benchmark/deps.txt
 
+echo "Installing nvidia toolkit"
+sudo apt install nvidia-cuda-toolkit  
+
 # Download pre-trained model
 echo "Downloading pretrained model"
 pip install --upgrade gdown
