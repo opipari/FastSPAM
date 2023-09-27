@@ -42,7 +42,7 @@ python tools/train.py --amp \
         --config ${exp} \
         --stage ${stage} \
         --pretrained_path ${pretrain} \
-        --gpu_num 8
+        --gpu_num 4
 
 # Save status of repository for reference
 git log -1 --oneline > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/repo_state.txt
