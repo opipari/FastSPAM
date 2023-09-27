@@ -116,10 +116,9 @@ def segment_metrics(
     intersection = ((true_segment * pred_segment) > 0).sum().cpu().item()
     precision_denominator = (pred_segment>0).sum().cpu().item()
     recall_denominator = (true_segment>0).sum().cpu().item()
-    assert recall_denominator>0
 
     precision = intersection / precision_denominator if precision_denominator > 0 else 0
-    recall = intersection / recall_denominator
+    recall = intersection / recall_denominator if recall_denominator > 0 else 0
     F_score = (2 * precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
     IOU_score = intersection / (precision_denominator + recall_denominator - intersection) if (precision_denominator + recall_denominator - intersection) > 0 else 0
 
