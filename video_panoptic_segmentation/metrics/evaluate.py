@@ -29,7 +29,7 @@ def get_mask_boundary_metrics(anno_mask, pred_mask, device='cpu'):
 
     return mask_metrics, boundary_metrics
 
-def evaluate_metrics(in_rle_dir, out_rgb_dir, ref_path, ref_split, device='cpu', i=0, n_proc=0):
+def evaluate_metrics(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0, n_proc=0):
     
     dataset = MVPDataset(root=ref_path,
                         split=ref_split,
@@ -38,12 +38,8 @@ def evaluate_metrics(in_rle_dir, out_rgb_dir, ref_path, ref_split, device='cpu',
         is_per_proc = math.ceil(len(dataset)/n_proc)
         i_start = i*is_per_proc
         i_end = min((i+1)*is_per_proc, len(dataset))
-        import random
-        random.seed(i)
         inds = list(range(i_start, i_end))
-        random.shuffle(inds)
-        print(inds[:10])
-        dataset = torch.utils.data.Subset(dataset, inds[:10])
+        dataset = torch.utils.data.Subset(dataset, inds)
         print(len(dataset))
         
     results = {}
@@ -51,9 +47,9 @@ def evaluate_metrics(in_rle_dir, out_rgb_dir, ref_path, ref_split, device='cpu',
         sample = next(iter(video))
         video_name = sample['meta']['video_name']
         video_rle_dir = os.path.join(in_rle_dir, video_name)
-        # video_rgb_dir = os.path.join(out_rgb_dir, video_name)
-        # os.makedirs(video_rgb_dir, exist_ok=True)
-        results[video_name] = []
+        video_out_dir = os.path.join(out_dir, video_name)
+        os.makedirs(video_out_dir, exist_ok=True)
+        video_results = {}
 
         for sample in tqdm(video, position=1, disable=i!=0):
             sample_result = {}
@@ -91,12 +87,7 @@ def evaluate_metrics(in_rle_dir, out_rgb_dir, ref_path, ref_split, device='cpu',
 
                 mask_metrics, boundary_metrics = get_mask_boundary_metrics(anno_mask, pred_mask, device)
 
-                # sample_result[int(rle_ind)] = {**mask_metrics, **boundary_metrics}
-                sample_result[int(rle_ind)] = {}
-                sample_result[int(rle_ind)]["met"] = [mask_metrics["Mask-Intersection"], mask_metrics["Mask-Precision-Denominator"], mask_metrics["Mask-Recall-Denominator"],
-                                                boundary_metrics["Boundary-Intersection"], boundary_metrics["Boundary-Precision-Denominator"], boundary_metrics["Boundary-Recall-Denominator"]]
-                
-
+                sample_result[int(rle_ind)] = {**mask_metrics, **boundary_metrics}
                 sample_result[int(rle_ind)]["instance_id"] = int(ref_ids[ref_ind])
                 sample_result[int(rle_ind)]["category_id"] = int(sample['meta']['class_dict'][int(ref_ids[ref_ind])])
 
@@ -106,27 +97,24 @@ def evaluate_metrics(in_rle_dir, out_rgb_dir, ref_path, ref_split, device='cpu',
 
                 mask_metrics, boundary_metrics = get_mask_boundary_metrics(anno_mask, pred_mask, device)
 
-                # sample_result[int(rle_ind)] = {**mask_metrics, **boundary_metrics}
-                sample_result[int(rle_ind)] = {}
-                sample_result[int(rle_ind)]["met"] = [mask_metrics["Mask-Intersection"], mask_metrics["Mask-Precision-Denominator"], mask_metrics["Mask-Recall-Denominator"],
-                                                boundary_metrics["Boundary-Intersection"], boundary_metrics["Boundary-Precision-Denominator"], boundary_metrics["Boundary-Recall-Denominator"]]
-            
+                sample_result[int(rle_ind)] = {**mask_metrics, **boundary_metrics}
+                
             for ref_ind in unmatched_ref_ind:
                 anno_mask = ref_segments[ref_ind]
                 pred_mask = torch.zeros_like(anno_mask)
 
                 mask_metrics, boundary_metrics = get_mask_boundary_metrics(anno_mask, pred_mask, device)
                 
-                # sample_result[f'unmatched-anno-{int(ref_ind)}'] = {**mask_metrics, **boundary_metrics}
-                sample_result[f'unmatched-anno-{int(ref_ind)}'] = {}
-                sample_result[f'unmatched-anno-{int(ref_ind)}']["met"] = [mask_metrics["Mask-Intersection"], mask_metrics["Mask-Precision-Denominator"], mask_metrics["Mask-Recall-Denominator"],
-                                                boundary_metrics["Boundary-Intersection"], boundary_metrics["Boundary-Precision-Denominator"], boundary_metrics["Boundary-Recall-Denominator"]]
+                sample_result[f'unmatched-anno-{int(ref_ind)}'] = {**mask_metrics, **boundary_metrics}
                 sample_result[f'unmatched-anno-{int(ref_ind)}']["instance_id"] = int(ref_ids[ref_ind])
                 sample_result[f'unmatched-anno-{int(ref_ind)}']["category_id"] = int(sample['meta']['class_dict'][int(ref_ids[ref_ind])])
 
-            results[video_name].append(sample_result)
-        
-    return results
+            video_results[window_stamp] = sample_result
+
+        with open(os.path.join(video_out_dir, "metrics.json"),"w") as fl:
+            json.dump(video_results, fl)
+            
+
 
 
 
@@ -144,11 +132,9 @@ if __name__=='__main__':
     
 
     in_rle_dir = os.path.join(args.rle_path, 'panomasksRLE')
-    out_rgb_dir = os.path.join(args.rle_path, 'panomasksRGB')
+    out_rgb_dir = os.path.join(args.rle_path, 'metricsJSON')
     
 
-    
-    
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     # rle_2_rgb(in_rle_dir, out_rgb_dir, MVPd, device=device)
@@ -156,12 +142,14 @@ if __name__=='__main__':
     n_proc = 2
     mp.set_start_method('spawn', force=True)
     pool = mp.Pool(processes = n_proc)
-    results = pool.starmap(evaluate_metrics, [[in_rle_dir, out_rgb_dir, args.ref_path, args.ref_split, device, i, n_proc] for i in range(n_proc)])
+    pool.starmap(evaluate_metrics, [[in_rle_dir, out_rgb_dir, args.ref_path, args.ref_split, device, i, n_proc] for i in range(n_proc)])
 
-    result_dict = {}
-    for res in results:
-        result_dict.update(res)
+    # result_dict = {}
+    # for res in results:
+    #     result_dict.update(res)
     # result_dict = evaluate_metrics(in_rle_dir, out_rgb_dir, args.ref_path, args.ref_split, device=device)
 
-    with open(os.path.join(args.rle_path, "metrics_sam_automatic.json"),"w") as fl:
-        json.dump(result_dict, fl)
+    # with open(os.path.join(args.rle_path, "metrics_sam_automatic.json"),"w") as fl:
+    #     json.dump(result_dict, fl)
+
+    # python video_panoptic_segmentation/metrics/evaluate.py --rle_path ./video_panoptic_segmentation/models/segment-anything/results/evaluate_pretrained_sam_automatic/ --ref_path ./video_panoptic_segmentation/datasets/MVPd/MVPd/ --ref_split val
