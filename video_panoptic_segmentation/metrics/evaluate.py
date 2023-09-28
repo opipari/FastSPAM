@@ -1,10 +1,12 @@
 import os
 import json
+import math
 import argparse
 
 from tqdm import tqdm
 
 import torch
+import torch.multiprocessing as mp
 import numpy as np
 
 from panopticapi.utils import id2rgb
@@ -16,7 +18,7 @@ from video_panoptic_segmentation.metrics import utils as metric_utils
 
 
 
-def get_mask_boundary_metrics(anno_mask, pred_mask):
+def get_mask_boundary_metrics(anno_mask, pred_mask, device='cpu'):
     anno_boundary = metric_utils.mask_to_boundary(anno_mask.cpu().numpy().astype(np.uint8), dilation_ratio=0.002)
     pred_boundary = metric_utils.mask_to_boundary(pred_mask.cpu().numpy().astype(np.uint8), dilation_ratio=0.002)
     anno_boundary = torch.as_tensor(anno_boundary > 0, device=device)
@@ -27,9 +29,25 @@ def get_mask_boundary_metrics(anno_mask, pred_mask):
 
     return mask_metrics, boundary_metrics
 
-def evaluate_metrics(in_rle_dir, out_rgb_dir, dataset, device='cpu'):
+def evaluate_metrics(in_rle_dir, out_rgb_dir, ref_path, ref_split, device='cpu', i=0, n_proc=0):
+    
+    dataset = MVPDataset(root=ref_path,
+                        split=ref_split,
+                        window_size = 0)
+    if n_proc>0:
+        is_per_proc = math.ceil(len(dataset)/n_proc)
+        i_start = i*is_per_proc
+        i_end = min((i+1)*is_per_proc, len(dataset))
+        import random
+        random.seed(i)
+        inds = list(range(i_start, i_end))
+        random.shuffle(inds)
+        print(inds[:10])
+        dataset = torch.utils.data.Subset(dataset, inds[:10])
+        print(len(dataset))
+        
     results = {}
-    for video in tqdm(dataset):
+    for video in tqdm(dataset, position=0, disable=i!=0):
         sample = next(iter(video))
         video_name = sample['meta']['video_name']
         video_rle_dir = os.path.join(in_rle_dir, video_name)
@@ -37,7 +55,7 @@ def evaluate_metrics(in_rle_dir, out_rgb_dir, dataset, device='cpu'):
         # os.makedirs(video_rgb_dir, exist_ok=True)
         results[video_name] = []
 
-        for sample in video:
+        for sample in tqdm(video, position=1, disable=i!=0):
             sample_result = {}
             window_stamp = '.'.join(next(iter(sample['meta']['window_names'])).split('.')[:-1])
             rle_file = os.path.join(video_rle_dir, window_stamp+'.pt')
@@ -71,9 +89,14 @@ def evaluate_metrics(in_rle_dir, out_rgb_dir, dataset, device='cpu'):
             for ref_ind, rle_ind in zip(matched_ref_ind, matched_rle_ind):
                 anno_mask, pred_mask = ref_segments[ref_ind], rle_segments[rle_ind]
 
-                mask_metrics, boundary_metrics = get_mask_boundary_metrics(anno_mask, pred_mask)
+                mask_metrics, boundary_metrics = get_mask_boundary_metrics(anno_mask, pred_mask, device)
 
-                sample_result[int(rle_ind)] = {**mask_metrics, **boundary_metrics}
+                # sample_result[int(rle_ind)] = {**mask_metrics, **boundary_metrics}
+                sample_result[int(rle_ind)] = {}
+                sample_result[int(rle_ind)]["met"] = [mask_metrics["Mask-Intersection"], mask_metrics["Mask-Precision-Denominator"], mask_metrics["Mask-Recall-Denominator"],
+                                                boundary_metrics["Boundary-Intersection"], boundary_metrics["Boundary-Precision-Denominator"], boundary_metrics["Boundary-Recall-Denominator"]]
+                
+
                 sample_result[int(rle_ind)]["instance_id"] = int(ref_ids[ref_ind])
                 sample_result[int(rle_ind)]["category_id"] = int(sample['meta']['class_dict'][int(ref_ids[ref_ind])])
 
@@ -81,85 +104,29 @@ def evaluate_metrics(in_rle_dir, out_rgb_dir, dataset, device='cpu'):
                 pred_mask = rle_segments[rle_ind]
                 anno_mask = torch.zeros_like(pred_mask)
 
-                mask_metrics, boundary_metrics = get_mask_boundary_metrics(anno_mask, pred_mask)
+                mask_metrics, boundary_metrics = get_mask_boundary_metrics(anno_mask, pred_mask, device)
 
-                sample_result[int(rle_ind)] = {**mask_metrics, **boundary_metrics}
+                # sample_result[int(rle_ind)] = {**mask_metrics, **boundary_metrics}
+                sample_result[int(rle_ind)] = {}
+                sample_result[int(rle_ind)]["met"] = [mask_metrics["Mask-Intersection"], mask_metrics["Mask-Precision-Denominator"], mask_metrics["Mask-Recall-Denominator"],
+                                                boundary_metrics["Boundary-Intersection"], boundary_metrics["Boundary-Precision-Denominator"], boundary_metrics["Boundary-Recall-Denominator"]]
             
             for ref_ind in unmatched_ref_ind:
                 anno_mask = ref_segments[ref_ind]
                 pred_mask = torch.zeros_like(anno_mask)
 
-                mask_metrics, boundary_metrics = get_mask_boundary_metrics(anno_mask, pred_mask)
+                mask_metrics, boundary_metrics = get_mask_boundary_metrics(anno_mask, pred_mask, device)
                 
-                sample_result[f'unmatched-anno-{int(ref_ind)}'] = {**mask_metrics, **boundary_metrics}
+                # sample_result[f'unmatched-anno-{int(ref_ind)}'] = {**mask_metrics, **boundary_metrics}
+                sample_result[f'unmatched-anno-{int(ref_ind)}'] = {}
+                sample_result[f'unmatched-anno-{int(ref_ind)}']["met"] = [mask_metrics["Mask-Intersection"], mask_metrics["Mask-Precision-Denominator"], mask_metrics["Mask-Recall-Denominator"],
+                                                boundary_metrics["Boundary-Intersection"], boundary_metrics["Boundary-Precision-Denominator"], boundary_metrics["Boundary-Recall-Denominator"]]
                 sample_result[f'unmatched-anno-{int(ref_ind)}']["instance_id"] = int(ref_ids[ref_ind])
                 sample_result[f'unmatched-anno-{int(ref_ind)}']["category_id"] = int(sample['meta']['class_dict'][int(ref_ids[ref_ind])])
 
             results[video_name].append(sample_result)
-
+        
     return results
-
-# def evaluate_metrics(anno_dir_seqs, pred_dir_seqs, dataset):
-#     anno_dir, anno_sequences = anno_dir_seqs
-#     pred_dir, pred_sequences = pred_dir_seqs
-
-#     assert len(anno_sequences)==len(pred_sequences)
-#     assert set(anno_sequences)==set(pred_sequences)
-
-#     results = {}
-
-#     for sequence in tqdm(anno_sequences):
-#         annotations = next(v for v in dataset["annotations"] if v["video_name"]==sequence)["annotations"]
-
-#         results[sequence] = []
-
-#         for anno in annotations:
-
-#             anno_result = {}
-
-#             file_path = os.path.join(sequence, anno["file_name"])
-
-#             anno_file_path = os.path.join(anno_dir, file_path)
-#             pred_file_path = os.path.join(pred_dir, file_path)
-
-#             if not (os.path.isfile(anno_file_path) and os.path.isfile(pred_file_path)):
-#                 continue
-
-#             anno_arr = metric_utils.read_panomaskRGB(anno_file_path)
-#             pred_arr = metric_utils.read_panomaskRGB(pred_file_path)
-
-#             assert set(np.unique(anno_arr)).difference(set([segment["id"] for segment in anno["segments_info"]]))=={0}
-            
-
-#             for segment_id in np.sort(np.unique(anno_arr)):
-#                 if segment_id!=0:
-#                     segment = next(seg for seg in anno["segments_info"] if seg["id"]==segment_id)
-#                     category_id = segment["category_id"]
-#                 else:
-#                     category_id = 0
-
-
-#                 anno_mask = anno_arr==segment_id
-#                 pred_mask = pred_arr==segment_id
-
-                
-                
-#                 anno_boundary = metric_utils.mask_to_boundary(anno_mask.astype(np.uint8), dilation_ratio=0.002)
-#                 pred_boundary = metric_utils.mask_to_boundary(pred_mask.astype(np.uint8), dilation_ratio=0.002)
-#                 anno_boundary = anno_boundary > 0
-#                 pred_boundary = pred_boundary > 0
-
-
-#                 mask_metrics = {"Mask-"+key: value for key,value in metric_utils.segment_metrics(anno_mask, pred_mask).items()}
-#                 boundary_metrics = {"Boundary-"+key: value for key,value in metric_utils.segment_metrics(anno_boundary, pred_boundary).items()}
-
-#                 anno_result[int(segment_id)] = {**mask_metrics, **boundary_metrics}
-#                 anno_result[int(segment_id)]["category_id"] = int(category_id)
-
-#             results[sequence].append(anno_result)
-
-
-#     return results
 
 
 
@@ -180,16 +147,21 @@ if __name__=='__main__':
     out_rgb_dir = os.path.join(args.rle_path, 'panomasksRGB')
     
 
-    MVPd = MVPDataset(root=args.ref_path,
-                        split=args.ref_split,
-                        window_size = 0)
+    
     
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     # rle_2_rgb(in_rle_dir, out_rgb_dir, MVPd, device=device)
 
+    n_proc = 2
+    mp.set_start_method('spawn', force=True)
+    pool = mp.Pool(processes = n_proc)
+    results = pool.starmap(evaluate_metrics, [[in_rle_dir, out_rgb_dir, args.ref_path, args.ref_split, device, i, n_proc] for i in range(n_proc)])
 
-    result_dict = evaluate_metrics(in_rle_dir, out_rgb_dir, MVPd, device=device)
+    result_dict = {}
+    for res in results:
+        result_dict.update(res)
+    # result_dict = evaluate_metrics(in_rle_dir, out_rgb_dir, args.ref_path, args.ref_split, device=device)
 
-    with open(os.path.join(args.pred_path, "metrics.json"),"w") as fl:
+    with open(os.path.join(args.rle_path, "metrics_sam_automatic.json"),"w") as fl:
         json.dump(result_dict, fl)
