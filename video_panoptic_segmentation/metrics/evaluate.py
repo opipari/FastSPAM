@@ -139,7 +139,7 @@ if __name__=='__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     # rle_2_rgb(in_rle_dir, out_rgb_dir, MVPd, device=device)
 
-    n_proc = 2
+    n_proc = 4
     mp.set_start_method('spawn', force=True)
     pool = mp.Pool(processes = n_proc)
     pool.starmap(evaluate_metrics, [[in_rle_dir, out_rgb_dir, args.ref_path, args.ref_split, device, i, n_proc] for i in range(n_proc)])
