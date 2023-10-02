@@ -50,6 +50,9 @@ def evaluate_metrics(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0
         video_out_dir = os.path.join(out_dir, video_name)
         os.makedirs(video_out_dir, exist_ok=True)
         video_results = {}
+        
+        if os.path.exists(os.path.join(video_out_dir, "metrics.json")):
+            continue
 
         for sample in tqdm(video, position=1, disable=i!=0):
             sample_result = {}
@@ -57,15 +60,21 @@ def evaluate_metrics(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0
             rle_file = os.path.join(video_rle_dir, window_stamp+'.pt')
             # rgb_file = os.path.join(video_rgb_dir, window_stamp+'.png')
 
-            rle_segments = metric_utils.read_panomaskRLE(rle_file)
-            rle_segments = rle_segments.to(dtype=torch.bool).to(device=device)
-
             ref_arr = sample['label']['mask'][0]
             ref_segments, ref_ids = label_to_one_hot(ref_arr, filter_void=True)            
             ref_segments = torch.as_tensor(ref_segments, device=device, dtype=torch.bool)
 
-            # Match rle segments to reference segments, then merge unmatched rle segments
-            (matched_ref_ind, unmatched_ref_ind), (matched_rle_ind, unmatched_rle_ind), _ = metric_utils.match_segments(ref_segments, rle_segments)
+            rle_segments = metric_utils.read_panomaskRLE(rle_file)
+            if len(rle_segments)==0:
+                rle_segments = torch.zeros((1,)+ref_segments.shape[1:]).to(dtype=torch.bool).to(device=device)
+
+                matched_ref_ind, unmatched_ref_ind = np.array([]), np.arange(ref_segments.shape[0])
+                matched_rle_ind, unmatched_rle_ind = np.array([]), np.array([])
+            else:
+                rle_segments = rle_segments.to(dtype=torch.bool).to(device=device)
+
+                # Match rle segments to reference segments, then merge unmatched rle segments
+                (matched_ref_ind, unmatched_ref_ind), (matched_rle_ind, unmatched_rle_ind), _ = metric_utils.match_segments(ref_segments, rle_segments)
             
             # ref_rgbs = np.array(id2rgb(ref_ids))
 
@@ -139,10 +148,13 @@ if __name__=='__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     # rle_2_rgb(in_rle_dir, out_rgb_dir, MVPd, device=device)
 
-    n_proc = 4
+    n_proc = 1
     mp.set_start_method('spawn', force=True)
     pool = mp.Pool(processes = n_proc)
     pool.starmap(evaluate_metrics, [[in_rle_dir, out_rgb_dir, args.ref_path, args.ref_split, device, i, n_proc] for i in range(n_proc)])
+
+    # evaluate_metrics(in_rle_dir, out_rgb_dir, args.ref_path, args.ref_split, device, 0, 0)
+
 
     # result_dict = {}
     # for res in results:
