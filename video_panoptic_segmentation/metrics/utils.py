@@ -26,8 +26,11 @@ def read_panomaskRGB(
 def read_panomaskRLE(
     pt_file_path: str
 ) -> torch.Tensor:
-    return torch.stack([torch.as_tensor(mask_utils.decode(rle),dtype=torch.int) for rle in torch.load(pt_file_path,map_location='cpu')['coco_rle']])
-
+    mask_list = [torch.as_tensor(mask_utils.decode(rle),dtype=torch.int) for rle in torch.load(pt_file_path,map_location='cpu')['coco_rle']]
+    if len(mask_list)>0:
+        return torch.stack(mask_list)
+    else:
+        return mask_list
 
 def alpha_compose(
     nsrc,
