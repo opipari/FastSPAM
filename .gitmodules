@@ -30,3 +30,6 @@
 [submodule "video_panoptic_segmentation/models/Video-K-Net/Video-K-Net"]
 	path = video_panoptic_segmentation/models/Video-K-Net/Video-K-Net
 	url = https://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@github.com/opipari/Video-K-Net.git
+[submodule "video_panoptic_segmentation/models/FastSAM/FastSAM"]
+	path = video_panoptic_segmentation/models/FastSAM/FastSAM
+	url = https://github.com/CASIA-IVA-Lab/FastSAM.git

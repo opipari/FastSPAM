@@ -125,6 +125,17 @@ python3.8 -m venv ./envs/video-k-net && \
 ```
 
 
+#### FastSAM
+
+Setup environments:
+
+```
+python3.8 -m venv ./envs/FastSAM && \
+  source ./envs/FastSAM/bin/activate && \
+    pip install -r ./requirements/fastsam.txt && \
+      deactivate
+```
+
 
 
 
