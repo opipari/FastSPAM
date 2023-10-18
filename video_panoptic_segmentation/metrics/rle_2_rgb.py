@@ -16,11 +16,13 @@ from video_panoptic_segmentation.metrics import utils as metric_utils
 
 
 
-def rle_2_rgb(in_rle_dir, out_rgb_dir, dataset, device='cpu'):
+def rle_2_rgb(in_rle_dir, out_rgb_dir, dataset, v_name=None, device='cpu'):
     
     for video in dataset:
         sample = next(iter(video))
         video_name = sample['meta']['video_name']
+        if v_name is not None and video_name!=v_name:
+            continue
         video_rle_dir = os.path.join(in_rle_dir, video_name)
         video_rgb_dir = os.path.join(out_rgb_dir, video_name)
         os.makedirs(video_rgb_dir, exist_ok=True)
@@ -31,6 +33,8 @@ def rle_2_rgb(in_rle_dir, out_rgb_dir, dataset, device='cpu'):
             rgb_file = os.path.join(video_rgb_dir, window_stamp+'.png')
 
             rle_segments = metric_utils.read_panomaskRLE(rle_file)
+            if len(rle_segments)==0:
+                rle_segments = torch.zeros((1,480,640))
             rle_segments = rle_segments.to(dtype=torch.bool).to(device=device)
 
             ref_arr = sample['label']['mask'][0]
@@ -63,6 +67,7 @@ if __name__=='__main__':
     parser.add_argument('--rle_path',type=str, required=True) 
     parser.add_argument('--ref_path',type=str, required=True)
     parser.add_argument('--ref_split',type=str, required=True)
+    parser.add_argument('--v_name', type=str, default=None)
     args = parser.parse_args()
     
 
@@ -76,5 +81,5 @@ if __name__=='__main__':
     
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    rle_2_rgb(in_rle_dir, out_rgb_dir, MVPd, device=device)
+    rle_2_rgb(in_rle_dir, out_rgb_dir, MVPd, v_name=args.v_name, device=device)
 
