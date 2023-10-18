@@ -2,7 +2,7 @@
     "experiment_name": "evaluate_pretrained_fastsam_automatic",
     "dataset": {
         "root": "./video_panoptic_segmentation/datasets/MVPd/MVPd/",
-        "split": "val",
+        "split": "test",
         "window_size": 0
     },
     "model": {

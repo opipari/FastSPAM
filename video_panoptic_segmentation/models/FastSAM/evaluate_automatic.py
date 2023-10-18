@@ -46,20 +46,25 @@ def evaluation_process(index, nprocs, config, output_dir):
         dataset = torch.utils.data.Subset(dataset, inds)
         print(len(dataset))
 
-    print("Within evaluation process")
+    # print("Within evaluation process")
     with torch.no_grad():
-        for vi, video in enumerate(dataset):
-            vitime = time.time()
+        for vi, video in enumerate(tqdm(dataset, position=0, disable=index!=0)):
+            # vitime = time.time()
             first_sample = next(iter(video))
             video_name = first_sample['meta']['video_name']
             out_dir = os.path.join(output_dir, config['experiment_name'], 'panomasksRLE', video_name)
             os.makedirs(out_dir, exist_ok=True)
 
-            for index, sample in enumerate(video):
+
+
+            for sample in tqdm(video, position=1, disable=index!=0):
                 # Load metadata
                 video_name = sample['meta']['video_name']
                 out_dir = os.path.join(output_dir, config['experiment_name'], 'panomasksRLE', video_name)
                 out_file = sample['meta']['window_names'][0].split('.')[0]+'.pt'
+
+                if os.path.exists(os.path.join(out_dir, out_file)):
+                    continue
 
                 # Run SAM
                 image = np.array(sample['observation']['image'][0]).astype(np.uint8) # 480 x 640 x 3
@@ -76,12 +81,14 @@ def evaluation_process(index, nprocs, config, output_dir):
                     )
                 prompt_process = FastSAMPrompt(input, everything_results, device=0)
                 ann = prompt_process.everything_prompt()
-
-                coco_rle = [metric_utils.coco_encode_rle(rle) for rle in metric_utils.mask_to_rle_pytorch(ann.to(torch.bool))]
+                if len(ann)>0:
+                    ann = ann.to(torch.bool)
+                    ann = metric_utils.mask_to_rle_pytorch(ann)
+                coco_rle = [metric_utils.coco_encode_rle(rle) for rle in ann]
                 torch.save({"coco_rle":coco_rle}, os.path.join(out_dir, out_file))
 
 
-            print(f"Finished processing {vi}/{len(dataset)}: ", video_name, f"in {time.time()-vitime}s", flush=True)
+            # print(f"Finished processing {vi}/{len(dataset)}: ", video_name, f"in {time.time()-vitime}s", flush=True)
 
 
 if __name__ == "__main__":
