@@ -196,7 +196,8 @@ class SAMReprojection(nn.Module):
 
     def automatic_generate(self, image):
         pred = self.automatic_mask_generator.generate(image)
-        pred = {"masks": torch.stack([torch.as_tensor(pr["segmentation"]) for pr in pred], axis=0)}
+        pred = {"masks": torch.stack([torch.as_tensor(pr["segmentation"]) for pr in pred], axis=0),
+                "iou_preds": torch.stack([torch.as_tensor(pr["predicted_iou"]) for pr in pred], axis=0)}
         return pred
 
     def forward(
@@ -231,12 +232,12 @@ class SAMReprojection(nn.Module):
 
             # Serialize predictions and store in MaskData
             pred = MaskData(
-                masks=rendered_mem.flatten(0, 1)
+                masks=rendered_mem.flatten(0, 1),
+                iou_preds=self.memory_iou
             )
             pred["boxes"] = batched_mask_to_box(pred["masks"])
 
             if self.use_fill:
-                pred["predicted_iou"] = iou_preds=self.memory_iou.flatten(0, 1)
                 fill_rgn_area = fill_rgn.sum().item()
                 if fill_rgn_area>0:
                     if self.fill_sampling=="proportional":
@@ -250,7 +251,7 @@ class SAMReprojection(nn.Module):
 
                     merged_pred_fill = MaskData(
                         masks=torch.cat([pred["masks"], fill["masks"]],axis=0),
-                        iou_preds=torch.cat([pred["iou_preds"], fill["iou_preds"]],axis=0),
+                        iou_preds=torch.cat([pred["iou_preds"].to(fill["iou_preds"].device), fill["iou_preds"]],axis=0),
                         boxes=torch.cat([pred["boxes"], fill["boxes"]],axis=0).float(),
                     )
 
@@ -266,7 +267,7 @@ class SAMReprojection(nn.Module):
             else:
                 if fill_rgn.sum().item()==0:
                     pred = self.automatic_generate(image)
-        
+
         xy_depth = get_xy_depth(depth, from_ndc=True).permute(0,2,3,1).reshape(1,-1,3)
         xyz = camera.unproject_points(xy_depth, from_ndc=True, world_coordinates=True)
         seg = pred["masks"].permute(1,2,0).flatten(0,1).unsqueeze(0).to(dtype=xyz.dtype).to(device=xyz.device)

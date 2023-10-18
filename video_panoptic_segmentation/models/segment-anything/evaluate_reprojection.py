@@ -22,7 +22,6 @@ from video_panoptic_segmentation.metrics import utils as metric_utils
 def get_dataset(dataset_config):
     return MVPDataset(root=os.path.join(dataset_config['root']),
                             split=dataset_config['split'],
-                            training=dataset_config['training'],
                             window_size = dataset_config['window_size'])
     
 def get_model(model_config, device):
