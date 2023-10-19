@@ -24,12 +24,12 @@ def get_mask_boundary_metrics(anno_mask, pred_mask, device='cpu'):
     anno_boundary = torch.as_tensor(anno_boundary > 0, device=device)
     pred_boundary = torch.as_tensor(pred_boundary > 0, device=device)
 
-    mask_metrics = {"Mask-"+key: value for key,value in metric_utils.segment_metrics(anno_mask, pred_mask).items()}
-    boundary_metrics = {"Boundary-"+key: value for key,value in metric_utils.segment_metrics(anno_boundary, pred_boundary).items()}
+    mask_metrics = metric_utils.segment_metrics(anno_mask, pred_mask).items()
+    boundary_metrics = metric_utils.segment_metrics(anno_boundary, pred_boundary).items()
 
     return mask_metrics, boundary_metrics
 
-def evaluate_metrics(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0, n_proc=0):
+def evaluate_images(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0, n_proc=0):
     
     dataset = MVPDataset(root=ref_path,
                         split=ref_split,
@@ -51,14 +51,16 @@ def evaluate_metrics(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0
         os.makedirs(video_out_dir, exist_ok=True)
         video_results = {}
         
-        if os.path.exists(os.path.join(video_out_dir, "metrics.json")):
+        if os.path.exists(os.path.join(video_out_dir, "metrics_image.json")):
             continue
 
         for sample in tqdm(video, position=1, disable=i!=0):
-            sample_result = {}
+            sample_result = []
             window_stamp = '.'.join(next(iter(sample['meta']['window_names'])).split('.')[:-1])
             rle_file = os.path.join(video_rle_dir, window_stamp+'.pt')
             # rgb_file = os.path.join(video_rgb_dir, window_stamp+'.png')
+
+            ref_zero_shot = sample['meta']['zero_shot_dict']
 
             ref_arr = sample['label']['mask'][0]
             ref_segments, ref_ids = label_to_one_hot(ref_arr, filter_void=True)            
@@ -96,9 +98,13 @@ def evaluate_metrics(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0
 
                 mask_metrics, boundary_metrics = get_mask_boundary_metrics(anno_mask, pred_mask, device)
 
-                sample_result[int(rle_ind)] = {**mask_metrics, **boundary_metrics}
-                sample_result[int(rle_ind)]["instance_id"] = int(ref_ids[ref_ind])
-                sample_result[int(rle_ind)]["category_id"] = int(sample['meta']['class_dict'][int(ref_ids[ref_ind])])
+                res_dict = {}
+                res_dict["Match"] = "TP"
+                res_dict["Mask"] = mask_metrics
+                res_dict["Boundary"] = boundary_metrics
+                res_dict["zero-shot"] = ref_zero_shot[ref_ids[ref_ind]]
+                res_dict["category_id"] = int(sample['meta']['class_dict'][int(ref_ids[ref_ind])])
+                sample_result.append(res_dict)
 
             for rle_ind in unmatched_rle_ind:
                 pred_mask = rle_segments[rle_ind]
@@ -106,7 +112,11 @@ def evaluate_metrics(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0
 
                 mask_metrics, boundary_metrics = get_mask_boundary_metrics(anno_mask, pred_mask, device)
 
-                sample_result[int(rle_ind)] = {**mask_metrics, **boundary_metrics}
+                res_dict = {}
+                res_dict["Match"] = "FP"
+                res_dict["Mask"] = mask_metrics
+                res_dict["Boundary"] = boundary_metrics
+                sample_result.append(res_dict)
                 
             for ref_ind in unmatched_ref_ind:
                 anno_mask = ref_segments[ref_ind]
@@ -114,13 +124,17 @@ def evaluate_metrics(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0
 
                 mask_metrics, boundary_metrics = get_mask_boundary_metrics(anno_mask, pred_mask, device)
                 
-                sample_result[f'unmatched-anno-{int(ref_ind)}'] = {**mask_metrics, **boundary_metrics}
-                sample_result[f'unmatched-anno-{int(ref_ind)}']["instance_id"] = int(ref_ids[ref_ind])
-                sample_result[f'unmatched-anno-{int(ref_ind)}']["category_id"] = int(sample['meta']['class_dict'][int(ref_ids[ref_ind])])
+                res_dict = {}
+                res_dict["Match"] = "FN"
+                res_dict["Mask"] = mask_metrics
+                res_dict["Boundary"] = boundary_metrics
+                res_dict["zero-shot"] = ref_zero_shot[ref_ids[ref_ind]]
+                res_dict["category_id"] = int(sample['meta']['class_dict'][int(ref_ids[ref_ind])])
+                sample_result.append(res_dict)
 
             video_results[window_stamp] = sample_result
 
-        with open(os.path.join(video_out_dir, "metrics.json"),"w") as fl:
+        with open(os.path.join(video_out_dir, "metrics_image.json"),"w") as fl:
             json.dump(video_results, fl)
             
 
@@ -151,7 +165,7 @@ if __name__=='__main__':
     n_proc = 1
     mp.set_start_method('spawn', force=True)
     pool = mp.Pool(processes = n_proc)
-    pool.starmap(evaluate_metrics, [[in_rle_dir, out_rgb_dir, args.ref_path, args.ref_split, device, i, n_proc] for i in range(n_proc)])
+    pool.starmap(evaluate_images, [[in_rle_dir, out_rgb_dir, args.ref_path, args.ref_split, device, i, n_proc] for i in range(n_proc)])
 
     # evaluate_metrics(in_rle_dir, out_rgb_dir, args.ref_path, args.ref_split, device, 0, 0)
 
