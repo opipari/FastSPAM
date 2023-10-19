@@ -24,8 +24,8 @@ def get_mask_boundary_metrics(anno_mask, pred_mask, device='cpu'):
     anno_boundary = torch.as_tensor(anno_boundary > 0, device=device)
     pred_boundary = torch.as_tensor(pred_boundary > 0, device=device)
 
-    mask_metrics = metric_utils.segment_metrics(anno_mask, pred_mask).items()
-    boundary_metrics = metric_utils.segment_metrics(anno_boundary, pred_boundary).items()
+    mask_metrics = metric_utils.segment_metrics(anno_mask, pred_mask)
+    boundary_metrics = metric_utils.segment_metrics(anno_boundary, pred_boundary)
 
     return mask_metrics, boundary_metrics
 
@@ -48,7 +48,6 @@ def evaluate_images(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0,
         video_name = sample['meta']['video_name']
         video_rle_dir = os.path.join(in_rle_dir, video_name)
         video_out_dir = os.path.join(out_dir, video_name)
-        os.makedirs(video_out_dir, exist_ok=True)
         video_results = {}
         
         if os.path.exists(os.path.join(video_out_dir, "metrics_image.json")):
@@ -134,6 +133,7 @@ def evaluate_images(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0,
 
             video_results[window_stamp] = sample_result
 
+        os.makedirs(video_out_dir, exist_ok=True)
         with open(os.path.join(video_out_dir, "metrics_image.json"),"w") as fl:
             json.dump(video_results, fl)
             
