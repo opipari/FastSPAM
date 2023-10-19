@@ -116,7 +116,7 @@ def get_tubes(rle_segments, window_size, segment_ids=None, cache=None, device='c
     return window_size, tubes, tube_ids, prev_segments, prev_segments_map
 
 
-def evaluate_iVPQ(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0, n_proc=0, k_list=[1,5,10,15], step_size=5):
+def evaluate_iVPQ_v2(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0, n_proc=0, k_list=[1,5,10,15], step_size=15):
     
     dataset = MVPDataset(root=ref_path,
                         split=ref_split,
@@ -135,7 +135,7 @@ def evaluate_iVPQ(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0, n
         video_rle_dir = os.path.join(in_rle_dir, video_name)
         video_out_dir = os.path.join(out_dir, video_name)
         
-        if os.path.exists(os.path.join(video_out_dir, "metrics.json")):
+        if os.path.exists(os.path.join(video_out_dir, "metrics_iVPQ_v2.json")):
             continue
 
         
@@ -200,19 +200,110 @@ def evaluate_iVPQ(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0, n
                         video_results["non-zero-shot"][k]["FN"] += 1
                 
         os.makedirs(video_out_dir, exist_ok=True)
-        with open(os.path.join(video_out_dir, "metrics_iVPQ.json"),"w") as fl:
+        with open(os.path.join(video_out_dir, "metrics_iVPQ_v2.json"),"w") as fl:
             json.dump(video_results, fl)
 
 
 
 
-def summarize_iVPQ(metric_root, k_list=['1','5','10','15']):
+def evaluate_iVPQ_v1(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0, n_proc=0, k_list=[1,5,10,15], step_size=15):
+    
+    dataset = MVPDataset(root=ref_path,
+                        split=ref_split,
+                        window_size = 0)
+    if n_proc>0:
+        is_per_proc = math.ceil(len(dataset)/n_proc)
+        i_start = i*is_per_proc
+        i_end = min((i+1)*is_per_proc, len(dataset))
+        inds = list(range(i_start, i_end))
+        dataset = torch.utils.data.Subset(dataset, inds)
+        print(len(dataset))
+        
+    for video in tqdm(dataset, position=0, disable=i!=0):
+        sample = next(iter(video))
+        video_name = sample['meta']['video_name']
+        video_rle_dir = os.path.join(in_rle_dir, video_name)
+        video_out_dir = os.path.join(out_dir, video_name)
+        
+        if os.path.exists(os.path.join(video_out_dir, "metrics_iVPQ_v1.json")):
+            continue
+
+        
+        video_results = {
+                        "zero-shot": {k: {"IOU": 0, "TP": 0, "FP": 0, "FN": 0} for k in k_list},
+                        "non-zero-shot": {k: {"IOU": 0, "TP": 0, "FP": 0, "FN": 0} for k in k_list}
+                        }
+        window_size = max(k_list)
+        
+
+        for v_idx in tqdm(range(0, len(video)-window_size, step_size), position=1, disable=i!=0):
+
+            ref_arr, ref_names, ref_zero_shot = collect_ref_window(video, start_idx=v_idx, window_size=window_size)
+            ref_segments, ref_ids = label_to_one_hot(np.stack(ref_arr), filter_void=True)
+
+            rle_segments = collect_rle_window(video_rle_dir, ref_names)
+
+
+            for ki, k in enumerate(k_list):
+                if ki==0:
+                    rle_tube_cache = get_tubes(rle_segments, window_size=k, device=device)
+                else:
+                    rle_tube_cache = get_tubes(rle_segments, window_size=k, cache=rle_tube_cache, device=device)
+                
+                ref_tubes, ref_tubes_ids = ref_segments[:k], ref_ids
+                non_empty_ref = np.sum(ref_tubes, axis=(0,2,3))>0
+                ref_tubes, ref_tubes_ids = ref_tubes[:,non_empty_ref], ref_tubes_ids[non_empty_ref]
+                ref_tubes = torch.as_tensor(ref_tubes, dtype=torch.bool, device=device)
+                
+                rle_tubes = rle_tube_cache[1]
+
+                assert all(ref_id in ref_zero_shot for ref_id in ref_tubes_ids)
+                
+                rle_tubes = rle_tubes.permute(1,0,2,3)
+                rle_tubes = torch.flatten(rle_tubes, start_dim=1,end_dim=2)
+
+                
+                ref_tubes = ref_tubes.permute(1,0,2,3)
+                ref_tubes = torch.flatten(ref_tubes, start_dim=1,end_dim=2)
+
+                
+                (matched_ref_ind, unmatched_ref_ind), (matched_rle_ind, unmatched_rle_ind), _ = metric_utils.match_segments(ref_tubes, rle_tubes)                
+
+                for ref_ind, rle_ind in zip(matched_ref_ind, matched_rle_ind):
+                    anno_mask, pred_mask = ref_tubes[ref_ind], rle_tubes[rle_ind]
+
+                    metrics = metric_utils.segment_metrics(anno_mask, pred_mask)
+                    if ref_zero_shot[ref_tubes_ids[ref_ind]]:
+                        video_results["zero-shot"][k]["IOU"] += metrics["IOU"]
+                        video_results["zero-shot"][k]["TP"] += 1
+                    else:
+                        video_results["non-zero-shot"][k]["IOU"] += metrics["IOU"]
+                        video_results["non-zero-shot"][k]["TP"] += 1
+
+                for rle_ind in unmatched_rle_ind:
+                    video_results["zero-shot"][k]["FP"] += 1
+                    video_results["non-zero-shot"][k]["FP"] += 1
+                    
+                for ref_ind in unmatched_ref_ind:
+                    if ref_zero_shot[ref_tubes_ids[ref_ind]]:
+                        video_results["zero-shot"][k]["FN"] += 1
+                    else:
+                        video_results["non-zero-shot"][k]["FN"] += 1
+
+        os.makedirs(video_out_dir, exist_ok=True)
+        with open(os.path.join(video_out_dir, "metrics_iVPQ_v1.json"),"w") as fl:
+            json.dump(video_results, fl)
+
+
+
+
+def summarize_iVPQ(metric_root, k_list=['1','5','10','15'], fpath="metrics_iVPQ.json"):
     total = {
             "zero-shot": {k: {"sum_iou": 0, "sum_denom": 0} for k in k_list},
             "non-zero-shot": {k: {"sum_iou": 0, "sum_denom": 0} for k in k_list}
             }
     for video_name in os.listdir(metric_root):
-        video_data = json.load(open(os.path.join(metric_root, video_name, "metrics_iVPQ.json"),"r"))
+        video_data = json.load(open(os.path.join(metric_root, video_name, fpath),"r"))
         for zs in ["zero-shot", "non-zero-shot"]:
             for k in k_list:
                 sum_iou = video_data[zs][k]["IOU"]
@@ -251,11 +342,11 @@ if __name__=='__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     # rle_2_rgb(in_rle_dir, out_rgb_dir, MVPd, device=device)
 
-    n_proc = args.n_proc
-    mp.set_start_method('spawn', force=True)
-    pool = mp.Pool(processes = n_proc)
-    pool.starmap(evaluate_iVPQ, [[in_rle_dir, out_json_dir, args.ref_path, args.ref_split, device, i, n_proc] for i in range(n_proc)])
+    # n_proc = args.n_proc
+    # mp.set_start_method('spawn', force=True)
+    # pool = mp.Pool(processes = n_proc)
+    # pool.starmap(evaluate_iVPQ, [[in_rle_dir, out_json_dir, args.ref_path, args.ref_split, device, i, n_proc] for i in range(n_proc)])
 
-    # evaluate_iVPQ(in_rle_dir, out_json_dir, args.ref_path, args.ref_split, device, 0, 0)
+    evaluate_iVPQ_v1(in_rle_dir, out_json_dir, args.ref_path, args.ref_split, device, 0, 0)
 
-    summarize_iVPQ(out_json_dir)
+    summarize_iVPQ(out_json_dir, fpath="metrics_iVPQ_v1.json")
