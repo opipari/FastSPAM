@@ -302,16 +302,23 @@ def summarize_iVPQ(metric_root, k_list=['1','5','10','15'], fpath="metrics_iVPQ.
             "zero-shot": {k: {"sum_iou": 0, "sum_denom": 0} for k in k_list},
             "non-zero-shot": {k: {"sum_iou": 0, "sum_denom": 0} for k in k_list}
             }
+    v_tot = 0
     for video_name in os.listdir(metric_root):
         video_data = json.load(open(os.path.join(metric_root, video_name, fpath),"r"))
         for zs in ["zero-shot", "non-zero-shot"]:
             for k in k_list:
-                sum_iou = video_data[zs][k]["IOU"]
-                denom = video_data[zs][k]["TP"] + (0.5*video_data[zs][k]["FP"]) + (0.5*video_data[zs][k]["FN"])
+                if (video_data[zs][k]["TP"] + video_data[zs][k]["FN"]) > 0:
+                    sum_iou = video_data[zs][k]["IOU"]
+                    denom = video_data[zs][k]["TP"] + (0.5*video_data[zs][k]["FP"]) + (0.5*video_data[zs][k]["FN"])
+                else:
+                    sum_iou = 0
+                    denom = 0
                 total[zs][k]["sum_iou"] += sum_iou
                 total[zs][k]["sum_denom"] += denom
-                print(zs, video_name, k, sum_iou/denom)
+                print(zs, video_name, k, sum_iou/denom if denom>0 else 0)
+        v_tot+=1
         print()
+    print(v_tot)
     for zs in ["zero-shot", "non-zero-shot"]:
         avg=0
         for k in k_list:
@@ -330,6 +337,8 @@ if __name__=='__main__':
     parser.add_argument('--rle_path',type=str, required=True) 
     parser.add_argument('--ref_path',type=str, required=True)
     parser.add_argument('--ref_split',type=str, required=True)
+    parser.add_argument('--compute', action='store_true', default=False)
+    parser.add_argument('--summarize', action='store_true', default=False)
     parser.add_argument('--n_proc', type=int, default=1)
     args = parser.parse_args()
     
@@ -347,6 +356,7 @@ if __name__=='__main__':
     # pool = mp.Pool(processes = n_proc)
     # pool.starmap(evaluate_iVPQ, [[in_rle_dir, out_json_dir, args.ref_path, args.ref_split, device, i, n_proc] for i in range(n_proc)])
 
-    evaluate_iVPQ_v1(in_rle_dir, out_json_dir, args.ref_path, args.ref_split, device, 0, 0)
-
-    summarize_iVPQ(out_json_dir, fpath="metrics_iVPQ_v1.json")
+    if args.compute:
+        evaluate_iVPQ_v1(in_rle_dir, out_json_dir, args.ref_path, args.ref_split, device, 0, 0)
+    if args.summarize:
+        summarize_iVPQ(out_json_dir, fpath="metrics_iVPQ_v1.json")
