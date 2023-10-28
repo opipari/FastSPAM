@@ -5,7 +5,7 @@ OUTPUT_DIR="video_panoptic_segmentation/models/Video-K-Net/Video-K-Net/results"
 git log -1 --oneline > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/repo_state.txt
 
 
-
+pip install --upgrade pip
 pip install Cython==3.0.2
 pip install -r ./requirements/video-k-net/video-k-net.txt
 
