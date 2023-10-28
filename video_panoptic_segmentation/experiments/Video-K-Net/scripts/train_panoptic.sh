@@ -1,6 +1,16 @@
 
+
+
 pip install Cython==3.0.2
 pip install -r ./requirements/video-k-net/video-k-net.txt
+
+
+cd video_panoptic_segmentation/datasets/MVPd
+./data/copy.sh -s train -m -d imagesRGB -d panomasksRGB
+./data/copy.sh -s val -m -d imagesRGB -d panomasksRGB
+
+
+cd ../../..
 
 mkdir ./video_panoptic_segmentation/models/Video-K-Net/Video-K-Net/data/
 ln -s $PWD/video_panoptic_segmentation/datasets/MVPd/MVPd ./video_panoptic_segmentation/models/Video-K-Net/Video-K-Net/data/
