@@ -1,0 +1,12 @@
+#For the data format, please refer to https://docs.ultralytics.com/datasets/segment/coco/
+
+path: '/home/topipari/Desktop/PanopticMemoryClouds/video_panoptic_segmentation/datasets/MVPd/MVPd/yolo_sample_A'
+
+train: ['train',]
+
+val: 'train'
+test: 'train'
+
+# Classes
+names:
+  0: object
