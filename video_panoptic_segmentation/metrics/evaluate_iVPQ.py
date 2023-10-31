@@ -120,6 +120,7 @@ def evaluate_iVPQ_v2(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0
     
     dataset = MVPDataset(root=ref_path,
                         split=ref_split,
+                        use_stuff=False,
                         window_size = 0)
     if n_proc>0:
         is_per_proc = math.ceil(len(dataset)/n_proc)
@@ -210,6 +211,7 @@ def evaluate_iVPQ_v1(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0
     
     dataset = MVPDataset(root=ref_path,
                         split=ref_split,
+                        use_stuff=False,
                         window_size = 0)
     if n_proc>0:
         is_per_proc = math.ceil(len(dataset)/n_proc)

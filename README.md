@@ -136,6 +136,17 @@ python3.8 -m venv ./envs/FastSAM && \
       deactivate
 ```
 
+Training environments:
+
+```
+python3.8 -m venv ./envs/FastSAM-training && \
+  source ./envs/FastSAM-training/bin/activate && \
+    cd video_panoptic_segmentation/models/FastSAM/train_and_validation/ultralytics-d8701b42caeb9f7f1de5fd45e7c3f3cf1724ebb6 && \
+      pip install -e . && \
+        cd .. && \
+      deactivate
+```
+
 
 
 
