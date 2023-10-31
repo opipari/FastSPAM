@@ -300,10 +300,11 @@ def evaluate_iVPQ_v1(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0
 def summarize_iVPQ(metric_root, k_list=['1','5','10','15'], fpath="metrics_iVPQ.json"):
     total = {
             "zero-shot": {k: {"sum_iou": 0, "sum_denom": 0} for k in k_list},
-            "non-zero-shot": {k: {"sum_iou": 0, "sum_denom": 0} for k in k_list}
+            "non-zero-shot": {k: {"sum_iou": 0, "sum_denom": 0} for k in k_list},
+            "aggregate": {k: {"sum_iou": 0, "sum_denom": 0} for k in k_list}
             }
     v_tot = 0
-    for video_name in os.listdir(metric_root):
+    for video_name in sorted(os.listdir(metric_root)):
         video_data = json.load(open(os.path.join(metric_root, video_name, fpath),"r"))
         for zs in ["zero-shot", "non-zero-shot"]:
             for k in k_list:
@@ -315,11 +316,28 @@ def summarize_iVPQ(metric_root, k_list=['1','5','10','15'], fpath="metrics_iVPQ.
                     denom = 0
                 total[zs][k]["sum_iou"] += sum_iou
                 total[zs][k]["sum_denom"] += denom
-                print(zs, video_name, k, sum_iou/denom if denom>0 else 0)
+                # print(zs, video_name, k, sum_iou/denom if denom>0 else 0)
+
+        
+        for k in k_list:
+            if (video_data["zero-shot"][k]["TP"] + video_data["zero-shot"][k]["FN"] \
+                + video_data["non-zero-shot"][k]["TP"] + video_data["non-zero-shot"][k]["FN"]) > 0:
+                sum_iou = video_data["zero-shot"][k]["IOU"] + video_data["non-zero-shot"][k]["IOU"]
+                tp = video_data["zero-shot"][k]["TP"] + video_data["non-zero-shot"][k]["TP"]
+                fn = video_data["zero-shot"][k]["FN"] + video_data["non-zero-shot"][k]["FN"]
+                fp = video_data["zero-shot"][k]["FP"]
+                assert video_data["zero-shot"][k]["FP"]==video_data["non-zero-shot"][k]["FP"]
+                denom = tp + (0.5*fp) + (0.5*fn)
+            else:
+                sum_iou = 0
+                denom = 0
+            total["aggregate"][k]["sum_iou"] += sum_iou
+            total["aggregate"][k]["sum_denom"] += denom
+
         v_tot+=1
-        print()
+        # print()
     print(v_tot)
-    for zs in ["zero-shot", "non-zero-shot"]:
+    for zs in ["zero-shot", "non-zero-shot", "aggregate"]:
         avg=0
         for k in k_list:
             ivpq_k = total[zs][k]["sum_iou"]/total[zs][k]["sum_denom"]
