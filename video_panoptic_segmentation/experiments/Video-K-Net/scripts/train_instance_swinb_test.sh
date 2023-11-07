@@ -1,4 +1,4 @@
-EXPERIMENT_NAME="train_instance"
+EXPERIMENT_NAME="train_instance_swinb_test"
 OUTPUT_DIR="video_panoptic_segmentation/models/Video-K-Net/Video-K-Net/results"
 
 # Save status of repository for reference
@@ -11,8 +11,8 @@ pip install -r ./requirements/video-k-net/video-k-net.txt
 
 
 cd video_panoptic_segmentation/datasets/MVPd
-./data/download.sh -s train -m -d imagesRGB -d panomasksRGB
-./data/download.sh -s val -m -d imagesRGB -d panomasksRGB
+./data/download.sh -s train -p -m -d imagesRGB.0000000000 -d panomasksRGB
+# ./data/download.sh -s val -m -d imagesRGB.0000000000 -d panomasksRGB
 
 
 cd ../../..
@@ -28,17 +28,18 @@ cd video_panoptic_segmentation/models/Video-K-Net/Video-K-Net
 
 mkdir pretrained
 mkdir pretrained/instance_models
-aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/Video-K-Net/pretrained/instance_models/knet_r50_instance_coco_3x_100p.pth ./pretrained/instance_models/ > /dev/null
+aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/Video-K-Net/pretrained/instance_models/knet_deformable_fpn_swin_b_coco.pth ./pretrained/instance_models/ > /dev/null
 
+python -c "import time; print('start',time.time())"
 
-CONFIG="configs/video_knet_vis/video_knet_vis/knet_track_r50_1x_mvpdvis.py"
+CONFIG="configs/video_knet_vis/video_knet_vis/knet_track_swinb_deformable_1x_mvpdvis.py"
 WORK_DIR="./results"
-LOAD_PATH="./pretrained/instance_models/knet_r50_instance_coco_3x_100p.pth"
+LOAD_PATH="./pretrained/instance_models/knet_deformable_fpn_swin_b_coco.pth"
 GPUS="8"
 PORT=${PORT:-$((29500 + $RANDOM % 29))}
-PYTHONPATH=$PYTHONPATH:./ python -m torch.distributed.launch  --nproc_per_node=$GPUS --master_port=$PORT ./tools/train.py $CONFIG --launcher pytorch --work-dir=${WORK_DIR} --load-from ${LOAD_PATH}
+PYTHONPATH=$PYTHONPATH:./ python -m torch.distributed.launch  --nproc_per_node=$GPUS --master_port=$PORT ./tools/train.py $CONFIG --launcher pytorch --work-dir=${WORK_DIR} --load-from ${LOAD_PATH} --no-validate
 
-
+python -c "import time; print('end',time.time())"
 
 echo "Compressing results"
 tar -cf ${EXPERIMENT_NAME}.tar.gz ${WORK_DIR}/
