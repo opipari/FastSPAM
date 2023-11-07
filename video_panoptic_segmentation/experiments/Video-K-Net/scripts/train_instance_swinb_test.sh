@@ -11,8 +11,8 @@ pip install -r ./requirements/video-k-net/video-k-net.txt
 
 
 cd video_panoptic_segmentation/datasets/MVPd
-./data/download.sh -s train -p -m -d imagesRGB -d panomasksRGB
-# ./data/download.sh -s val -m -d imagesRGB -d panomasksRGB
+./data/download.sh -s train -p -m -d imagesRGB.0000000000 -d panomasksRGB
+# ./data/download.sh -s val -m -d imagesRGB.0000000000 -d panomasksRGB
 
 
 cd ../../..
