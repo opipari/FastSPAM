@@ -28,12 +28,12 @@ cd video_panoptic_segmentation/models/Video-K-Net/Video-K-Net
 
 mkdir pretrained
 mkdir pretrained/instance_models
-aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/Video-K-Net/pretrained/instance_models/knet_r50_instance_coco_3x_100p.pth ./pretrained/instance_models/ > /dev/null
+aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/Video-K-Net/pretrained/instance_models/knet_deformable_fpn_swin_b_coco.pth ./pretrained/instance_models/ > /dev/null
 
 
 CONFIG="configs/video_knet_vis/video_knet_vis/knet_track_swinb_deformable_1x_mvpdvis.py"
 WORK_DIR="./results"
-LOAD_PATH="./pretrained/instance_models/knet_r50_instance_coco_3x_100p.pth"
+LOAD_PATH="./pretrained/instance_models/knet_deformable_fpn_swin_b_coco.pth"
 GPUS="8"
 PORT=${PORT:-$((29500 + $RANDOM % 29))}
 PYTHONPATH=$PYTHONPATH:./ python -m torch.distributed.launch  --nproc_per_node=$GPUS --master_port=$PORT ./tools/train.py $CONFIG --launcher pytorch --work-dir=${WORK_DIR} --load-from ${LOAD_PATH} --no-validate
