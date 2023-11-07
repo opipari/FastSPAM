@@ -30,6 +30,7 @@ mkdir pretrained
 mkdir pretrained/instance_models
 aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/Video-K-Net/pretrained/instance_models/knet_deformable_fpn_swin_b_coco.pth ./pretrained/instance_models/ > /dev/null
 
+python -c "import time; print('start',time.time())"
 
 CONFIG="configs/video_knet_vis/video_knet_vis/knet_track_swinb_deformable_1x_mvpdvis.py"
 WORK_DIR="./results"
@@ -38,6 +39,7 @@ GPUS="8"
 PORT=${PORT:-$((29500 + $RANDOM % 29))}
 PYTHONPATH=$PYTHONPATH:./ python -m torch.distributed.launch  --nproc_per_node=$GPUS --master_port=$PORT ./tools/train.py $CONFIG --launcher pytorch --work-dir=${WORK_DIR} --load-from ${LOAD_PATH} --no-validate
 
+python -c "import time; print('end',time.time())"
 
 echo "Compressing results"
 tar -cf ${EXPERIMENT_NAME}.tar.gz ${WORK_DIR}/
