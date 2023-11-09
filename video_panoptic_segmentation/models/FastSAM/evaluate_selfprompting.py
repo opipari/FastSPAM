@@ -144,33 +144,14 @@ class FastSelfPrompting(nn.Module):
                 ann = ann[torch.argsort(torch.sum(ann,(1,2)),descending=True)]
 
         else:
-            points = points_[:1]
-            ann = torch.as_tensor(prompt_process.point_prompt(points=points, pointlabel=[1]))
-            for p in points_[1:]:
-                mask = torch.as_tensor(prompt_process.point_prompt(points=[p], pointlabel=[1]))
-                max_iou, max_arg = torch.max(metric_utils.pairwise_segment_metric(mask,ann,metric='IOU'), dim=1)
-                max_iou, max_arg = max_iou.item(), max_arg.item()
-                if max_iou>=self.config["iou"]:
-                    ann[max_arg] = torch.logical_or(ann[max_arg], mask[0])
-                else:
-                    ann = torch.cat([ann, mask])
-                    points = torch.cat([points, p.unsqueeze(0)])
-
+            ann = []
             all_ann = prompt_process.everything_prompt()
             if len(all_ann)>0:
-                all_ann = all_ann.to(torch.bool)
-                all_ann = all_ann[torch.argsort(torch.sum(all_ann,(1,2)),descending=True)]
-                added_ann = torch.any(ann,dim=0,keepdim=True).to(all_ann.device)
-                
-                pairwise_inter = metric_utils.pairwise_segment_metric(all_ann, added_ann, metric="Intersection")
-                inter_over_i = pairwise_inter / torch.sum(all_ann,(1,2)).reshape(-1,1).to(pairwise_inter.device)
-                inter_over_iou = (inter_over_i>=self.config["iou"]).reshape(-1)
-                new_ann = all_ann[~inter_over_iou]
-                new_points_ = torch.as_tensor([mask_to_point(ar) for ar in new_ann])
-
-                for p in new_points_:
+                points = points_[:1]
+                ann = torch.as_tensor(prompt_process.point_prompt(points=points, pointlabel=[1]))
+                for p in points_[1:]:
                     mask = torch.as_tensor(prompt_process.point_prompt(points=[p], pointlabel=[1]))
-                    max_iou, max_arg = torch.max(metric_utils.pairwise_segment_metric(mask,ann,metric='IOU'), dim=1)
+                    max_iou, max_arg = torch.max(metric_utils.pairwise_segment_metric(mask, ann, metric='IOU'), dim=1)
                     max_iou, max_arg = max_iou.item(), max_arg.item()
                     if max_iou>=self.config["iou"]:
                         ann[max_arg] = torch.logical_or(ann[max_arg], mask[0])
@@ -178,13 +159,34 @@ class FastSelfPrompting(nn.Module):
                         ann = torch.cat([ann, mask])
                         points = torch.cat([points, p.unsqueeze(0)])
 
-            non_empty = torch.sum(ann,(1,2))>0
-            points = points[non_empty]
-            ann = ann[non_empty]
+                
+                    all_ann = all_ann.to(torch.bool)
+                    all_ann = all_ann[torch.argsort(torch.sum(all_ann,(1,2)),descending=True)]
+                    added_ann = torch.any(ann,dim=0,keepdim=True).to(all_ann.device)
+                    
+                    pairwise_inter = metric_utils.pairwise_segment_metric(all_ann, added_ann, metric="Intersection")
+                    inter_over_i = pairwise_inter / torch.sum(all_ann,(1,2)).reshape(-1,1).to(pairwise_inter.device)
+                    inter_over_iou = (inter_over_i>=self.config["iou"]).reshape(-1)
+                    new_ann = all_ann[~inter_over_iou]
+                    new_points_ = torch.as_tensor([mask_to_point(ar) for ar in new_ann])
 
-            sort_order = torch.argsort(torch.sum(ann,(1,2)),descending=True)
-            points = points[sort_order]
-            ann = ann[sort_order]
+                    for p in new_points_:
+                        mask = torch.as_tensor(prompt_process.point_prompt(points=[p], pointlabel=[1]))
+                        max_iou, max_arg = torch.max(metric_utils.pairwise_segment_metric(mask,ann,metric='IOU'), dim=1)
+                        max_iou, max_arg = max_iou.item(), max_arg.item()
+                        if max_iou>=self.config["iou"]:
+                            ann[max_arg] = torch.logical_or(ann[max_arg], mask[0])
+                        else:
+                            ann = torch.cat([ann, mask])
+                            points = torch.cat([points, p.unsqueeze(0)])
+
+                non_empty = torch.sum(ann,(1,2))>0
+                points = points[non_empty]
+                ann = ann[non_empty]
+
+                sort_order = torch.argsort(torch.sum(ann,(1,2)),descending=True)
+                points = points[sort_order]
+                ann = ann[sort_order]
             
 
 
@@ -225,8 +227,10 @@ def evaluation_process(index, nprocs, config, output_dir):
             first_sample = next(iter(video))
             video_name = first_sample['meta']['video_name']
             out_dir = os.path.join(output_dir, config['experiment_name'], 'panomasksRLE', video_name)
+            
+            if os.path.exists(os.path.join(out_dir)):
+                continue
             os.makedirs(out_dir, exist_ok=True)
-                
 
             model.reset_memory()
             for idx, sample in enumerate(tqdm(video, position=1, disable=index!=0)):
