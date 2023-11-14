@@ -25,9 +25,13 @@ def read_panomaskRGB(
     return label
 
 def read_panomaskRLE(
-    pt_file_path: str
+    pt_file_path: str,
+    inds=None
 ) -> torch.Tensor:
-    mask_list = [torch.as_tensor(mask_utils.decode(rle),dtype=torch.int) for rle in torch.load(pt_file_path,map_location='cpu')['coco_rle']]
+    rles = torch.load(pt_file_path,map_location='cpu')['coco_rle']
+    if inds is not None:
+        rles = [rles[i] for i in inds]
+    mask_list = [torch.as_tensor(mask_utils.decode(rle),dtype=torch.int) for rle in rles]
     if len(mask_list)>0:
         return torch.stack(mask_list)
     else:
