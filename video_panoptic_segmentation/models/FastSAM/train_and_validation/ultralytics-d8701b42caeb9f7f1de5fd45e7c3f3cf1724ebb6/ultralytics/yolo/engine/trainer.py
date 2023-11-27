@@ -367,7 +367,7 @@ class BaseTrainer:
                 self.ema.update_attr(self.model, include=['yaml', 'nc', 'args', 'names', 'stride', 'class_weights'])
                 final_epoch = (epoch + 1 == self.epochs) or self.stopper.possible_stop
 
-                if self.args.val or final_epoch:
+                if self.args.val:
                     self.metrics, self.fitness = self.validate()
                 self.save_metrics(metrics={**self.label_loss_items(self.tloss), **self.metrics, **self.lr})
                 self.stop = self.stopper(epoch + 1, self.fitness)
@@ -396,10 +396,10 @@ class BaseTrainer:
             # Do final val with best.pt
             LOGGER.info(f'\n{epoch - self.start_epoch + 1} epochs completed in '
                         f'{(time.time() - self.train_time_start) / 3600:.3f} hours.')
-            self.final_eval()
-            if self.args.plots:
-                self.plot_metrics()
-            self.run_callbacks('on_train_end')
+            # self.final_eval()
+            # if self.args.plots:
+            #     self.plot_metrics()
+            # self.run_callbacks('on_train_end')
         torch.cuda.empty_cache()
         self.run_callbacks('teardown')
 

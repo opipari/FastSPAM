@@ -1,6 +1,6 @@
 #For the data format, please refer to https://docs.ultralytics.com/datasets/segment/coco/
 
-path: '/home/topipari/Desktop/PanopticMemoryClouds/video_panoptic_segmentation/datasets/MVPd/MVPd/yolo_sample_A'
+path: '/media/topipari/0CD418EB76995EEF/yolo'
 
 train: ['train',]
 
