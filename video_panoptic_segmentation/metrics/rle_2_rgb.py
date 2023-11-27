@@ -50,7 +50,7 @@ def rle_2_rgb(in_rle_dir, out_rgb_dir, dataset, v_name=None, device='cpu'):
             # print(ref_rgbs[matched_ref_ind].shape, np.array(matched_ref_ind.shape[0]*[[255]]).shape)
             if ref_rgbs[matched_ref_ind].shape[0]>0:
                 rle_rgbs[matched_rle_ind] = np.concatenate([ref_rgbs[matched_ref_ind], matched_ref_ind.shape[0]*[[255]]],axis=1)            
-            rle_rgbs[unmatched_rle_ind] = (255,255,255,0.65*255)
+            rle_rgbs[unmatched_rle_ind] = (255,49,49,0.70*255)
 
             for unmatched_rle_i in unmatched_rle_ind:
                 rle_segments[unmatched_rle_i] = torch.as_tensor(metric_utils.mask_to_boundary(rle_segments[unmatched_rle_i].cpu().float().numpy(), 
@@ -77,6 +77,8 @@ if __name__=='__main__':
 
     MVPd = MVPDataset(root=args.ref_path,
                         split=args.ref_split,
+                        use_stuff=False,
+                        filter_pcnt=0,
                         window_size = 0)
     
 
