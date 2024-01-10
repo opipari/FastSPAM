@@ -1,4 +1,4 @@
-# Panoptic Memory Clouds <br/> Experiment Branch
+# FastSPAM <br/> Experiment Branch
 
 ## Branch Structure
 
@@ -14,7 +14,7 @@ This branch of the repository is setup to track all code for the experiments inc
 │   └── segment-anything.txt        # Package requirements for segment anything model package
 ├── envs                            # Directory containing virtual environment source files and package dependency requirements
 │   └── segment-anything            # Directory for segment anything's virtual environment
-└── video_panoptic_segmentation     # The central python package for VideoPanopticSegmentation package experiments
+└── video_segmentation     # The central python package for VideoSegmentation package experiments
     ├── models                      # Directory containing source code for model development, training and evaluation
     │   └── segment-anything        # Directory containing all source for training and evaluating segment anything model
     ├── datasets                    # Directory containing raw datasets (DO NOT ADD DATA TO GIT TRACKING)
@@ -37,11 +37,11 @@ This branch of the repository is setup to track all code for the experiments inc
     sudo apt install python3.8 python3.8-venv python3.8-dev
     ```
 
-3. Install Python v3.9
+<!-- 3. Install Python v3.9
 
     ```
     sudo apt install python3.9 python3.9-venv python3.9-dev
-    ```
+    ``` -->
 
 
 <hr>
@@ -102,16 +102,6 @@ python3.8 -m venv ./envs/geo-paot-benchmark && \
       deactivate
 ```
 
-#### Panoptic Memory Clouds (GAPS)
-
-Setup environments:
-
-```
-python3.8 -m venv ./envs/panoptic-memory-clouds && \
-  source ./envs/panoptic-memory-clouds/bin/activate && \
-    pip install -r ./requirements/panoptic-memory-clouds.txt && \
-      deactivate
-```
 
 #### Video K-Net
 
@@ -148,7 +138,13 @@ python3.8 -m venv ./envs/FastSAM-training && \
 ```
 
 
+#### SAM-PT
 
+```
+python3.8 -m venv ./envs/sam-pt && \
+  source ./envs/sam-pt/bin/activate && \
+    xargs -L 1 pip install < requirements/sam-pt.txt
+```
 
 
 ### How to use submodules
