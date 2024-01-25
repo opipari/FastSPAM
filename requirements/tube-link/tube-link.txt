@@ -1,5 +1,5 @@
+openmim==0.1.1
 mmcv-full==1.6.1 -f https://download.openmmlab.com/mmcv/dist/cu102/torch1.9/index.html
-mmdet==2.18.0
 timm==0.4.12
 lap==0.4.0
 imageio==2.31.2
