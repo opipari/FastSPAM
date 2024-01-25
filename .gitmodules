@@ -38,5 +38,5 @@
 	url = https://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@github.com/opipari/sam-pt.git
 [submodule "video_segmentation/models/Tube-Link/Tube-Link"]
 	path = video_segmentation/models/Tube-Link/Tube-Link
-	url = https://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@github.com:opipari/Tube-Link.git
+	url = https://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@github.com/opipari/Tube-Link.git
 	branch = main
