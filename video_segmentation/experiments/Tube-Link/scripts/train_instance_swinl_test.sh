@@ -26,7 +26,7 @@ cd video_segmentation/models/Tube-Link/Tube-Link
 
 python -c "import time; print('end',time.time())"
 
-CONFIG="configs/video/mvpd/mvpd_swin_l_tb_link_2_5k_5k_10k.py"
+CONFIG="configs/video/mvpd/mvpd_swin_l_tb_link_2_5k_5k_10k_test.py"
 WORK_DIR="./results"
 GPUS="8"
 PORT=${PORT:-$((29500 + $RANDOM % 29))}
