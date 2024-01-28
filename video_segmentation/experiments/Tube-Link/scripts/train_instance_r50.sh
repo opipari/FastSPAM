@@ -23,13 +23,17 @@ ln -s $PWD/video_segmentation/datasets/MVPd/MVPd ./video_segmentation/models/Tub
 
 cd video_segmentation/models/Tube-Link/Tube-Link
 
+mkdir pretrained
+aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/Tube-Link/pretrained/iter_100000.pth ./pretrained/ > /dev/null
+
 
 
 CONFIG="configs/video/mvpd/mvpd_r50_tb_link_5k_10k_15k.py"
 WORK_DIR="./results"
+LOAD_PATH="./pretrained/iter_100000.pth"
 GPUS="8"
 PORT=${PORT:-$((29500 + $RANDOM % 29))}
-PYTHONPATH=$PYTHONPATH:./ python -m torch.distributed.launch  --nproc_per_node=$GPUS --master_port=$PORT ./tools/train.py $CONFIG --launcher pytorch --work-dir=${WORK_DIR} --no-validate
+PYTHONPATH=$PYTHONPATH:./ python -m torch.distributed.launch  --nproc_per_node=$GPUS --master_port=$PORT ./tools/train.py $CONFIG --launcher pytorch --work-dir=${WORK_DIR} --resume-from=${LOAD_PATH}  --no-validate
 
 
 echo "Compressing results"
