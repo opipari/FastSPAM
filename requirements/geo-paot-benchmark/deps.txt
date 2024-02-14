@@ -1,2 +1,0 @@
-https://github.com/ClementPinard/Pytorch-Correlation-extension/archive/41c8d37.zip
--e .
