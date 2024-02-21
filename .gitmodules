@@ -20,3 +20,6 @@
 [submodule "video_object_segmentation/models/Painter/Painter"]
 	path = video_object_segmentation/models/Painter/Painter
 	url = https://github.com/baaivision/Painter
+[submodule "video_segmentation/models/Painter"]
+	path = video_segmentation/models/Painter
+	url = git@github.com:opipari/Painter.git
