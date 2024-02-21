@@ -75,33 +75,6 @@ python3.8 -m venv ./envs/segment-anything && \
         wget -P ./video_panoptic_segmentation/models/segment-anything/segment-anything/checkpoints/ https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
 ```
 
-#### Pyramid / Panoptic Associating Objects with Transformers (PAOT)
-
-Setup environments:
-
-```
-python3.8 -m venv ./envs/paot-benchmark && \
-  source ./envs/paot-benchmark/bin/activate && \
-    pip install -r ./requirements/paot-benchmark/base.txt &&
-    pip install -r ./requirements/paot-benchmark/deps.txt && \
-      deactivate
-```
-
-For reproducing published results on the VIPOSeg dataset, refer to the [paot-benchmark.md](https://github.com/opipari/ZeroShotSceneSegmentation/blob/main/paot-benchmark.md) file.
-
-
-#### Geometry-Pyramid / Panoptic Associating Objects with Transformers (GEO-PAOT)
-
-Setup environments:
-
-```
-python3.8 -m venv ./envs/geo-paot-benchmark && \
-  source ./envs/geo-paot-benchmark/bin/activate && \
-    pip install -r ./requirements/geo-paot-benchmark/base.txt &&
-    pip install -r ./requirements/geo-paot-benchmark/deps.txt && \
-      deactivate
-```
-
 
 #### Video K-Net
 
@@ -144,6 +117,15 @@ python3.8 -m venv ./envs/FastSAM-training && \
 python3.8 -m venv ./envs/sam-pt && \
   source ./envs/sam-pt/bin/activate && \
     xargs -L 1 pip install < requirements/sam-pt.txt
+```
+
+
+#### SegGPT
+
+```
+python3.8 -m venv ./envs/seggpt && \
+  source ./envs/seggpt/bin/activate && \
+    xargs -L 1 pip install < requirements/seggpt.txt
 ```
 
 
