@@ -1,0 +1,14 @@
+https://download.pytorch.org/whl/cu117/torch-1.13.0%2Bcu117-cp38-cp38-linux_x86_64.whl#sha256=3abd0161ed86be34ab68fc418005eeb0c944bacc366ed6cce77ab8fac1fc2fe1
+https://download.pytorch.org/whl/cu117/torchvision-0.14.0%2Bcu117-cp38-cp38-linux_x86_64.whl#sha256=63cabf8d8e769e437dc6b9a709945428fec4a71fa765b8ce77fbae9e6968b1af
+numpy
+opencv-python
+timm==0.4.12
+fairscale==0.4.13
+scipy
+git+https://github.com/facebookresearch/detectron2.git
+
+
+git+https://github.com/cocodataset/panopticapi.git
+
+-e ./video_segmentation/datasets/MVPd
+-e ./

@@ -23,6 +23,6 @@ pycocotools==2.0.6
 https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py38_cu117_pyt201/pytorch3d-0.7.4-cp38-cp38-linux_x86_64.whl
 git+https://github.com/cocodataset/panopticapi.git
 
--e ./video_panoptic_segmentation/datasets/MVPd
--e ./video_panoptic_segmentation/models/FastSAM/FastSAM
+-e ./video_segmentation/datasets/MVPd
+-e ./video_segmentation/models/FastSAM/FastSAM
 -e .

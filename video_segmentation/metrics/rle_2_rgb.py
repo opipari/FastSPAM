@@ -10,7 +10,7 @@ from panopticapi.utils import id2rgb
 
 from MVPd.utils.MVPdHelpers import label_to_one_hot
 from MVPd.utils.MVPdataset import MVPDataset, MVPVideo, MVPdCategories, video_collate
-from video_panoptic_segmentation.metrics import utils as metric_utils
+from video_segmentation.metrics import utils as metric_utils
 
 
 
