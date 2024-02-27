@@ -129,6 +129,12 @@ python3.8 -m venv ./envs/seggpt && \
 ```
 
 
+### Tube-Link
+```
+docker build -t tube-link ./requirements/tube-link
+docker run -it --shm-size 8G --gpus device=0 tube-link
+```
+
 ### How to use submodules
 
 ```
