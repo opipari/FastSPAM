@@ -17,6 +17,9 @@
 	path = video_segmentation/models/Tube-Link/Tube-Link
 	url = https://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@github.com/opipari/Tube-Link.git
 	branch = main
+[submodule "video_segmentation/models/Cutie/Cutie"]
+	path = video_segmentation/models/Cutie/Cutie
+	url = https://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@github.com/opipari/Cutie.git
 [submodule "video_segmentation/models/Painter"]
 	path = video_segmentation/models/Painter
 	url = https://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@github.com/opipari/Painter.git
