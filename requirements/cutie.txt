@@ -12,3 +12,4 @@ gdown==4.7.1
 git+https://github.com/cocodataset/panopticapi.git
 
 -e ./video_segmentation/models/Cutie/Cutie
+-e ./
