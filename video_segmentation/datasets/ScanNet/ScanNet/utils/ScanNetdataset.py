@@ -113,7 +113,7 @@ class ScanNetVideo(Dataset):
         label = np.array(label, dtype=np.uint8)
         label = TF.functional.resize(torch.tensor(label).unsqueeze(0), (480,640), 
             interpolation=TF.InterpolationMode.NEAREST_EXACT).squeeze(0)
-        label = np.asarray(label, dtype=np.uint8)
+        label = np.asarray(label, dtype=np.int32)
 
         return image, depth, label
 
