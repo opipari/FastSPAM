@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:1.9.0-cuda10.2-cudnn7-devel
+FROM pytorch/pytorch:1.9.0-cuda11.1-cudnn8-devel
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN rm /etc/apt/sources.list.d/cuda.list
