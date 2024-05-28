@@ -1,12 +1,12 @@
 {
     "experiment_name": "evaluate_pretrained_fastsam_selfprompting",
     "dataset": {
-        "root": "./video_panoptic_segmentation/datasets/MVPd/MVPd/",
+        "root": "./video_segmentation/datasets/MVPd/MVPd/",
         "split": "test",
         "window_size": 0
     },
     "model": {
-        "checkpoint": "./video_panoptic_segmentation/models/FastSAM/FastSAM/weights/FastSAM-x.pt",
+        "checkpoint": "./video_segmentation/models/FastSAM/FastSAM/weights/FastSAM-x.pt",
         "imgsz": 1024,
         "iou": 0.9,
         "conf": 0.4,
