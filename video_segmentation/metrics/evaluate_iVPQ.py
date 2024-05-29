@@ -16,8 +16,9 @@ import matplotlib.pyplot as plt
 from panopticapi.utils import id2rgb
 
 from MVPd.utils.MVPdHelpers import label_to_one_hot, filter_binmask_area
+from ScanNet.utils.ScanNetdataset import ScanNetDataset, ScanNetVideo
 from MVPd.utils.MVPdataset import MVPDataset, MVPVideo, MVPdCategories, video_collate
-from video_panoptic_segmentation.metrics import utils as metric_utils
+from video_segmentation.metrics import utils as metric_utils
 
 
 
@@ -117,12 +118,9 @@ def get_tubes(rle_segments, window_size, segment_ids=None, cache=None, device='c
 
 
 
-def evaluate_iVPQ_v1(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0, n_proc=0, k_list=[1,5,10,15], step_size=15):
+def evaluate_iVPQ_v1(in_rle_dir, out_dir, dataset, device='cpu', i=0, n_proc=0, k_list=[1,5,10,15], step_size=15):
     
-    dataset = MVPDataset(root=ref_path,
-                        split=ref_split,
-                        use_stuff=False,
-                        window_size = 0)
+
     if n_proc>0:
         is_per_proc = math.ceil(len(dataset)/n_proc)
         i_start = i*is_per_proc
@@ -220,12 +218,9 @@ def collect_rle_tracks(video, video_rle_dir, threshold=0.5):
 
 
 
-def evaluate_iVPQ_vkn(in_rle_dir, out_dir, ref_path, ref_split, device='cpu', i=0, n_proc=0, k_list=[1,5,10,15], step_size=15):
+def evaluate_iVPQ_vkn(in_rle_dir, out_dir, dataset, device='cpu', i=0, n_proc=0, k_list=[1,5,10,15], step_size=15):
     
-    dataset = MVPDataset(root=ref_path,
-                        split=ref_split,
-                        use_stuff=False,
-                        window_size = 0)
+    
     if n_proc>0:
         is_per_proc = math.ceil(len(dataset)/n_proc)
         i_start = i*is_per_proc
@@ -373,6 +368,7 @@ if __name__=='__main__':
     parser.add_argument('--compute', action='store_true', default=False)
     parser.add_argument('--summarize', action='store_true', default=False)
     parser.add_argument('--n_proc', type=int, default=1)
+    parser.add_argument('--dataset', type=str, default='MVPd')
     args = parser.parse_args()
     
 
@@ -389,7 +385,17 @@ if __name__=='__main__':
     # pool = mp.Pool(processes = n_proc)
     # pool.starmap(evaluate_iVPQ, [[in_rle_dir, out_json_dir, args.ref_path, args.ref_split, device, i, n_proc] for i in range(n_proc)])
 
+    if args.dataset=='MVPd':
+        dataset = MVPDataset(root=args.ref_path,
+                        split=args.ref_split,
+                        use_stuff=False,
+                        window_size = 0)
+    elif args.dataset=='ScanNet':
+        dataset = ScanNetDataset(root=args.ref_path,
+                                split=args.ref_split,
+                                window_size=0)
+
     if args.compute:
-        evaluate_iVPQ_v1(in_rle_dir, out_json_dir, args.ref_path, args.ref_split, device, 0, 0)
+        evaluate_iVPQ_v1(in_rle_dir, out_json_dir, dataset, device, 0, 0)
     if args.summarize:
         summarize_iVPQ(out_json_dir, fpath="metrics_iVPQ_v1.json")

@@ -227,7 +227,8 @@ class ScanNetVideo(Dataset):
             'video_name': self.video_meta['video_name'],
             'window_idxs': np.array([sub_idx for sub_idx in range(start_idx, end_idx)]),
             'window_names': [self.video_meta['images'][sub_idx] for sub_idx in range(start_idx, end_idx)],
-            'image_size': np.array([img.shape[:2] for img in image_sequence])
+            'image_size': np.array([img.shape[:2] for img in image_sequence]),
+            'zero_shot_dict': {idd:False for idd in np.unique(id_sequence)}
         }
         
         if self.transform is not None:
