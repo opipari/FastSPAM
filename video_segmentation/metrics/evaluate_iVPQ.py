@@ -51,7 +51,7 @@ def collect_rle_window(video_rle_dir, names, inds=None, default_size=(1,480,640)
         if len(rle_seg)==0:
             rle_seg = torch.zeros(default_size)
         rle_segments.append(F.interpolate(rle_seg[None,:].to(torch.float), 
-            scale_factor=(0.5,0.5), 
+            size=(240,320), 
             mode='nearest')[0].to(torch.bool))
     return rle_segments
 
@@ -210,7 +210,7 @@ def collect_rle_tracks(video, video_rle_dir, threshold=0.5):
     track_inds = set()
 
     for f_idx in range(len(video)):
-        rle_file = os.path.join(video_rle_dir, f'{f_idx:010d}.pt')
+        rle_file = os.path.join(video_rle_dir, f'{f_idx}.pt')
         track_boxes = torch.load(rle_file, map_location='cpu')['bbox_results']
         track_inds.update(np.flatnonzero(track_boxes[:,5]>threshold))
 
@@ -238,6 +238,8 @@ def evaluate_iVPQ_vkn(in_rle_dir, out_dir, dataset, device='cpu', i=0, n_proc=0,
         if os.path.exists(os.path.join(video_out_dir, "metrics_iVPQ_v1.json")):
             continue
 
+        if not os.path.exists(video_rle_dir):
+            continue
         
         video_results = {
                         "zero-shot": {k: {"IOU": 0, "TP": 0, "FP": 0, "FN": 0} for k in k_list},
@@ -253,7 +255,7 @@ def evaluate_iVPQ_vkn(in_rle_dir, out_dir, dataset, device='cpu', i=0, n_proc=0,
 
             tt = time.time()
             rle_segments = collect_rle_window(video_rle_dir, ref_names, inds=rle_track_inds, default_size=(100,480,640))
-            print(time.time()-tt)
+            # print(time.time()-tt)
             rle_segments = torch.stack(rle_segments).to(device=device)
             for ki, k in enumerate(k_list):
                 # if ki==0:
@@ -346,6 +348,7 @@ def summarize_iVPQ(metric_root, k_list=['1','5','10','15'], fpath="metrics_iVPQ.
 
         v_tot+=1
         # print()
+
     print(v_tot)
     for zs in ["zero-shot", "non-zero-shot", "aggregate"]:
         avg=0
@@ -396,6 +399,6 @@ if __name__=='__main__':
                                 window_size=0)
 
     if args.compute:
-        evaluate_iVPQ_v1(in_rle_dir, out_json_dir, dataset, device, 0, 0)
+        evaluate_iVPQ_vkn(in_rle_dir, out_json_dir, dataset, device, 0, 0)
     if args.summarize:
         summarize_iVPQ(out_json_dir, fpath="metrics_iVPQ_v1.json")
