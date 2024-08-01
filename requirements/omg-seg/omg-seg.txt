@@ -1,6 +1,6 @@
 
 https://github.com/open-mmlab/mmengine/archive/refs/tags/v0.8.5.zip
-https://download.openmmlab.com/mmcv/dist/cu118/torch2.3.0/mmcv-2.2.0-cp38-cp38-manylinux1_x86_64.whl
+https://download.openmmlab.com/mmcv/dist/cu118/torch2.3.0/mmcv-2.2.0-cp310-cp310-manylinux1_x86_64.whl
 https://github.com/open-mmlab/mmdetection/archive/refs/tags/v3.1.0.zip
 https://github.com/open-mmlab/mmsegmentation/archive/refs/tags/v1.1.1.zip
 https://github.com/open-mmlab/mmpretrain/archive/refs/tags/v1.0.1.zip
