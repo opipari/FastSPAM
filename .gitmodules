@@ -25,5 +25,5 @@
 	url = https://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@github.com/opipari/Painter.git
 [submodule "video_segmentation/models/OMG-Seg/OMG-Seg"]
 	path = video_segmentation/models/OMG-Seg/OMG-Seg
-	url = git@github.com:opipari/OMG-Seg.git
+	url = https://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@github.com:opipari/OMG-Seg.git
 	branch = main
