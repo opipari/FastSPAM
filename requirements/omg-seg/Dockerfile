@@ -1,8 +1,6 @@
 FROM pytorch/pytorch:2.3.0-cuda11.8-cudnn8-devel
 ARG DEBIAN_FRONTEND=noninteractive
 
-#RUN rm /etc/apt/sources.list.d/cuda.list
-#RUN rm /etc/apt/sources.list.d/nvidia-ml.list
 
 RUN apt update && apt install -y software-properties-common
 RUN apt update && add-apt-repository ppa:deadsnakes/ppa
@@ -11,14 +9,11 @@ RUN apt update && add-apt-repository ppa:deadsnakes/ppa
 RUN apt update && apt install -y \
     build-essential vim curl git wget zip \
     imagemagick 
- 
-# python
-RUN apt update && apt install -y python3.8 python3.8-venv python3.8-dev python3.8-distutils
-# pip
-RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-RUN python3.8 get-pip.py
- 
-# python packages
+
 RUN apt-get update && apt-get install -y python3-opencv
-RUN python3.8 -m pip install opencv-python
+
+RUN pip install --upgrade pip
+RUN python -m pip install https://github.com/open-mmlab/mmengine/archive/refs/tags/v0.8.5.zip
+RUN TORCH_CUDA_ARCH_LIST="8.0 8.9" TORCH_NVCC_FLAGS="-Xfatbin -compress-all" CUDA_HOME=$(dirname $(dirname $(which nvcc))) LD_LIBRARY_PATH=$(dirname $(dirname $(which nvcc)))/lib MMCV_WITH_OPS=1 FORCE_CUDA=1 python -m pip install git+https://github.com/open-mmlab/mmcv.git@4f65f91db6502d990ce2ee5de0337441fb69dd10
+
 
