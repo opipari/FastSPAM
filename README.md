@@ -135,6 +135,12 @@ docker build -t tube-link ./requirements/tube-link
 docker run -it --shm-size 8G --gpus device=0 tube-link
 ```
 
+### OMG-Seg
+```
+docker build -t omg-seg ./requirements/omg-seg
+docker run -it --shm-size 8G --gpus device=0 --network host omg-seg
+```
+
 ### How to use submodules
 
 ```
