@@ -5,6 +5,7 @@ mkdir -p ${OUTPUT_DIR}/${EXPERIMENT_NAME}
 # Save status of repository for reference
 git log -1 --oneline > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/repo_state.txt
 
+nvidia-smi > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/nvidia.txt
 
 pip install --upgrade pip
 pip install -r ./requirements/omg-seg/omg-seg.txt
