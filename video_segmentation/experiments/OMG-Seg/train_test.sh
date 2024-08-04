@@ -25,7 +25,7 @@ ln -s $PWD/video_segmentation/datasets/MVPd/MVPd ./video_segmentation/models/OMG
 cd video_segmentation/models/OMG-Seg/OMG-Seg
 
 
-./tools/dist.sh gen_cls seg/configs/m2ov_val/eval_m2_convl_300q_ov_mvpd.py 1
+# ./tools/dist.sh gen_cls seg/configs/m2ov_val/eval_m2_convl_300q_ov_mvpd.py 1
 # ./tools/dist.sh train seg/configs/m2ov_train/omg_convl_vlm_fix_12e_ov_mvpd.py 8
 ./tools/dist.sh train seg/configs/m2_train_close_set/omg_convl_mvpd.py 8
 
