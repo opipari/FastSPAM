@@ -141,6 +141,12 @@ docker build -t omg-seg ./requirements/omg-seg
 docker run -it --shm-size 8G --gpus device=0 --network host omg-seg
 ```
 
+### LVVIS
+```
+docker build -t lvvis ./requirements/lvvis
+docker run -it --shm-size 8G --gpus device=0 --network host lvvis
+```
+
 ### How to use submodules
 
 ```

@@ -1,0 +1,13 @@
+
+opencv-python==4.10.0.84
+
+git@github.com:facebookresearch/detectron2.git
+
+git+https://github.com/cocodataset/panopticapi.git
+git+https://github.com/lvis-dataset/lvis-api.git
+
+
+-r ./video_segmentation/models/LVVIS/LVVIS/requirements.txt
+
+-e ./video_segmentation/datasets/MVPd
+-e .

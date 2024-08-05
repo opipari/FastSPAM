@@ -27,3 +27,7 @@
 	path = video_segmentation/models/OMG-Seg/OMG-Seg
 	url = https://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@github.com/opipari/OMG-Seg.git
 	branch = main
+[submodule "video_segmentation/models/LVVIS/LVVIS"]
+	path = video_segmentation/models/LVVIS/LVVIS
+	url = https://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@github.com/opipari/LVVIS.git
+	branch = main
