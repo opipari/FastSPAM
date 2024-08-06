@@ -16,7 +16,7 @@ regex==2024.7.24
 timm==1.0.8
 scikit-image==0.24.0
 kornia==0.7.3
-
+yapf==0.32
 
 git+https://github.com/cocodataset/panopticapi.git
 -e ./video_segmentation/datasets/MVPd

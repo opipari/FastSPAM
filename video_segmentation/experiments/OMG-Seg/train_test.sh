@@ -10,7 +10,7 @@ nvidia-smi > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/nvidia.txt
 pip install --upgrade pip
 pip install -r ./requirements/omg-seg/omg-seg.txt
 # TORCH_CUDA_ARCH_LIST="8.0" TORCH_NVCC_FLAGS="-Xfatbin -compress-all" CUDA_HOME=$(dirname $(dirname $(which nvcc))) LD_LIBRARY_PATH=$(dirname $(dirname $(which nvcc)))/lib MMCV_WITH_OPS=1 FORCE_CUDA=1 python -m pip install git+https://github.com/open-mmlab/mmcv.git@4f65f91db6502d990ce2ee5de0337441fb69dd10
-
+pip install yapf==0.32
 
 cd video_segmentation/datasets/MVPd
 ./data/download.sh -s train -p -m -d imagesRGB.0000000000 -d panomasksRGB
