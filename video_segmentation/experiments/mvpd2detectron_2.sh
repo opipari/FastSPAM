@@ -6,14 +6,14 @@ cd video_segmentation/datasets/MVPd
 mkdir ./work_dirs
 
 
-pip install --upgrade pip
-pip install -r ./requirements/mvpd.txt
+python3.8 -m pip install --upgrade pip
+python3.8 -m pip install -r ./requirements/mvpd.txt
 
 ./data/download_2.sh -s train -m -d imagesRGB.0000000000 -d panomasksRGB
 # ./data/download.sh -s val -m -d imagesRGB.0000000000 -d panomasksRGB
 
 
-python convert2detectron.py --root_path MVPd --split train
+python3.8 convert2detectron.py --root_path MVPd --split train
 
 mv MVPd_train_detectron2.json ./work_dirs/
 

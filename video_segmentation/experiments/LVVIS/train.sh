@@ -10,6 +10,10 @@ pip install --upgrade pip
 pip install -r ./requirements/lvvis/lvvis.txt
 # TORCH_CUDA_ARCH_LIST="8.0" TORCH_NVCC_FLAGS="-Xfatbin -compress-all" CUDA_HOME=$(dirname $(dirname $(which nvcc))) LD_LIBRARY_PATH=$(dirname $(dirname $(which nvcc)))/lib MMCV_WITH_OPS=1 FORCE_CUDA=1 python -m pip install git+https://github.com/open-mmlab/mmcv.git@4f65f91db6502d990ce2ee5de0337441fb69dd10
 
+cd video_segmentation/models/LVVIS/LVVIS/ov2seg/modeling/pixel_decoder/ops
+sh make.sh
+cd /root/PanopticMemoryClouds
+
 
 cd video_segmentation/datasets/MVPd
 ./data/download.sh -s train -m -d imagesRGB.0000000000 -d panomasksRGB
@@ -18,10 +22,10 @@ cd video_segmentation/datasets/MVPd
 
 cd ../../..
 
-mkdir ./video_segmentation/models/OMG-Seg/OMG-Seg/data/
+mkdir ./video_segmentation/models/LVVIS/LVVIS/data/
 ln -s $PWD/video_segmentation/datasets/MVPd/MVPd ./video_segmentation/models/OMG-Seg/OMG-Seg/data/
 
-cd video_segmentation/models/OMG-Seg/OMG-Seg
+cd video_segmentation/models/LVVIS/LVVIS
 
 
 # ./tools/dist.sh gen_cls seg/configs/m2ov_val/eval_m2_convl_300q_ov_mvpd.py 1
