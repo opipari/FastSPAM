@@ -9,7 +9,7 @@ mkdir ./work_dirs
 python3.8 -m pip install --upgrade pip
 xargs -L 1 pip install < ./requirements/mvpd.txt
 
-./data/download_3.sh -s train -m -d imagesRGB.0000000000 -d panomasksRGB
+sh ./data/download_3.sh -s train -m -d imagesRGB.0000000000 -d panomasksRGB
 # ./data/download.sh -s val -m -d imagesRGB.0000000000 -d panomasksRGB
 
 
