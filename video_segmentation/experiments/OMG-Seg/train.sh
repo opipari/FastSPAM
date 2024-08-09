@@ -14,7 +14,7 @@ pip install yapf==0.32
 cd video_segmentation/datasets/MVPd
 aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/datasets/MVPd/MVPd/train_annotations.json ./MVPd/
 echo "Downloaded train annotations.json"
-./data/download.sh -s train -m -d imagesRGB.0000000000 -d panomasksRGB
+./data/download_12.sh -s train -m -d imagesRGB.0000000000 -d panomasksRGB
 # ./data/download.sh -s val -m -d imagesRGB.0000000000 -d panomasksRGB
 
 
@@ -29,6 +29,8 @@ cd video_segmentation/models/OMG-Seg/OMG-Seg
 # ./tools/dist.sh gen_cls seg/configs/m2ov_val/eval_m2_convl_300q_ov_mvpd.py 1
 # ./tools/dist.sh train seg/configs/m2ov_train/omg_convl_vlm_fix_12e_ov_mvpd.py 8
 ./tools/dist.sh train seg/configs/m2_train_close_set/omg_convl_mvpd.py 8
+
+mv data/MVPd/train_annotations.json ./work_dirs/
 
 WORK_DIR="./work_dirs"
 
