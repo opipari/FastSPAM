@@ -1,5 +1,5 @@
 EXPERIMENT_NAME="train"
-OUTPUT_DIR="video_segmentation/models/LVVIS/LVVIS/"
+OUTPUT_DIR="video_segmentation/models/LVVIS/LVVIS/output"
 
 mkdir -p ${OUTPUT_DIR}/${EXPERIMENT_NAME}
 # Save status of repository for reference
@@ -16,23 +16,28 @@ cd /root/PanopticMemoryClouds
 
 
 cd video_segmentation/datasets/MVPd
-./data/download.sh -s train -m -d imagesRGB.0000000000 -d panomasksRGB
+aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/datasets/MVPd/MVPd/MVPd_train_detectron2_1.json ./MVPd/ > /dev/null
+echo "Downloaded train annotations json"
+bash ./data/download_1.sh -s train -m -d imagesRGB.0000000000 -d panomasksRGB
 # ./data/download.sh -s val -m -d imagesRGB.0000000000 -d panomasksRGB
 
 
 cd ../../..
 
-mkdir ./video_segmentation/models/LVVIS/LVVIS/data/
-ln -s $PWD/video_segmentation/datasets/MVPd/MVPd ./video_segmentation/models/OMG-Seg/OMG-Seg/data/
+ln -s $PWD/video_segmentation/datasets/MVPd/MVPd ./video_segmentation/models/LVVIS/LVVIS/
 
 cd video_segmentation/models/LVVIS/LVVIS
 
+mkdir models
+cd models
+aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/LLVIS/models/resnet50_miil_21k.pkl ./ > /dev/null
+aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/LLVIS/models/swin_base_patch4_window7_224.pkl ./ > /dev/null
+cd ..
+echo "Downloaded pretrained models"
 
-# ./tools/dist.sh gen_cls seg/configs/m2ov_val/eval_m2_convl_300q_ov_mvpd.py 1
-# ./tools/dist.sh train seg/configs/m2ov_train/omg_convl_vlm_fix_12e_ov_mvpd.py 8
-./tools/dist.sh train seg/configs/m2_train_close_set/omg_convl_mvpd.py 8
+./scripts/train_1.sh
 
-WORK_DIR="./work_dirs"
+WORK_DIR="./output"
 
 echo "Compressing results"
 tar -cf ${EXPERIMENT_NAME}.tar.gz ${WORK_DIR}/
