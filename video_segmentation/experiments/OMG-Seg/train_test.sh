@@ -13,7 +13,7 @@ pip install -r ./requirements/omg-seg/omg-seg.txt
 pip install yapf==0.32
 
 cd video_segmentation/datasets/MVPd
-bash ./data/download_3.sh -s train -m -d imagesRGB.0000000000 -d panomasksRGB
+bash ./data/download_4.sh -s train -m -d imagesRGB.0000000000 -d panomasksRGB
 # ./data/download.sh -s val -m -d imagesRGB.0000000000 -d panomasksRGB
 
 
