@@ -32,7 +32,7 @@ mkdir models
 cd models
 aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/LLVIS/models/resnet50_miil_21k.pkl ./ > /dev/null
 aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/LLVIS/models/swin_base_patch4_window7_224.pkl ./ > /dev/null
-aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/LLVIS/models/model_final_1.pth ./MVPd/ > /dev/null
+aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/LLVIS/models/model_final_1.pth ./ > /dev/null
 cd ..
 echo "Downloaded pretrained models"
 
