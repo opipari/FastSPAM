@@ -16,7 +16,7 @@ cd /root/PanopticMemoryClouds
 
 
 cd video_segmentation/datasets/MVPd
-aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/datasets/MVPd/MVPd/MVPd_train_detectron2_1.json ./MVPd/ > /dev/null
+aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/datasets/MVPd/MVPd/MVPd_train_detectron2_2.json ./MVPd/ > /dev/null
 echo "Downloaded train annotations json"
 bash ./data/download_2.sh -s train -m -d imagesRGB.0000000000 -d panomasksRGB
 # ./data/download.sh -s val -m -d imagesRGB.0000000000 -d panomasksRGB
