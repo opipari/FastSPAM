@@ -12,8 +12,7 @@ pip install -r ./requirements/omg-seg/omg-seg.txt
 pip install yapf==0.32
 
 cd video_segmentation/datasets/MVPd
-# aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/datasets/MVPd/MVPd/train_annotations_4.json ./MVPd/ > /dev/null
-# mv MVPd/train_annotations_4.json MVPd/train_annotations.json
+aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/datasets/MVPd/MVPd/test_annotations.json ./MVPd/ > /dev/null
 # echo "Downloaded test annotations json"
 bash ./data/download.sh -s test -m -d imagesRGB.0000000000 -d panomasksRGB
 # ./data/download.sh -s val -m -d imagesRGB.0000000000 -d panomasksRGB
@@ -35,10 +34,10 @@ echo "Downloaded pretrained models"
 
 ./tools/dist.sh gen_cls seg/configs/m2ov_val/eval_m2_convl_300q_ov_mvpd.py 1
 # ./tools/dist.sh train seg/configs/m2ov_train/omg_convl_vlm_fix_12e_ov_mvpd_4.py 8
-./tools/dist.sh test seg/configs/m2ov_val/eval_m2_convl_300q_ov_mvpd.py 1 --out ./work_dirs/det.pkl --checkpoint ./models/iter_200000.pth
+./tools/dist.sh test seg/configs/m2ov_val/eval_m2_convl_300q_ov_mvpd.py 8 --out ./work_dirs/det.pkl --checkpoint ./models/iter_200000.pth
 # ./tools/dist.sh train seg/configs/m2_train_close_set/omg_convl_mvpd.py 8
 
-mv data/MVPd/test_annotations.json ./work_dirs/
+# mv data/MVPd/test_annotations.json ./work_dirs/
 
 WORK_DIR="./work_dirs"
 
