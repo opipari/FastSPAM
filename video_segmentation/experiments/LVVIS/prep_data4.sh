@@ -9,7 +9,7 @@ git log -1 --oneline > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/repo_state.txt
 pip install --upgrade pip
 
 cd video_segmentation/datasets/MVPd
-pip install -r ./requirements/mvpd.txt
+xargs -L 1 pip install < ./requirements/mvpd.txt
 
 
 bash ./data/download_4.sh -s test -m -d imagesRGB.0000000000 -d panomasksRGB
