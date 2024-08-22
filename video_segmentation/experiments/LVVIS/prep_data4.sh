@@ -10,7 +10,7 @@ pip install --upgrade pip
 
 cd video_segmentation/datasets/MVPd
 xargs -L 1 pip install < ./requirements/mvpd.txt
-
+pip install tqdm
 
 bash ./data/download_4.sh -s test -m -d imagesRGB.0000000000 -d panomasksRGB
 
