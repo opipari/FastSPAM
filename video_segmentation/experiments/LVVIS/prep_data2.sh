@@ -6,11 +6,14 @@ mkdir -p ${OUTPUT_DIR}/${EXPERIMENT_NAME}
 git log -1 --oneline > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/repo_state.txt
 
 
-pip install --upgrade pip
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python get-pip.py
+
+python -m pip install --upgrade pip
 
 cd video_segmentation/datasets/MVPd
-xargs -L 1 pip install < ./requirements/mvpd.txt
-pip install tqdm
+xargs -L 1 python -m pip install < ./requirements/mvpd.txt
+python -m pip install tqdm
 
 bash ./data/download_2.sh -s test -m -d imagesRGB.0000000000 -d panomasksRGB
 
