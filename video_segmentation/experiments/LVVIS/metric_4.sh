@@ -11,7 +11,7 @@ pip install -r ./requirements/temp_base.txt
 
 
 cd video_segmentation/datasets/MVPd
-bash ./data/download_1.sh -s test -m -d imagesRGB.0000000000 -d panomasksRGB
+bash ./data/download_4.sh -s test -m -d imagesRGB.0000000000 -d panomasksRGB
 # ./data/download.sh -s val -m -d imagesRGB.0000000000 -d panomasksRGB
 
 

@@ -17,7 +17,6 @@ import matplotlib.pyplot as plt
 from panopticapi.utils import id2rgb
 
 from MVPd.utils.MVPdHelpers import label_to_one_hot, filter_binmask_area
-from ScanNet.utils.ScanNetdataset import ScanNetDataset, ScanNetVideo
 from MVPd.utils.MVPdataset import MVPDataset, MVPVideo, MVPdCategories, video_collate
 from video_segmentation.metrics import utils as metric_utils
 
@@ -373,7 +372,6 @@ if __name__=='__main__':
     parser.add_argument('--vkn', action='store_true', default=False)
     parser.add_argument('--summarize', action='store_true', default=False)
     parser.add_argument('--n_proc', type=int, default=1)
-    parser.add_argument('--dataset', type=str, default='MVPd')
     args = parser.parse_args()
     
 
@@ -390,15 +388,11 @@ if __name__=='__main__':
     # pool = mp.Pool(processes = n_proc)
     # pool.starmap(evaluate_iVPQ, [[in_rle_dir, out_json_dir, args.ref_path, args.ref_split, device, i, n_proc] for i in range(n_proc)])
 
-    if args.dataset=='MVPd':
-        dataset = MVPDataset(root=args.ref_path,
-                        split=args.ref_split,
-                        use_stuff=False,
-                        window_size = 0)
-    elif args.dataset=='ScanNet':
-        dataset = ScanNetDataset(root=args.ref_path,
-                                split=args.ref_split,
-                                window_size=0)
+    dataset = MVPDataset(root=args.ref_path,
+                    split=args.ref_split,
+                    use_stuff=False,
+                    window_size = 0)
+
 
     if args.compute:
         if not args.vkn:
