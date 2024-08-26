@@ -16,8 +16,10 @@ gradio==3.35.2
 ultralytics == 8.0.120
 
 pycocotools==2.0.6
-git+https://github.com/facebookresearch/pytorch3d.git
 git+https://github.com/cocodataset/panopticapi.git
+git+https://github.com/facebookresearch/detectron2.git
+
+https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py38_cu117_pyt201/pytorch3d-0.7.4-cp38-cp38-linux_x86_64.whl
 
 -e ./video_segmentation/datasets/MVPd
 -e .
