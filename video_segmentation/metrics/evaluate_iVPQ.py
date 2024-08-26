@@ -25,6 +25,7 @@ from video_segmentation.metrics import utils as metric_utils
 
 
 
+
 def collect_ref_window(video, start_idx, window_size=15):
     masks = []
     names = []
@@ -52,7 +53,7 @@ def collect_rle_window(video_rle_dir, names, inds=None, default_size=(1,480,640)
         if len(rle_seg)==0:
             rle_seg = torch.zeros(default_size)
         rle_segments.append(F.interpolate(rle_seg[None,:].to(torch.float), 
-            size=(240,320), 
+            scale_factor=(0.5,0.5), 
             mode='nearest')[0].to(torch.bool))
     return rle_segments
 
@@ -121,9 +122,6 @@ def get_tubes(rle_segments, window_size, segment_ids=None, cache=None, device='c
 
 def evaluate_iVPQ_v1(in_rle_dir, out_dir, dataset, device='cpu', i=0, n_proc=0, k_list=[1,5,10,15], step_size=15):
     
-    invalid_videos = pickle.load(open('/home/ANT.AMAZON.COM/topipari/Downloads/invalid_videos.pkl','rb'))
-
-
     if n_proc>0:
         is_per_proc = math.ceil(len(dataset)/n_proc)
         i_start = i*is_per_proc
@@ -132,8 +130,6 @@ def evaluate_iVPQ_v1(in_rle_dir, out_dir, dataset, device='cpu', i=0, n_proc=0, 
         dataset = torch.utils.data.Subset(dataset, inds)
         print(len(dataset))
         
-    tot_eval = 0
-    orig_videos = 0
     for video in tqdm(dataset, position=0, disable=i!=0):
         sample = next(iter(video))
         video_name = sample['meta']['video_name']
@@ -143,7 +139,6 @@ def evaluate_iVPQ_v1(in_rle_dir, out_dir, dataset, device='cpu', i=0, n_proc=0, 
         if os.path.exists(os.path.join(video_out_dir, "metrics_iVPQ_v1.json")):
             continue
 
-
         
         video_results = {
                         "zero-shot": {k: {"IOU": 0, "TP": 0, "FP": 0, "FN": 0} for k in k_list},
@@ -151,19 +146,8 @@ def evaluate_iVPQ_v1(in_rle_dir, out_dir, dataset, device='cpu', i=0, n_proc=0, 
                         }
         window_size = max(k_list)
         
-        
-        if not invalid_videos[video_name]["has_invalid"]:
-            duration = len(video)
-            orig_videos += 1
-        elif invalid_videos[video_name]["first_invalid"]>=15:
-            duration = invalid_videos[video_name]["first_invalid"]
-            print('skipping',len(video)-duration)
-        else:
-            continue
 
-        tot_eval+=duration
-
-        for v_idx in tqdm(range(0, duration-window_size, step_size), position=1, disable=i!=0):
+        for v_idx in tqdm(range(0, len(video)-window_size, step_size), position=1, disable=i!=0):
 
             ref_arr, ref_names, ref_zero_shot = collect_ref_window(video, start_idx=v_idx, window_size=window_size)
             ref_segments, ref_ids = label_to_one_hot(np.stack(ref_arr), filter_void=True)
@@ -216,14 +200,10 @@ def evaluate_iVPQ_v1(in_rle_dir, out_dir, dataset, device='cpu', i=0, n_proc=0, 
                         video_results["zero-shot"][k]["FN"] += 1
                     else:
                         video_results["non-zero-shot"][k]["FN"] += 1
-        
 
         os.makedirs(video_out_dir, exist_ok=True)
         with open(os.path.join(video_out_dir, "metrics_iVPQ_v1.json"),"w") as fl:
             json.dump(video_results, fl)
-
-    print('original videos',orig_videos)
-    print('evaluated images',tot_eval)
 
 
 
@@ -241,9 +221,6 @@ def collect_rle_tracks(video, video_rle_dir, threshold=0.5):
 
 def evaluate_iVPQ_vkn(in_rle_dir, out_dir, dataset, device='cpu', i=0, n_proc=0, k_list=[1,5,10,15], step_size=15):
     
-    invalid_videos = pickle.load(open('/home/ANT.AMAZON.COM/topipari/Downloads/invalid_videos.pkl','rb'))
-
-
     if n_proc>0:
         is_per_proc = math.ceil(len(dataset)/n_proc)
         i_start = i*is_per_proc
@@ -261,36 +238,22 @@ def evaluate_iVPQ_vkn(in_rle_dir, out_dir, dataset, device='cpu', i=0, n_proc=0,
         if os.path.exists(os.path.join(video_out_dir, "metrics_iVPQ_v1.json")):
             continue
 
-        if not os.path.exists(video_rle_dir):
-            continue
         
         video_results = {
                         "zero-shot": {k: {"IOU": 0, "TP": 0, "FP": 0, "FN": 0} for k in k_list},
                         "non-zero-shot": {k: {"IOU": 0, "TP": 0, "FP": 0, "FN": 0} for k in k_list}
                         }
         window_size = max(k_list)
-
-        if not invalid_videos[video_name]["has_invalid"]:
-            duration = len(video)
-            orig_videos += 1
-        elif invalid_videos[video_name]["first_invalid"]>=15:
-            duration = invalid_videos[video_name]["first_invalid"]
-            print('skipping',len(video)-duration)
-        else:
-            continue
-
-        tot_eval+=duration
-
         
         rle_track_inds = collect_rle_tracks(video, video_rle_dir, threshold=0.5)
-        for v_idx in tqdm(range(0, duration-window_size, step_size), position=1, disable=i!=0):
+        for v_idx in tqdm(range(0, len(video)-window_size, step_size), position=1, disable=i!=0):
 
             ref_arr, ref_names, ref_zero_shot = collect_ref_window(video, start_idx=v_idx, window_size=window_size)
             ref_segments, ref_ids = label_to_one_hot(np.stack(ref_arr), filter_void=True)
 
             tt = time.time()
             rle_segments = collect_rle_window(video_rle_dir, ref_names, inds=rle_track_inds, default_size=(100,480,640))
-            # print(time.time()-tt)
+            print(time.time()-tt)
             rle_segments = torch.stack(rle_segments).to(device=device)
             for ki, k in enumerate(k_list):
                 # if ki==0:
@@ -341,9 +304,6 @@ def evaluate_iVPQ_vkn(in_rle_dir, out_dir, dataset, device='cpu', i=0, n_proc=0,
         os.makedirs(video_out_dir, exist_ok=True)
         with open(os.path.join(video_out_dir, "metrics_iVPQ_v1.json"),"w") as fl:
             json.dump(video_results, fl)
-
-    print('original videos',orig_videos)
-    print('evaluated images',tot_eval)
 
 
 
