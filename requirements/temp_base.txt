@@ -6,6 +6,9 @@ PyYAML>=5.3.1
 requests>=2.23.0
 scipy>=1.4.1
 tqdm>=4.64.0
+torch==2.0.1
+torchaudio==2.0.2
+torchvision==0.15.2
 
 pandas>=1.1.4
 seaborn>=0.11.0
@@ -17,7 +20,6 @@ ultralytics == 8.0.120
 
 pycocotools==2.0.6
 git+https://github.com/cocodataset/panopticapi.git
-git+https://github.com/facebookresearch/detectron2.git
 
 https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py38_cu117_pyt201/pytorch3d-0.7.4-cp38-cp38-linux_x86_64.whl
 
