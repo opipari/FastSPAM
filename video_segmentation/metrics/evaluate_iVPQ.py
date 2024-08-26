@@ -210,7 +210,7 @@ def collect_rle_tracks(video, video_rle_dir, threshold=0.5):
     track_inds = set()
 
     for f_idx in range(len(video)):
-        rle_file = os.path.join(video_rle_dir, f'{f_idx}.pt')
+        rle_file = os.path.join(video_rle_dir, f'{f_idx:010d}.pt')
         track_boxes = torch.load(rle_file, map_location='cpu')['bbox_results']
         track_inds.update(np.flatnonzero(track_boxes[:,5]>threshold))
 
