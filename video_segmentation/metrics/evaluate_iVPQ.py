@@ -229,11 +229,12 @@ def evaluate_iVPQ_vkn(in_rle_dir, out_dir, dataset, device='cpu', i=0, n_proc=0,
         dataset = torch.utils.data.Subset(dataset, inds)
         print(len(dataset))
         
-    for video in tqdm(dataset, position=0, disable=i!=0):
+    for vii,video in enumerate(tqdm(dataset, position=0, disable=i!=0)):
         sample = next(iter(video))
         video_name = sample['meta']['video_name']
         video_rle_dir = os.path.join(in_rle_dir, video_name)
         video_out_dir = os.path.join(out_dir, video_name)
+        print(vii,len(dataset))
         
         if os.path.exists(os.path.join(video_out_dir, "metrics_iVPQ_v1.json")):
             continue
@@ -369,6 +370,7 @@ if __name__=='__main__':
     parser.add_argument('--ref_path',type=str, required=True)
     parser.add_argument('--ref_split',type=str, required=True)
     parser.add_argument('--compute', action='store_true', default=False)
+    parser.add_argument('--vkn', action='store_true', default=False)
     parser.add_argument('--summarize', action='store_true', default=False)
     parser.add_argument('--n_proc', type=int, default=1)
     parser.add_argument('--dataset', type=str, default='MVPd')
@@ -399,6 +401,9 @@ if __name__=='__main__':
                                 window_size=0)
 
     if args.compute:
-        evaluate_iVPQ_v1(in_rle_dir, out_json_dir, dataset, device, 0, 0)
+        if not args.vkn:
+            evaluate_iVPQ_v1(in_rle_dir, out_json_dir, dataset, device, 0, 0)
+        else:
+            evaluate_iVPQ_vkn(in_rle_dir, out_json_dir, dataset, device, 0, 0)
     if args.summarize:
         summarize_iVPQ(out_json_dir, fpath="metrics_iVPQ_v1.json")
