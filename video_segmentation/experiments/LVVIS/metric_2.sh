@@ -6,8 +6,13 @@ mkdir -p ${OUTPUT_DIR}/${EXPERIMENT_NAME}
 git log -1 --oneline > ${OUTPUT_DIR}/${EXPERIMENT_NAME}/repo_state.txt
 
 
-pip install --upgrade pip
-pip install -r ./requirements/temp_base.txt
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python get-pip.py
+
+python -m pip install --upgrade pip
+
+xargs -L 1 python -m pip install < ./requirements/temp_base.txt
+python -m pip install tqdm
 
 
 cd video_segmentation/datasets/MVPd
@@ -20,7 +25,7 @@ cd ../../..
 
 cd results
 aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/LLVIS/results/ov2seg_resnet50.tar.gz ./ > /dev/null
-tar -xvf ov2seg_resnet50.tar.gz
+tar -xf ov2seg_resnet50.tar.gz
 rm ov2seg_resnet50.tar.gz
 cd ..
 echo "Downloaded pretrained models"
