@@ -5,8 +5,8 @@ import numpy as np
 
 
 in_data_json_file = '/home/ANT.AMAZON.COM/topipari/Downloads/MVPd_test_coco_1.json'
-in_data_json_folder = '/home/ANT.AMAZON.COM/topipari/Downloads/ov2seg_resnet50_part1_results'
-out_pt_folder = '/home/ANT.AMAZON.COM/topipari/Downloads/ov2seg_resnet50'
+in_data_json_folder = '/home/ANT.AMAZON.COM/topipari/Downloads/ov2seg_swin_part1_results'
+out_pt_folder = '/home/ANT.AMAZON.COM/topipari/Downloads/ov2seg_swin'
 
 
 mvpd_data = json.load(open(in_data_json_file,'r'))

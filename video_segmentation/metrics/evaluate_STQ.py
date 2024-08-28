@@ -142,8 +142,8 @@ def evaluate_STQ(in_rle_dir, out_dir, dataset, conf_threshold=0.5, device='cpu')
 
         
         
-        if os.path.exists(os.path.join(video_out_dir, "metrics_STQ.json")):
-            continue
+        # if os.path.exists(os.path.join(video_out_dir, "metrics_STQ.json")):
+        #     continue
 
 
         gt_ids_vid = [int(k) for k in sample['meta']['class_dict'].keys()]
@@ -163,6 +163,7 @@ def evaluate_STQ(in_rle_dir, out_dir, dataset, conf_threshold=0.5, device='cpu')
 
             # Read in image prediction
             rle_file = os.path.join(video_rle_dir, f"{sample['meta']['window_names'][0].split('.')[0]}.pt")
+
             pred_masks = metric_utils.read_panomaskRLE(rle_file, inds=track_inds)
             if len(pred_masks)==0:
                 pred_masks = torch.zeros((len(tubes.keys()),480,640), dtype=torch.bool)
@@ -174,6 +175,12 @@ def evaluate_STQ(in_rle_dir, out_dir, dataset, conf_threshold=0.5, device='cpu')
             total_union_overlap += torch.maximum(obj_mask_bin,obj_pred_all).sum().item()
             total_union_non_overlap += torch.logical_or(obj_mask_bin, obj_pred_bin).sum().item()
 
+            # import matplotlib.pyplot as plt
+            # fig,ax=plt.subplots(ncols=2)
+            # ax[0].imshow(gt_mask)
+            # ax[1].imshow(pred_masks.sum(dim=0))
+            # plt.show()
+
             # If a ground truth track was seen in this frame, must calculate tpa,fpa,fna statistics
             for gt_id in gt_ids_frame:
                 assert gt_id in track_aq_stats
@@ -184,10 +191,16 @@ def evaluate_STQ(in_rle_dir, out_dir, dataset, conf_threshold=0.5, device='cpu')
                     if tubes[tube_id][sample_i]>=0:
                         pred_mask_bin = pred_masks[tubes[tube_id][sample_i]].to(dtype=torch.bool, device=device)
 
-
                         tpa = (pred_mask_bin*gt_mask_bin).sum().item()
                         fpa = (pred_mask_bin*(~gt_mask_bin)).sum().item()
                         fna = ((~pred_mask_bin)*gt_mask_bin).sum().item()
+                        # print(tpa,fpa,fna)
+                        # if tpa>0:
+                        #     import matplotlib.pyplot as plt
+                        #     fig,ax=plt.subplots(ncols=2)
+                        #     ax[0].imshow(pred_mask_bin.cpu())
+                        #     ax[1].imshow(gt_mask_bin.cpu())
+                        #     plt.show()
                     else:
                         tpa = 0
                         fpa = 0
@@ -232,8 +245,8 @@ def evaluate_STQ(in_rle_dir, out_dir, dataset, conf_threshold=0.5, device='cpu')
 
         video_statistics["SQ_overlap"] = total_inter / total_union_overlap
         video_statistics["SQ_non_overlap"] = total_inter / total_union_non_overlap
-        video_statistics["N_tracks"] = len(list(video_statistics["track_stats"]))
-        print(video_statistics["AQ"], video_statistics["N_tracks"], video_statistics["AQ"]/video_statistics["N_tracks"])
+        video_statistics["N_tracks"] = len(list(video_statistics["track_stats"].keys()))
+        print(video_statistics["AQ"], t, video_statistics["N_tracks"], video_statistics["AQ"]/video_statistics["N_tracks"])
         print(total_inter, total_union_overlap, total_union_non_overlap)
         print(video_statistics["SQ_overlap"], video_statistics["SQ_non_overlap"])
 
