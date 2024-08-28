@@ -34,11 +34,13 @@ def collect_rle_tracks(video, video_rle_dir, threshold=0.5):
     return list(track_inds)
 
 
-def collect_rle_window(video_rle_dir):
+def collect_rle_window(video_rle_dir, default_size=(1,480,640)):
     rle_segments = []
     for name in sorted(os.listdir(video_rle_dir)):
         rle_file = os.path.join(video_rle_dir, name)
         rle_seg = metric_utils.read_panomaskRLE(rle_file)
+        if len(rle_seg)==0:
+            rle_seg = torch.zeros(default_size)
         rle_segments.append(rle_seg.to(torch.bool))
     return rle_segments
 
@@ -249,7 +251,7 @@ def evaluate_STQ(in_rle_dir, out_dir, dataset, conf_threshold=0.5, device='cpu')
         print(video_statistics["AQ"], t, video_statistics["N_tracks"], video_statistics["AQ"]/video_statistics["N_tracks"])
         print(total_inter, total_union_overlap, total_union_non_overlap)
         print(video_statistics["SQ_overlap"], video_statistics["SQ_non_overlap"])
-
+        print(os.path.join(video_out_dir, "metrics_STQ.json"))
         os.makedirs(video_out_dir, exist_ok=True)
         with open(os.path.join(video_out_dir, "metrics_STQ.json"),"w") as fl:
             json.dump(video_statistics, fl)
