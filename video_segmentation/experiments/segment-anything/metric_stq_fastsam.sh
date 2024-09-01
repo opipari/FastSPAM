@@ -33,6 +33,7 @@ echo "Downloaded pretrained models"
 python video_segmentation/metrics/evaluate_STQ.py --rle_path ./results/evaluate_trained_fastsam_automatic --ref_path ./video_segmentation/datasets/MVPd/MVPd --ref_split test --compute
 
 rm -rf ./results/evaluate_trained_fastsam_automatic/panomasksRLE
+mv res.json results/
 
 WORK_DIR="./results"
 

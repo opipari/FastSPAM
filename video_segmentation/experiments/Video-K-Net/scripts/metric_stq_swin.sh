@@ -33,6 +33,7 @@ echo "Downloaded pretrained models"
 python video_segmentation/metrics/evaluate_STQ.py --rle_path ./results/train_instance_swinb --ref_path ./video_segmentation/datasets/MVPd/MVPd --ref_split test --compute
 
 rm -rf ./results/train_instance_swinb/panomasksRLE
+mv res.json results/
 
 WORK_DIR="./results"
 

@@ -26,7 +26,7 @@ from video_segmentation.metrics import utils as metric_utils
 def calc_aq_score(num_tracks, num_preds, get_track, get_pred, get_track_size):
 
     score = 0
-    for pred_i in range(num_preds):
+    for pred_i in tqdm(range(num_preds)):
         pred_mask_bin = get_pred(pred_i).to(torch.bool) # T x H x W
         
         for gt_j in range(num_tracks):
@@ -148,14 +148,6 @@ def get_tubes(rle_segments, tube_device='cpu', frame_device='cuda'):
 
 
 
-def masks_to_inst_tubes(labels):
-    label_ids = torch.unique(labels)
-    label_ids = label_ids[label_ids!=0]
-
-    inst_label_tubes = labels.unsqueeze(0)==label_ids.reshape(-1,1,1,1) # P x T x H x W
-
-    return inst_label_tubes
-
 def masks_to_sem_tubes(labels, preds, ign_id=0):
 
     sem_label_tubes = torch.stack([labels!=ign_id, labels==ign_id]) # C x T x H x W
@@ -172,12 +164,8 @@ def masks_to_sem_tubes(labels, preds, ign_id=0):
 def evaluate_STQ(in_rle_dir, dataset, epsilon=1e-15):
 
     # torch.random.manual_seed(0)
-    # torch.randperm(1741)[:50]
-    rand_inds = [1367,  100,  983,   83, 1586,  896,  683, 1598, 1092, 1020,  435,  747,
-        1497,  484,  473,  367,  622,   14, 1290, 1414,  459,  740,  111, 1383,
-        1189, 1698, 1280, 1584,  286,  229, 1279,  463, 1396, 1305,  500,  214,
-        1513,  108,  536, 1729,  240, 1184, 1061,  722,  513,  650,   59,  128,
-         180, 1028]
+    # torch.randperm(1741)[:10]
+    rand_inds = [1367,  100,  983,   83, 1586,  896,  683, 1598, 1092, 1020]
 
 
     num_videos = len(rand_inds)
@@ -234,29 +222,27 @@ def evaluate_STQ(in_rle_dir, dataset, epsilon=1e-15):
         del sem_pred_tubes
 
         # Calculate AQ
-        inst_label_tubes = masks_to_inst_tubes(labels)
-
-        inst_label_sizes = inst_label_tubes.sum((1,2,3))
-        inst_label_tubes = inst_label_tubes[inst_label_sizes>0]
-        inst_label_sizes = inst_label_sizes[inst_label_sizes>0]
-        
-        num_preds = len(tubes.keys())
-        num_tracks = inst_label_tubes.shape[0]
-
         if 'bbox_results' in sample_rle:
             preds = torch.stack(preds).permute(1,0,2,3)
             get_pred = lambda pred_i: preds[pred_i]
         else:
             get_pred = lambda pred_i: torch.stack([preds[t][tubes[pred_i][t]] if tubes[pred_i][t]>=0 else torch.zeros((480,640)) for t in range(len(video))])
         
-        get_track = lambda gt_j: inst_label_tubes[gt_j]
+        label_ids = torch.unique(labels)
+        label_ids = label_ids[label_ids!=0]
+        
+        num_preds = len(tubes.keys())
+        num_tracks = label_ids.shape[0]
+
+        get_track = lambda gt_j: labels==label_ids[gt_j]
+        inst_label_sizes = torch.as_tensor([get_track(gt_j).sum() for gt_j in range(num_tracks)])
         get_track_size = lambda gt_j: inst_label_sizes[gt_j]
 
         aq_score = calc_aq_score(num_tracks, num_preds, get_track, get_pred, get_track_size)
         aq_per_seq[vid_id] = aq_score
         num_tubes_per_seq[vid_id] = num_tracks
 
-        del inst_label_tubes
+        del labels
         del preds
 
         sq_ = torch.mean(intersections / torch.clamp(unions, min=epsilon))
@@ -264,7 +250,6 @@ def evaluate_STQ(in_rle_dir, dataset, epsilon=1e-15):
 
         stq_per_seq[vid_id] = torch.sqrt(aq_*sq_)
         iou_per_seq[vid_id] = sq_
-        print(stq_per_seq[vid_id].item(), aq_.item(), sq_.item())
     
         aq_mean = aq_per_seq.sum() / torch.clamp(num_tubes_per_seq.sum(), min=epsilon)
         num_classes_nonzero = len(class_unions.nonzero())
@@ -272,7 +257,8 @@ def evaluate_STQ(in_rle_dir, dataset, epsilon=1e-15):
         iou_mean =  ious.sum() / num_classes_nonzero
 
         stq = torch.sqrt(aq_mean * iou_mean)
-        
+        print(f"stq:{stq.item()}, stq_vid:{stq_per_seq[vid_id].item()}, aq_vid:{aq_.item()}, sq_vid:{sq_.item()}")
+
         torch.save({
             "stq": stq.item(),
             "aq": aq_mean.item(),
