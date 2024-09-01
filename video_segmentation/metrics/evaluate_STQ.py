@@ -27,9 +27,8 @@ def calc_aq_score(num_tracks, num_preds, get_track, get_pred, get_track_size):
 
     score = 0
     for pred_i in tqdm(range(num_preds)):
-        print(pred_i)
         pred_mask_bin = get_pred(pred_i).to(torch.bool) # T x H x W
-        print(pred_i,pred_mask_bin.shape)
+        
         for gt_j in range(num_tracks):
             gt_mask_bin = get_track(gt_j).to(torch.bool) # T x H xW
             
@@ -38,7 +37,7 @@ def calc_aq_score(num_tracks, num_preds, get_track, get_pred, get_track_size):
             fna = (gt_mask_bin * (~pred_mask_bin)).sum().item()
 
             score += (1 / get_track_size(gt_j)) * tpa * (tpa / (tpa + fpa + fna))
-        print('done',pred_i)
+    
     return score
 
 
@@ -225,12 +224,15 @@ def evaluate_STQ(in_rle_dir, dataset, epsilon=1e-15):
         sq_ = torch.mean(intersections / torch.clamp(unions, min=epsilon))
         print(vid_id, sq_)
 
+        labels = labels.to('cuda')
+        preds = [p.to('cuda') for p in preds]
+
         # Calculate AQ
         if 'bbox_results' in sample_rle:
             preds = torch.stack(preds).permute(1,0,2,3)
             get_pred = lambda pred_i: preds[pred_i]
         else:
-            zeros = torch.zeros((480,640))
+            zeros = torch.zeros((480,640)).to('cuda')
             get_pred = lambda pred_i: torch.stack([preds[t][tubes[pred_i][t]] if tubes[pred_i][t]>=0 else zeros for t in range(len(video))])
         
         label_ids = torch.unique(labels)
@@ -239,7 +241,7 @@ def evaluate_STQ(in_rle_dir, dataset, epsilon=1e-15):
         num_preds = len(tubes.keys())
         num_tracks = label_ids.shape[0]
 
-        print('pred, tracks, len', num_preds, num_tracks, len(video))
+        print('pred, tracks,', num_preds, num_tracks)
 
         get_track = lambda gt_j: labels==label_ids[gt_j]
         inst_label_sizes = torch.as_tensor([get_track(gt_j).sum() for gt_j in range(num_tracks)])
