@@ -23,6 +23,49 @@ from video_segmentation.metrics import utils as metric_utils
 
 
 
+def calc_aq_score(num_tracks, num_preds, get_track, get_pred, get_track_size):
+
+    score = 0
+    for pred_i in range(num_preds):
+        pred_mask_bin = get_pred(pred_i).to(torch.bool) # T x H x W
+        
+        for gt_j in range(num_tracks):
+            gt_mask_bin = get_track(gt_j).to(torch.bool) # T x H xW
+            
+            tpa = (gt_mask_bin * pred_mask_bin).sum().item()
+            fpa = ((~gt_mask_bin) * pred_mask_bin).sum().item()
+            fna = (gt_mask_bin * (~pred_mask_bin)).sum().item()
+
+            score += (1 / get_track_size(gt_j)) * tpa * (tpa / (tpa + fpa + fna))
+    
+    return score
+
+
+def calc_sq_score(gt_masks_all_bin, pred_masks_all_bin):
+    assert gt_masks_all_bin.shape==pred_masks_all_bin.shape
+    num_classes = gt_masks_all_bin.shape[0]
+
+    class_i = []
+    class_u = []
+    for c in range(num_classes):
+        if c==(num_classes-1):
+            class_i.append(torch.tensor((0)))
+            # Remove pixels labeled as background from false positive calculation
+            class_u.append(torch.logical_and(pred_masks_all_bin[c], ~gt_masks_all_bin[-1]).sum())
+        else:
+            class_i.append(torch.logical_and(gt_masks_all_bin[c], pred_masks_all_bin[c]).sum())
+            # Remove pixels labeled as background from false positive calculation
+            class_u.append(torch.logical_or(gt_masks_all_bin[c], torch.logical_and(pred_masks_all_bin[c], ~gt_masks_all_bin[-1])).sum())
+
+    return torch.as_tensor(class_i), torch.as_tensor(class_u)
+
+
+
+
+
+
+
+
 def collect_rle_tracks(video, video_rle_dir, threshold=0.5):
     track_inds = set()
 
@@ -34,11 +77,11 @@ def collect_rle_tracks(video, video_rle_dir, threshold=0.5):
     return list(track_inds)
 
 
-def collect_rle_window(video_rle_dir, default_size=(1,480,640)):
+def collect_rle_window(video_rle_dir, track_inds=None, default_size=(1,480,640)):
     rle_segments = []
     for name in sorted(os.listdir(video_rle_dir)):
         rle_file = os.path.join(video_rle_dir, name)
-        rle_seg = metric_utils.read_panomaskRLE(rle_file)
+        rle_seg = metric_utils.read_panomaskRLE(rle_file, inds=track_inds)
         if len(rle_seg)==0:
             rle_seg = torch.zeros(default_size)
         rle_segments.append(rle_seg.to(torch.bool))
@@ -103,158 +146,146 @@ def get_tubes(rle_segments, tube_device='cpu', frame_device='cuda'):
     return tubes
 
 
-def evaluate_STQ(in_rle_dir, out_dir, dataset, conf_threshold=0.5, device='cpu'):
-    
-    rand_inds = [1410,  185, 1366,   52, 1736, 1672,  890,  455,  797,  453, 1664, 1382,
-         910, 1332,  662,  520,  181,  702,  221,  807,  328, 1619,  750,  149,
-         373,   60, 1470, 1018, 1593,  261, 1667, 1637, 1211, 1006,  780,  474,
-         758,   47, 1462,  648,  108, 1383, 1258,  915,  481,  608, 1723, 1467,
-        1118,  883, 1140, 1452,  874, 1191,  962, 1252,  169,  776,  920,  880,
-         772,  803,  145,   69,  425,  922,  781,  548,  867, 1548, 1194,  727,
-         712, 1532,  381, 1578,   94,   23, 1393,   61,  975, 1464, 1740, 1079,
-        1613, 1500, 1098,  570, 1122,  500,  567,  615, 1046, 1275,  459, 1291,
-         284, 1588,  102,  152,  856, 1400, 1663, 1210, 1640,  490,  970,  928,
-        1376, 1580, 1065,  713,   11, 1068,  495,    9, 1012,  541,  724,    3,
-         443,  349,  945, 1739,  613,  382,  320,  516,  301, 1606,  521, 1221,
-        1090, 1013,  588,  265,  896,  610, 1715,  544,  321, 1517, 1523,  113,
-         602, 1551,  538, 1161,  871,  642, 1409,  432, 1197, 1249,  987, 1322,
-        1379, 1404, 1119,  283, 1016,  461,  263,  370,  894,  434,  545,  919,
-        1255, 1328,  857, 1614,  484,  259]
+
+
+def masks_to_inst_tubes(labels):
+    label_ids = torch.unique(labels)
+    label_ids = label_ids[label_ids!=0]
+
+    inst_label_tubes = labels.unsqueeze(0)==label_ids.reshape(-1,1,1,1) # P x T x H x W
+
+    return inst_label_tubes
+
+def masks_to_sem_tubes(labels, preds, ign_id=0):
+
+    sem_label_tubes = torch.stack([labels!=ign_id, labels==ign_id]) # C x T x H x W
+    sem_pred_tubes = torch.stack([p.sum(dim=0)>0 for p in preds]) # T x H x W
+    sem_pred_tubes = torch.stack([sem_pred_tubes, ~sem_pred_tubes]) # C x T x H x W
+
+    sem_label_tubes = sem_label_tubes.to(torch.bool)
+    sem_pred_tubes = sem_pred_tubes.to(torch.bool)
+
+    return sem_label_tubes, sem_pred_tubes
+
+
+
+def evaluate_STQ(in_rle_dir, dataset, epsilon=1e-15):
+
+    # torch.random.manual_seed(0)
+    # torch.randperm(1741)[:50]
+    rand_inds = [1367,  100,  983,   83, 1586,  896,  683, 1598, 1092, 1020,  435,  747,
+        1497,  484,  473,  367,  622,   14, 1290, 1414,  459,  740,  111, 1383,
+        1189, 1698, 1280, 1584,  286,  229, 1279,  463, 1396, 1305,  500,  214,
+        1513,  108,  536, 1729,  240, 1184, 1061,  722,  513,  650,   59,  128,
+         180, 1028]
+
+
+    num_videos = len(rand_inds)
+    num_classes = 1
+
+    aq_per_seq = torch.zeros((num_videos))
+    num_tubes_per_seq = torch.zeros((num_videos))
+    iou_per_seq = torch.zeros((num_videos))
+    stq_per_seq = torch.zeros((num_videos))
+
+    class_intersctions = torch.zeros((num_classes+1))
+    class_unions = torch.zeros((num_classes+1))
+
+
     # for vii,video in enumerate(tqdm(dataset, position=0)):
-    for vii, video_i in enumerate(tqdm(rand_inds, position=0)):
+    for vid_id, video_i in enumerate(rand_inds):
         video = dataset[video_i]
         sample = next(iter(video))
         video_name = sample['meta']['video_name']
         video_rle_dir = os.path.join(in_rle_dir, video_name)
-        video_out_dir = os.path.join(out_dir, video_name)
+        # video_out_dir = os.path.join(out_dir, video_name)
 
-        video_statistics = {"AQ": 0.0, "SQ_overlap": 0.0, "SQ_non_overlap":0.0, "N_tracks": 0.0, "track_stats": {}}
-        track_aq_stats = video_statistics["track_stats"]
+        labels = []
+        for data in video:
+            labels.append(torch.as_tensor(data['label']['mask'][0]))
+        labels = torch.stack(labels) # T x H x W
+        assert labels.shape[0]==len(video)
 
-        
         sample_rle_file = os.path.join(video_rle_dir, sample['meta']['window_names'][0].split('.')[0]+'.pt')
         sample_rle = torch.load(sample_rle_file,map_location='cpu')
         if 'bbox_results' in sample_rle:
             track_inds = collect_rle_tracks(video, video_rle_dir)
+            preds = collect_rle_window(video_rle_dir, track_inds=track_inds)
             tubes = {k: [k]*len(video) for k in range(len(track_inds))}
         else:
-            rle_segments = collect_rle_window(video_rle_dir)
             track_inds = None
-            tubes = get_tubes(rle_segments)
-
+            preds = collect_rle_window(video_rle_dir)
+            tubes = get_tubes(preds)
+            for k in tubes:
+                assert len(tubes[k])==len(video)
         
+        # Calculate SQ
+        sem_label_tubes, sem_pred_tubes = masks_to_sem_tubes(labels, preds)
+        assert sem_label_tubes.shape==sem_pred_tubes.shape
+
+        intersections, unions = calc_sq_score(sem_label_tubes, sem_pred_tubes)
+        class_intersctions += intersections
+        class_unions += unions
+
+        intersections = intersections[unions>0]
+        unions = unions[unions>0]
         
-        # if os.path.exists(os.path.join(video_out_dir, "metrics_STQ.json")):
-        #     continue
+        del sem_label_tubes
+        del sem_pred_tubes
+
+        # Calculate AQ
+        inst_label_tubes = masks_to_inst_tubes(labels)
+
+        inst_label_sizes = inst_label_tubes.sum((1,2,3))
+        inst_label_tubes = inst_label_tubes[inst_label_sizes>0]
+        inst_label_sizes = inst_label_sizes[inst_label_sizes>0]
+        
+        num_preds = len(tubes.keys())
+        num_tracks = inst_label_tubes.shape[0]
+
+        if 'bbox_results' in sample_rle:
+            preds = torch.stack(preds).permute(1,0,2,3)
+            get_pred = lambda pred_i: preds[pred_i]
+        else:
+            get_pred = lambda pred_i: torch.stack([preds[t][tubes[pred_i][t]] if tubes[pred_i][t]>=0 else torch.zeros((480,640)) for t in range(len(video))])
+        
+        get_track = lambda gt_j: inst_label_tubes[gt_j]
+        get_track_size = lambda gt_j: inst_label_sizes[gt_j]
+
+        aq_score = calc_aq_score(num_tracks, num_preds, get_track, get_pred, get_track_size)
+        aq_per_seq[vid_id] = aq_score
+        num_tubes_per_seq[vid_id] = num_tracks
+
+        del inst_label_tubes
+        del preds
+
+        sq_ = torch.mean(intersections / torch.clamp(unions, min=epsilon))
+        aq_ = aq_per_seq[vid_id] / torch.clamp(num_tubes_per_seq[vid_id], min=epsilon)
+
+        stq_per_seq[vid_id] = torch.sqrt(aq_*sq_)
+        iou_per_seq[vid_id] = sq_
+        print(stq_per_seq[vid_id].item(), aq_.item(), sq_.item())
+    
+        aq_mean = aq_per_seq.sum() / torch.clamp(num_tubes_per_seq.sum(), min=epsilon)
+        num_classes_nonzero = len(class_unions.nonzero())
+        ious = class_intersctions / torch.clamp(class_unions, min=epsilon)
+        iou_mean =  ious.sum() / num_classes_nonzero
+
+        stq = torch.sqrt(aq_mean * iou_mean)
+        
+        torch.save({
+            "stq": stq.item(),
+            "aq": aq_mean.item(),
+            "iou": iou_mean.item(),
+            "aq_per_seq": aq_per_seq,
+            "num_tubes_per_seq": num_tubes_per_seq,
+            "iou_per_seq": iou_per_seq,
+            "stq_per_seq": stq_per_seq,
+            "class_intersections": class_intersctions,
+            "class_unions": class_unions
+            }, "res.json")
 
 
-        gt_ids_vid = [int(k) for k in sample['meta']['class_dict'].keys()]
-        for gt_id in gt_ids_vid:
-            track_aq_stats[gt_id] = {"size": 0, "tube_stats": {}}
-            for tube_id in tubes:
-                track_aq_stats[gt_id]["tube_stats"][tube_id] = {"TPA": 0, "FPA": 0, "FNA": 0}
-
-        total_inter = 0
-        total_union_non_overlap = 0
-        total_union_overlap = 0
-        for sample_i, sample in enumerate(tqdm(video, position=1)):
-            # Read in image label
-            gt_mask = sample['label']['mask'][0]
-            gt_ids_frame = np.unique(gt_mask)
-            gt_ids_frame = gt_ids_frame[gt_ids_frame!=0]
-
-            # Read in image prediction
-            rle_file = os.path.join(video_rle_dir, f"{sample['meta']['window_names'][0].split('.')[0]}.pt")
-
-            pred_masks = metric_utils.read_panomaskRLE(rle_file, inds=track_inds)
-            if len(pred_masks)==0:
-                pred_masks = torch.zeros((len(tubes.keys()),480,640), dtype=torch.bool)
-
-            obj_mask_bin = torch.as_tensor(gt_mask>0).to(dtype=torch.bool, device=device)
-            obj_pred_all = pred_masks.sum(dim=0).to(device=device)
-            obj_pred_bin = (obj_pred_all>0).to(dtype=torch.bool, device=device)
-            total_inter += (obj_mask_bin*obj_pred_bin).sum().item()
-            total_union_overlap += torch.maximum(obj_mask_bin,obj_pred_all).sum().item()
-            total_union_non_overlap += torch.logical_or(obj_mask_bin, obj_pred_bin).sum().item()
-
-            # import matplotlib.pyplot as plt
-            # fig,ax=plt.subplots(ncols=2)
-            # ax[0].imshow(gt_mask)
-            # ax[1].imshow(pred_masks.sum(dim=0))
-            # plt.show()
-
-            # If a ground truth track was seen in this frame, must calculate tpa,fpa,fna statistics
-            for gt_id in gt_ids_frame:
-                assert gt_id in track_aq_stats
-                gt_mask_bin = torch.as_tensor((gt_mask == gt_id), dtype=torch.bool).to(device=device)
-                track_aq_stats[gt_id]["size"] += gt_mask_bin.sum().item()
-
-                for tube_id in tubes:
-                    if tubes[tube_id][sample_i]>=0:
-                        pred_mask_bin = pred_masks[tubes[tube_id][sample_i]].to(dtype=torch.bool, device=device)
-
-                        tpa = (pred_mask_bin*gt_mask_bin).sum().item()
-                        fpa = (pred_mask_bin*(~gt_mask_bin)).sum().item()
-                        fna = ((~pred_mask_bin)*gt_mask_bin).sum().item()
-                        # print(tpa,fpa,fna)
-                        # if tpa>0:
-                        #     import matplotlib.pyplot as plt
-                        #     fig,ax=plt.subplots(ncols=2)
-                        #     ax[0].imshow(pred_mask_bin.cpu())
-                        #     ax[1].imshow(gt_mask_bin.cpu())
-                        #     plt.show()
-                    else:
-                        tpa = 0
-                        fpa = 0
-                        fna = gt_mask_bin.sum().item()
-
-                    track_aq_stats[gt_id]["tube_stats"][tube_id]["TPA"] += tpa
-                    track_aq_stats[gt_id]["tube_stats"][tube_id]["FPA"] += fpa
-                    track_aq_stats[gt_id]["tube_stats"][tube_id]["FNA"] += fna               
-
-
-            # If a ground truth track wasn't seen in this frame, only account for fpa statistics
-            for gt_id in np.setdiff1d(gt_ids_vid, gt_ids_frame):
-                for tube_id in tubes:
-                    # Tube is only false positive if it was detected at this frame
-                    if tubes[tube_id][sample_i]>=0:
-                        pred_mask_bin = pred_masks[tubes[tube_id][sample_i]].to(dtype=torch.bool, device=device)
-                        tpa = 0
-                        fpa = pred_mask_bin.sum().item()
-                        fna = 0
-                        track_aq_stats[gt_id]["tube_stats"][tube_id]["FPA"] += fpa
-
-                        
-
-        outer_sum = 0.0
-        t = 0
-        for gt_id in gt_ids_vid:
-            if track_aq_stats[gt_id]["size"]==0:
-                del track_aq_stats[gt_id]
-                continue
-            t+=1
-            inner_sum = 0.0
-            for tube_id in track_aq_stats[gt_id]["tube_stats"]:
-                tpa = track_aq_stats[gt_id]["tube_stats"][tube_id]["TPA"]
-                fpa = track_aq_stats[gt_id]["tube_stats"][tube_id]["FPA"]
-                fna = track_aq_stats[gt_id]["tube_stats"][tube_id]["FNA"]
-                inner_sum += tpa * (tpa / (tpa + fpa + fna))
-            outer_sum += (1.0 / track_aq_stats[gt_id]["size"]) * inner_sum
-        video_statistics["AQ"] = outer_sum
-        video_statistics["inter"] = total_inter
-        video_statistics["union_overlap"] = total_union_overlap
-        video_statistics["union_non_overlap"] = total_union_non_overlap
-
-        video_statistics["SQ_overlap"] = total_inter / total_union_overlap
-        video_statistics["SQ_non_overlap"] = total_inter / total_union_non_overlap
-        video_statistics["N_tracks"] = len(list(video_statistics["track_stats"].keys()))
-        print(video_statistics["AQ"], t, video_statistics["N_tracks"], video_statistics["AQ"]/video_statistics["N_tracks"])
-        print(total_inter, total_union_overlap, total_union_non_overlap)
-        print(video_statistics["SQ_overlap"], video_statistics["SQ_non_overlap"])
-        print(os.path.join(video_out_dir, "metrics_STQ.json"))
-        os.makedirs(video_out_dir, exist_ok=True)
-        with open(os.path.join(video_out_dir, "metrics_STQ.json"),"w") as fl:
-            json.dump(video_statistics, fl)
 
 
 if __name__=='__main__':
@@ -282,6 +313,6 @@ if __name__=='__main__':
 
 
     if args.compute:
-        evaluate_STQ(in_rle_dir, out_json_dir, dataset, device=device)
+        evaluate_STQ(in_rle_dir, dataset)
     if args.summarize:
         summarize_STQ(out_json_dir, fpath="metrics_STQ.json")
