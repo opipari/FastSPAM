@@ -206,7 +206,7 @@ def evaluate_STQ(in_rle_dir, dataset, epsilon=1e-15):
             tubes = get_tubes(preds)
             for k in tubes:
                 assert len(tubes[k])==len(video)
-        
+        print(len(tubes.keys()))
         # Calculate SQ
         sem_label_tubes, sem_pred_tubes = masks_to_sem_tubes(labels, preds)
         assert sem_label_tubes.shape==sem_pred_tubes.shape
@@ -220,6 +220,9 @@ def evaluate_STQ(in_rle_dir, dataset, epsilon=1e-15):
         
         del sem_label_tubes
         del sem_pred_tubes
+
+        sq_ = torch.mean(intersections / torch.clamp(unions, min=epsilon))
+        print(vid_id, sq_)
 
         # Calculate AQ
         if 'bbox_results' in sample_rle:
@@ -245,7 +248,7 @@ def evaluate_STQ(in_rle_dir, dataset, epsilon=1e-15):
         del labels
         del preds
 
-        sq_ = torch.mean(intersections / torch.clamp(unions, min=epsilon))
+        
         aq_ = aq_per_seq[vid_id] / torch.clamp(num_tubes_per_seq[vid_id], min=epsilon)
 
         stq_per_seq[vid_id] = torch.sqrt(aq_*sq_)
@@ -257,7 +260,7 @@ def evaluate_STQ(in_rle_dir, dataset, epsilon=1e-15):
         iou_mean =  ious.sum() / num_classes_nonzero
 
         stq = torch.sqrt(aq_mean * iou_mean)
-        print(f"stq:{stq.item()}, stq_vid:{stq_per_seq[vid_id].item()}, aq_vid:{aq_.item()}, sq_vid:{sq_.item()}")
+        print(f"{vid_id} stq:{stq.item()}, stq_vid:{stq_per_seq[vid_id].item()}, aq_vid:{aq_.item()}, sq_vid:{sq_.item()}")
 
         torch.save({
             "stq": stq.item(),
