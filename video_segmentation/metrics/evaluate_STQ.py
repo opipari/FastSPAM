@@ -268,7 +268,7 @@ def evaluate_STQ(in_rle_dir, dataset, epsilon=1e-15):
         iou_mean =  ious.sum() / num_classes_nonzero
 
         stq = torch.sqrt(aq_mean * iou_mean)
-        print(f"{vid_id} stq:{stq.item()}, stq_vid:{stq_per_seq[vid_id].item()}, aq_vid:{aq_.item()}, sq_vid:{sq_.item()}")
+        print(f"{vid_id} stq:{stq.item()}, stq_vid:{stq_per_seq[vid_id].item()}, aq_vid:{aq_.item()}, sq_vid:{sq_.item()}", flush = True)
 
         torch.save({
             "stq": stq.item(),
