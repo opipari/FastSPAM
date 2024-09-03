@@ -238,7 +238,8 @@ def evaluate_STQ(in_rle_dir, dataset, epsilon=1e-15):
 
         # Calculate AQ
         if 'bbox_results' in sample_rle:
-            preds = torch.stack(preds).permute(1,0,2,3)
+            labels = labels.to('cuda')
+            preds = torch.stack(preds).permute(1,0,2,3).to('cuda')
             get_pred = lambda pred_i: preds[pred_i]
         else:
             labels = labels.to('cuda')
