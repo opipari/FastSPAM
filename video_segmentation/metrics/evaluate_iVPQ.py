@@ -229,6 +229,8 @@ def evaluate_iVPQ_vkn(in_rle_dir, out_dir, dataset, device='cpu', i=0, n_proc=0,
         print(len(dataset))
         
     for vii,video in enumerate(tqdm(dataset, position=0, disable=i!=0)):
+        if len(video)>300:
+            continue
         sample = next(iter(video))
         video_name = sample['meta']['video_name']
         video_rle_dir = os.path.join(in_rle_dir, video_name)
@@ -251,9 +253,9 @@ def evaluate_iVPQ_vkn(in_rle_dir, out_dir, dataset, device='cpu', i=0, n_proc=0,
             ref_arr, ref_names, ref_zero_shot = collect_ref_window(video, start_idx=v_idx, window_size=window_size)
             ref_segments, ref_ids = label_to_one_hot(np.stack(ref_arr), filter_void=True)
 
-            tt = time.time()
+            # tt = time.time()
             rle_segments = collect_rle_window(video_rle_dir, ref_names, inds=rle_track_inds, default_size=(100,480,640))
-            print(time.time()-tt)
+            # print(time.time()-tt)
             rle_segments = torch.stack(rle_segments).to(device=device)
             for ki, k in enumerate(k_list):
                 # if ki==0:
