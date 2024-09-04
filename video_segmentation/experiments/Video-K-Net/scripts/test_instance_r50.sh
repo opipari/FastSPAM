@@ -1,4 +1,4 @@
-EXPERIMENT_NAME="test_instance_swinb"
+EXPERIMENT_NAME="test_instance_r50"
 OUTPUT_DIR="video_segmentation/models/Video-K-Net/Video-K-Net/results"
 
 # Save status of repository for reference
