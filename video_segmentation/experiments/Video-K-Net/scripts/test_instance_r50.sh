@@ -28,10 +28,10 @@ cd video_segmentation/models/Video-K-Net/Video-K-Net
 # CONFIG="configs/video_knet_vis/video_knet_vis/knet_track_r50_1x_youtubevis.py"
 
 mkdir results
-aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/Video-K-Net/trained/instance_models/swin/iter_200000.pth ./results/ > /dev/null
+aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/Video-K-Net/trained/instance_models/r50/iter_200000.pth ./results/ > /dev/null
 
 
-CONFIG="configs/video_knet_vis/video_knet_vis/knet_track_swinb_deformable_1x_mvpdvis.py"
+CONFIG="configs/video_knet_vis/video_knet_vis/knet_track_r50_1x_mvpdvis.py"
 WORK_DIR="./results"
 CHECKPOINT="./results/iter_200000.pth"
 GPUS="1"
