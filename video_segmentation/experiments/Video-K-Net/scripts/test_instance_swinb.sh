@@ -12,7 +12,7 @@ pip install --upgrade pip
 pip install Cython==3.0.2
 pip install natsort
 pip install -r ./requirements/video-k-net/video-k-net.txt
-
+pip install yapf==0.32
 
 cd video_segmentation/datasets/MVPd
 # ./data/download.sh -s train -m -d imagesRGB.0000000000 -d panomasksRGB
