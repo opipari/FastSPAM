@@ -24,15 +24,15 @@ cd ../../..
 
 
 cd results
-aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/Video-K-Net/results/vkn_r50_metrics.tar.gz ./ > /dev/null
-tar -xf vkn_r50_metrics.tar.gz
-rm vkn_r50_metrics.tar.gz
+aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/Video-K-Net/results/test_instance_r50_300lengthvids.tar.gz ./ > /dev/null
+tar -xf test_instance_r50_300lengthvids.tar.gz
+rm test_instance_r50_300lengthvids.tar.gz
 cd ..
 echo "Downloaded pretrained models"
 
-python video_segmentation/metrics/evaluate_STQ.py --rle_path ./results/train_instance_r50 --ref_path ./video_segmentation/datasets/MVPd/MVPd --ref_split test --compute
+python video_segmentation/metrics/evaluate_STQ.py --rle_path ./results/test_instance_r50_300lengthvids --ref_path ./video_segmentation/datasets/MVPd/MVPd --ref_split test --compute
 
-rm -rf ./results/train_instance_r50/panomasksRLE
+rm -rf ./results/test_instance_r50_300lengthvids/panomasksRLE
 mv res.json results/
 
 WORK_DIR="./results"
