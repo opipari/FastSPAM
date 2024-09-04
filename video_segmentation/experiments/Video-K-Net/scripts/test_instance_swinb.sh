@@ -37,7 +37,7 @@ aws s3 cp s3://vesta-intern-anthony/video_panoptic_segmentation/models/Video-K-N
 CONFIG="configs/video_knet_vis/video_knet_vis/knet_track_swinb_deformable_1x_mvpdvis.py"
 WORK_DIR="./results"
 CHECKPOINT="./results/iter_200000.pth"
-GPUS="8"
+GPUS="1"
 PORT=${PORT:-$((29500 + $RANDOM % 29))}
 PYTHONPATH=$PYTHONPATH:./ python -m torch.distributed.launch --nproc_per_node=$GPUS --master_port=$PORT ./tools_vis/test_whole_video.py $CONFIG $CHECKPOINT --launcher pytorch --work-dir=${WORK_DIR} --format-only
 
