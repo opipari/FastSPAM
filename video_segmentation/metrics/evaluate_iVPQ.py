@@ -209,7 +209,7 @@ def evaluate_iVPQ_v1(in_rle_dir, out_dir, dataset, device='cpu', i=0, n_proc=0, 
 def collect_rle_tracks(video, video_rle_dir, threshold=0.5):
     track_inds = set()
 
-    for f_idx in range(len(video)):
+    for f_idx in range(len(os.listdir(video_rle_dir))):
         rle_file = os.path.join(video_rle_dir, f'{f_idx:010d}.pt')
         track_boxes = torch.load(rle_file, map_location='cpu')['bbox_results']
         track_inds.update(np.flatnonzero(track_boxes[:,5]>threshold))
@@ -218,7 +218,7 @@ def collect_rle_tracks(video, video_rle_dir, threshold=0.5):
 
 
 
-def evaluate_iVPQ_vkn(in_rle_dir, out_dir, dataset, device='cpu', i=0, n_proc=0, k_list=[1,5,10,15], step_size=15):
+def evaluate_iVPQ_vkn(in_rle_dir, out_dir, dataset, device='cpu', i=0, n_proc=0, k_list=[1,5,10,15], step_size=15, model_type='swin'):
     
     if n_proc>0:
         is_per_proc = math.ceil(len(dataset)/n_proc)
@@ -248,7 +248,13 @@ def evaluate_iVPQ_vkn(in_rle_dir, out_dir, dataset, device='cpu', i=0, n_proc=0,
         window_size = max(k_list)
         
         rle_track_inds = collect_rle_tracks(video, video_rle_dir, threshold=0.5)
-        for v_idx in tqdm(range(0, len(video)-window_size, step_size), position=1, disable=i!=0):
+
+        if model_type=='r50':
+            video_length = len(video)
+        else:
+            video_length = len(video) - (len(video) % 64)
+
+        for v_idx in tqdm(range(0, video_length-window_size, step_size), position=1, disable=i!=0):
 
             ref_arr, ref_names, ref_zero_shot = collect_ref_window(video, start_idx=v_idx, window_size=window_size)
             ref_segments, ref_ids = label_to_one_hot(np.stack(ref_arr), filter_void=True)

@@ -69,7 +69,7 @@ def calc_sq_score(gt_masks_all_bin, pred_masks_all_bin):
 def collect_rle_tracks(video, video_rle_dir, threshold=0.5):
     track_inds = set()
 
-    for f_idx in range(len(video)):
+    for f_idx in range(len(os.listdir(video_rle_dir))):
         rle_file = os.path.join(video_rle_dir, f'{f_idx:010d}.pt')
         track_boxes = torch.load(rle_file, map_location='cpu')['bbox_results']
         track_inds.update(np.flatnonzero(track_boxes[:,5]>threshold))
@@ -161,7 +161,7 @@ def masks_to_sem_tubes(labels, preds, ign_id=0):
 
 
 
-def evaluate_STQ(in_rle_dir, dataset, epsilon=1e-15):
+def evaluate_STQ(in_rle_dir, dataset, epsilon=1e-15, model_type='swin'):
 
     # torch.random.manual_seed(0)
     # torch.randperm(1741)[:100]
@@ -200,16 +200,22 @@ def evaluate_STQ(in_rle_dir, dataset, epsilon=1e-15):
         if len(video)>300:
             continue
 
+        if model_type=='r50':
+            video_length = len(video)
+        else:
+            video_length = len(video) - (len(video) % 64)
+
         sample = next(iter(video))
         video_name = sample['meta']['video_name']
         video_rle_dir = os.path.join(in_rle_dir, video_name)
         # video_out_dir = os.path.join(out_dir, video_name)
 
         labels = []
-        for data in video:
+        for data_i in range(video_length):
+            data = video[data_i]
             labels.append(torch.as_tensor(data['label']['mask'][0]))
         labels = torch.stack(labels) # T x H x W
-        assert labels.shape[0]==len(video)
+        assert labels.shape[0]==video_length # len(video)
 
         sample_rle_file = os.path.join(video_rle_dir, sample['meta']['window_names'][0].split('.')[0]+'.pt')
         sample_rle = torch.load(sample_rle_file,map_location='cpu')

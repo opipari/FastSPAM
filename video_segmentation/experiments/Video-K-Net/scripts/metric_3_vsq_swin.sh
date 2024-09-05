@@ -16,7 +16,7 @@ python -m pip install tqdm
 
 
 cd video_segmentation/datasets/MVPd
-bash ./data/download.sh -s test -m -d imagesRGB.0000000000 -d panomasksRGB
+bash ./data/download_3.sh -s test -m -d imagesRGB.0000000000 -d panomasksRGB
 # ./data/download.sh -s val -m -d imagesRGB.0000000000 -d panomasksRGB
 
 
@@ -30,10 +30,8 @@ rm test_instance_swin_300lengthvids.tar.gz
 cd ..
 echo "Downloaded pretrained models"
 
-python video_segmentation/metrics/evaluate_STQ.py --rle_path ./results/test_instance_swin_300lengthvids --ref_path ./video_segmentation/datasets/MVPd/MVPd --ref_split test --compute
+python video_segmentation/metrics/evaluate_iVPQ.py --rle_path ./results/test_instance_swin_300lengthvids --ref_path ./video_segmentation/datasets/MVPd/MVPd --ref_split test --compute --vkn
 
-rm -rf ./results/test_instance_swin_300lengthvids/panomasksRLE
-mv res.json results/
 
 WORK_DIR="./results"
 
