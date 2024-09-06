@@ -10,6 +10,8 @@ from PIL import Image
 import numpy as np
 import torch
 
+from fvcore.nn import FlopCountAnalysis
+
 from panopticapi.utils import id2rgb
 
 from MVPd.utils.MVPdataset import MVPDataset, MVPVideo, MVPdCategories, video_collate
@@ -102,6 +104,6 @@ if __name__ == "__main__":
     config = json.load(open(args.config_path, 'r'))
 
     nprocs = 3
-    torch.multiprocessing.spawn(evaluation_process, args=(nprocs, config, args.output_path), nprocs=nprocs)
+    # torch.multiprocessing.spawn(evaluation_process, args=(nprocs, config, args.output_path), nprocs=nprocs)
 
-    
+    evaluation_process(0,0,config,args.output_path)

@@ -14,7 +14,15 @@ from video_segmentation.metrics import utils as metric_utils
 
 
 
+def collect_rle_tracks(video, video_rle_dir, threshold=0.5):
+    track_inds = set()
 
+    for f_idx in range(len(video)):
+        rle_file = os.path.join(video_rle_dir, f'{f_idx:010d}.pt')
+        track_boxes = torch.load(rle_file, map_location='cpu')['bbox_results']
+        track_inds.update(np.flatnonzero(track_boxes[:,5]>threshold))
+
+    return list(track_inds)
 
 def rle_2_rgb(in_rle_dir, out_rgb_dir, dataset, v_name=None, device='cpu'):
     
@@ -27,12 +35,14 @@ def rle_2_rgb(in_rle_dir, out_rgb_dir, dataset, v_name=None, device='cpu'):
         video_rgb_dir = os.path.join(out_rgb_dir, video_name)
         os.makedirs(video_rgb_dir, exist_ok=True)
 
+        track_inds = None#collect_rle_tracks(video, video_rle_dir)
+
         for sample in video:
             window_stamp = '.'.join(next(iter(sample['meta']['window_names'])).split('.')[:-1])
             rle_file = os.path.join(video_rle_dir, window_stamp+'.pt')
             rgb_file = os.path.join(video_rgb_dir, window_stamp+'.png')
 
-            rle_segments = metric_utils.read_panomaskRLE(rle_file)
+            rle_segments = metric_utils.read_panomaskRLE(rle_file, track_inds)
             if len(rle_segments)==0:
                 rle_segments = torch.zeros((1,480,640))
             rle_segments = rle_segments.to(dtype=torch.bool).to(device=device)
