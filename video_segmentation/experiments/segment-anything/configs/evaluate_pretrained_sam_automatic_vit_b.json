@@ -1,16 +1,13 @@
 {
-    "experiment_name": "evaluate_pretrained_sam_automatic_vit_b",
+    "experiment_name": "evaluate_pretrained_sam_automatic",
     "dataset": {
-        "root": "./video_panoptic_segmentation/datasets/MVPd/MVPd/",
-        "split": "val",
-        "training": false,
-        "window_size": 1,
-        "image_root": "imagesRGB.0000000000"
+        "root": "./video_segmentation/datasets/MVPd/MVPd/",
+        "split": "test",
+        "window_size": 0
     },
     "model": {
-        "sam_checkpoint": "./video_panoptic_segmentation/models/segment-anything/segment-anything/checkpoints/sam_vit_b_01ec64.pth",
+        "sam_checkpoint": "./video_segmentation/models/segment-anything/segment-anything/checkpoints/sam_vit_b_01ec64.pth",
         "model_type": "vit_b",
         "points_per_side":32
     }
 }
-    

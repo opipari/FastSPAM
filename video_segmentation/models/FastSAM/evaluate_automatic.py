@@ -16,7 +16,7 @@ from MVPd.utils.MVPdataset import MVPDataset, MVPVideo, MVPdCategories, video_co
 
 from fastsam import FastSAM, FastSAMPrompt
 
-from video_panoptic_segmentation.metrics import utils as metric_utils
+from video_segmentation.metrics import utils as metric_utils
 
 
 def get_dataset(dataset_config):
@@ -45,7 +45,18 @@ def evaluation_process(index, nprocs, config, output_dir):
         inds = list(range(i_start, i_end))
         dataset = torch.utils.data.Subset(dataset, inds)
         print(len(dataset))
-
+    time_frames=[
+                '00808-y9hTuugGdiq.0000000000.0000000100',
+                '00808-y9hTuugGdiq.0000000001.0000000100',
+                '00808-y9hTuugGdiq.0000000002.0000000100',
+                '00808-y9hTuugGdiq.0000000003.0000000100',
+                '00808-y9hTuugGdiq.0000000004.0000000100',
+                '00808-y9hTuugGdiq.0000000005.0000000100',
+                '00808-y9hTuugGdiq.0000000006.0000000100',
+                '00808-y9hTuugGdiq.0000000007.0000000100',
+                '00808-y9hTuugGdiq.0000000008.0000000100',
+                '00808-y9hTuugGdiq.0000000009.0000000100',
+                ]
     # print("Within evaluation process")
     with torch.no_grad():
         for vi, video in enumerate(tqdm(dataset, position=0, disable=index!=0)):
@@ -55,17 +66,21 @@ def evaluation_process(index, nprocs, config, output_dir):
             out_dir = os.path.join(output_dir, config['experiment_name'], 'panomasksRLE', video_name)
             os.makedirs(out_dir, exist_ok=True)
 
-
-
+            if video_name not in time_frames:
+                continue
+            total_time = 0
+            total_frames = 0
+            #print(video_name, len(video)) 
             for sample in tqdm(video, position=1, disable=index!=0):
                 # Load metadata
                 video_name = sample['meta']['video_name']
                 out_dir = os.path.join(output_dir, config['experiment_name'], 'panomasksRLE', video_name)
                 out_file = sample['meta']['window_names'][0].split('.')[0]+'.pt'
 
-                if os.path.exists(os.path.join(out_dir, out_file)):
-                    continue
-
+                #if os.path.exists(os.path.join(out_dir, out_file)):
+                #    continue
+                
+                
                 # Run SAM
                 image = np.array(sample['observation']['image'][0]).astype(np.uint8) # 480 x 640 x 3
 
@@ -79,15 +94,23 @@ def evaluation_process(index, nprocs, config, output_dir):
                     conf=config["model"]["conf"],
                     iou=config["model"]["iou"]
                     )
-                prompt_process = FastSAMPrompt(input, everything_results, device=0)
-                ann = prompt_process.everything_prompt()
-                if len(ann)>0:
-                    ann = ann.to(torch.bool)
-                    ann = metric_utils.mask_to_rle_pytorch(ann)
-                coco_rle = [metric_utils.coco_encode_rle(rle) for rle in ann]
-                torch.save({"coco_rle":coco_rle}, os.path.join(out_dir, out_file))
-
-
+                
+                if everything_results is not None:
+                    total_frames += 1
+                    inf_speed_sec = sum([v for k,v in everything_results[0].speed.items()])/1000.0
+                    post_process_start_time = time.time()
+                    prompt_process = FastSAMPrompt(input, everything_results, device=0)
+                    ann = prompt_process.everything_prompt()
+                    elapsed = (time.time()-post_process_start_time) + inf_speed_sec
+                    total_time += elapsed
+                    #print(elapsed,elapsed+speed_sec)
+                    if len(ann)>0:
+                        ann = ann.to(torch.bool)
+                        ann = metric_utils.mask_to_rle_pytorch(ann)
+                    coco_rle = [metric_utils.coco_encode_rle(rle) for rle in ann]
+                    torch.save({"coco_rle":coco_rle}, os.path.join(out_dir, out_file))
+            print(total_frames, total_time)
+            print(total_frames, total_time, total_frames/total_time)
             # print(f"Finished processing {vi}/{len(dataset)}: ", video_name, f"in {time.time()-vitime}s", flush=True)
 
 

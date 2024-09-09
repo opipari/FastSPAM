@@ -125,6 +125,9 @@ class FastSelfPrompting(nn.Module):
     def forward(self, image, depth, camera):
         input = Image.fromarray(image)
         input = input.convert("RGB")
+        xy_depth = get_xy_depth(depth, from_ndc=True).permute(0,2,3,1).reshape(1,-1,3)
+        xyz = camera.unproject_points(xy_depth, from_ndc=True, world_coordinates=True)
+        start_time=time.time()
         everything_results = self.model(
             input,
             device=0,
@@ -133,6 +136,11 @@ class FastSelfPrompting(nn.Module):
             conf=self.config["conf"],
             iou=self.config["iou"]
             )
+        if everything_results is not None:
+            inf_time = sum([v for k,v in everything_results[0].speed.items()])/1000.0
+        else:
+            inf_time = time.time()-start_time
+        start_time=time.time()
         prompt_process = FastSAMPrompt(input, everything_results, device=0)
         
 
@@ -187,9 +195,11 @@ class FastSelfPrompting(nn.Module):
                 sort_order = torch.argsort(torch.sum(ann,(1,2)),descending=True)
                 points = points[sort_order]
                 ann = ann[sort_order]
-            
 
-
+                
+        self.memory = Pointclouds(points=xyz)
+        inf_time += time.time()-start_time
+        
         if len(ann)>0:
             self.memory_coords = torch.as_tensor([mask_to_point(ar) for ar in ann])
             ann = metric_utils.mask_to_rle_pytorch(ann)
@@ -197,12 +207,8 @@ class FastSelfPrompting(nn.Module):
             self.memory_coords = None
         coco_rle = [metric_utils.coco_encode_rle(rle) for rle in ann]
 
+        return coco_rle, inf_time
 
-        xy_depth = get_xy_depth(depth, from_ndc=True).permute(0,2,3,1).reshape(1,-1,3)
-        xyz = camera.unproject_points(xy_depth, from_ndc=True, world_coordinates=True)        
-        self.memory = Pointclouds(points=xyz)
-
-        return coco_rle
 
 
 def evaluation_process(index, nprocs, config, output_dir):
@@ -219,7 +225,19 @@ def evaluation_process(index, nprocs, config, output_dir):
         inds = list(range(i_start, i_end))
         dataset = torch.utils.data.Subset(dataset, inds)
         print(len(dataset))
-
+    
+    time_frames=[
+                '00808-y9hTuugGdiq.0000000000.0000000100',
+                '00808-y9hTuugGdiq.0000000001.0000000100',
+                '00808-y9hTuugGdiq.0000000002.0000000100',
+                '00808-y9hTuugGdiq.0000000003.0000000100',
+                '00808-y9hTuugGdiq.0000000004.0000000100',
+                '00808-y9hTuugGdiq.0000000005.0000000100',
+                '00808-y9hTuugGdiq.0000000006.0000000100',
+                '00808-y9hTuugGdiq.0000000007.0000000100',
+                '00808-y9hTuugGdiq.0000000008.0000000100',
+                '00808-y9hTuugGdiq.0000000009.0000000100',
+                ]
     # print("Within evaluation process")
     with torch.no_grad():
         for vi, video in enumerate(tqdm(dataset, position=0, disable=index!=0)):
@@ -228,9 +246,13 @@ def evaluation_process(index, nprocs, config, output_dir):
             video_name = first_sample['meta']['video_name']
             out_dir = os.path.join(output_dir, config['experiment_name'], 'panomasksRLE', video_name)
             
-            if os.path.exists(os.path.join(out_dir)):
-                continue
+            #if os.path.exists(os.path.join(out_dir)):
+            #    continue
             os.makedirs(out_dir, exist_ok=True)
+            if video_name not in time_frames:
+                continue
+            total_time = 0
+            total_frames = 0
 
             model.reset_memory()
             for idx, sample in enumerate(tqdm(video, position=1, disable=index!=0)):
@@ -239,8 +261,8 @@ def evaluation_process(index, nprocs, config, output_dir):
                 out_dir = os.path.join(output_dir, config['experiment_name'], 'panomasksRLE', video_name)
                 out_file = sample['meta']['window_names'][0].split('.')[0]+'.pt'
 
-                if os.path.exists(os.path.join(out_dir, out_file)):
-                    continue
+                #if os.path.exists(os.path.join(out_dir, out_file)):
+                #    continue
 
                 # Run SAM
                 image = np.array(sample['observation']['image'][0]).astype(np.uint8) # 480 x 640 x 3
@@ -251,12 +273,13 @@ def evaluation_process(index, nprocs, config, output_dir):
                                     sample['camera']['W2V_pose'],
                                     sample['meta']['image_size']).to('cuda')
 
-
-                coco_rle = model(image, depth, camera)
                 
+                coco_rle, inf_time = model(image, depth, camera)
+                total_time += inf_time
+                total_frames +=1
                 torch.save({"coco_rle":coco_rle}, os.path.join(out_dir, out_file))
-
-
+            print(total_frames, total_time)
+            print(total_frames, total_time, total_frames/total_time)
             # print(f"Finished processing {vi}/{len(dataset)}: ", video_name, f"in {time.time()-vitime}s", flush=True)
 
 

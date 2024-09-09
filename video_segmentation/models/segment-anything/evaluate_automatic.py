@@ -20,13 +20,13 @@ from visualize import masks_to_panomasks
 from segment_anything.modeling import Sam
 from segment_anything import sam_model_registry, SamAutomaticMaskGenerator, SamPredictor
 
-from video_panoptic_segmentation.metrics import utils as metric_utils
+from video_segmentation.metrics import utils as metric_utils
 
 
 def get_dataset(dataset_config):
     return MVPDataset(root=dataset_config['root'],
                             split=dataset_config['split'],
-                            training=dataset_config['training'],
+                            #training=dataset_config['training'],
                             window_size = dataset_config['window_size'])
     
 def get_model(model_config, device):
@@ -45,17 +45,33 @@ def evaluation_process(index, nprocs, config, output_dir):
     MVPdatasubset = torch.utils.data.Subset(dataset, subset_indices)
 
     model = get_model(config['model'], index)
-
+    time_frames=[
+                '00808-y9hTuugGdiq.0000000000.0000000100',
+                '00808-y9hTuugGdiq.0000000001.0000000100',
+                '00808-y9hTuugGdiq.0000000002.0000000100',
+                '00808-y9hTuugGdiq.0000000003.0000000100',
+                '00808-y9hTuugGdiq.0000000004.0000000100',
+                '00808-y9hTuugGdiq.0000000005.0000000100',
+                '00808-y9hTuugGdiq.0000000006.0000000100',
+                '00808-y9hTuugGdiq.0000000007.0000000100',
+                '00808-y9hTuugGdiq.0000000008.0000000100',
+                '00808-y9hTuugGdiq.0000000009.0000000100',
+                ]
     print("Within evaluation process")
     with torch.no_grad():
-        for vi, video in enumerate(MVPdatasubset):
+        for vi, video in enumerate(tqdm(MVPdatasubset,position=0)):
             vitime = time.time()
             first_sample = next(iter(video))
             video_name = first_sample['meta']['video_name']
             out_dir = os.path.join(output_dir, config['experiment_name'], 'panomasksRLE', video_name)
             os.makedirs(out_dir, exist_ok=True)
+            
+            if video_name not in time_frames:
+                continue
+            total_time = 0
+            total_frames = 0
 
-            for index, sample in enumerate(video):
+            for index, sample in enumerate(tqdm(video,position=1)):
                 # Load metadata
                 video_name = sample['meta']['video_name']
                 out_dir = os.path.join(output_dir, config['experiment_name'], 'panomasksRLE', video_name)
@@ -63,10 +79,16 @@ def evaluation_process(index, nprocs, config, output_dir):
 
                 # Run SAM
                 image = np.array(sample['observation']['image'][0]).astype(np.uint8) # 480 x 640 x 3
+                start_time = time.time()
                 pred = model.generate(image)
+                elapsed = time.time()-start_time
+                total_time += elapsed
+                total_frames+=1
+                print(total_frames, total_time, total_frames/total_time)
                 torch.save({"coco_rle":[pr['segmentation'] for pr in pred]}, os.path.join(out_dir, out_file))
-
-            print(f"Finished processing {vi}/{len(MVPdatasubset)}: ", video_name, f"in {time.time()-vitime}s", flush=True)
+            print(total_frames, total_time)
+            print(total_frames, total_time, total_frames/total_time)
+            #print(f"Finished processing {vi}/{len(MVPdatasubset)}: ", video_name, f"in {time.time()-vitime}s", flush=True)
 
 
 if __name__ == "__main__":
