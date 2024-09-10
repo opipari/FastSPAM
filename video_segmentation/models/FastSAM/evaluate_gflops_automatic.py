@@ -20,6 +20,6 @@ if __name__ == "__main__":
     config = json.load(open(args.config_path, 'r'))
 
     model = get_model(config['model'])
-    gflops = get_flops(model.model, imgsz=config["model"]["imgsz"])
+    gflops = get_flops(model.model, imgsz=config["model"]["imgsz"]) / 2
 
     print(f"GFlops: {gflops}")

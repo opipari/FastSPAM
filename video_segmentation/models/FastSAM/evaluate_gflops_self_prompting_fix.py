@@ -292,7 +292,7 @@ def evaluation_process(index, nprocs, config, output_dir):
                 
                 gflops = FlopCountAnalysis(model, (image.shape, depth, xy_depth, camera_info, everything_results))
                 #print(f"{gflops*1e9}, {model.memory_coords.shape}")
-                print(gflops.by_operator(), gflops.total() / 1e9 * 2)
+                print(gflops.total(), gflops.total() / 1e9)
 
 
 if __name__ == "__main__":
