@@ -126,8 +126,8 @@ class FastSelfPrompting(nn.Module):
         input = Image.fromarray(image)
         input = input.convert("RGB")
         xy_depth = get_xy_depth(depth, from_ndc=True).permute(0,2,3,1).reshape(1,-1,3)
-        xyz = camera.unproject_points(xy_depth, from_ndc=True, world_coordinates=True)
         start_time=time.time()
+        xyz = camera.unproject_points(xy_depth, from_ndc=True, world_coordinates=True)
         everything_results = self.model(
             input,
             device=0,
@@ -238,6 +238,8 @@ def evaluation_process(index, nprocs, config, output_dir):
                 '00808-y9hTuugGdiq.0000000008.0000000100',
                 '00808-y9hTuugGdiq.0000000009.0000000100',
                 ]
+    total_time = 0
+    total_frames = 0
     # print("Within evaluation process")
     with torch.no_grad():
         for vi, video in enumerate(tqdm(dataset, position=0, disable=index!=0)):
@@ -251,8 +253,8 @@ def evaluation_process(index, nprocs, config, output_dir):
             os.makedirs(out_dir, exist_ok=True)
             if video_name not in time_frames:
                 continue
-            total_time = 0
-            total_frames = 0
+            #total_time = 0
+            #total_frames = 0
 
             model.reset_memory()
             for idx, sample in enumerate(tqdm(video, position=1, disable=index!=0)):

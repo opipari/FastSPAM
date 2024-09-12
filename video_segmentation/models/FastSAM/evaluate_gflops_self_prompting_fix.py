@@ -20,8 +20,9 @@ from MVPd.utils.MVPdHelpers import get_xy_depth, get_cameras
 from pytorch3d.structures import Pointclouds
 
 from fastsam import FastSAM, FastSAMPrompt
-import thop
+
 from fvcore.nn import FlopCountAnalysis
+
 from video_segmentation.metrics import utils as metric_utils
 
 
@@ -291,7 +292,6 @@ def evaluation_process(index, nprocs, config, output_dir):
                 #xyz = camera.unproject_points(xy_depth, from_ndc=True, world_coordinates=True)
                 
                 gflops = FlopCountAnalysis(model, (image.shape, depth, xy_depth, camera_info, everything_results))
-                #print(f"{gflops*1e9}, {model.memory_coords.shape}")
                 print(gflops.total(), gflops.total() / 1e9)
 
 
