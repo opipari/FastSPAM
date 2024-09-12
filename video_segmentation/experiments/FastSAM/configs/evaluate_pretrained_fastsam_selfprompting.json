@@ -6,8 +6,8 @@
         "window_size": 0
     },
     "model": {
-        "checkpoint": "./video_segmentation/models/FastSAM/FastSAM/weights/FastSAM-x.pt",
-        "imgsz": 1024,
+        "checkpoint": "./video_segmentation/models/FastSAM/FastSAM/weights/last.pt",
+        "imgsz": 640,
         "iou": 0.9,
         "conf": 0.4,
         "retina": true
