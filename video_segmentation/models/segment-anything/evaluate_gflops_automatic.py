@@ -5,7 +5,7 @@ from copy import deepcopy
 import torch
 import torch.nn as nn
 
-import thop
+from fvcore.nn import FlopCountAnalysis
 
 from segment_anything.modeling import Sam
 from segment_anything import sam_model_registry, SamAutomaticMaskGenerator, SamPredictor
@@ -22,7 +22,7 @@ def get_model(model_config, device):
 
 def get_flop(config):
     
-    sam_model = get_model(config['model'], 0)
+    sam_model = get_model(config['model'], 'cpu')
 
 
     print("Within evaluation process")
@@ -37,8 +37,10 @@ def get_flop(config):
                 'mask_inputs': None
             }]
         multimask = True
-        gflops = thop.profile(sam_model.predictor.model, inputs=(inputs,multimask), verbose=False)[0] / 1E9 * 2
         
+        gflops = FlopCountAnalysis(sam_model.predictor.model, (inputs, multimask))
+        gflops = gflops.total() / 1e9
+
     return gflops
 
 if __name__ == "__main__":
