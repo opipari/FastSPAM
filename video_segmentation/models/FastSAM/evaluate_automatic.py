@@ -58,6 +58,8 @@ def evaluation_process(index, nprocs, config, output_dir):
                 '00808-y9hTuugGdiq.0000000009.0000000100',
                 ]
     # print("Within evaluation process")
+    total_time = 0
+    total_frames = 0
     with torch.no_grad():
         for vi, video in enumerate(tqdm(dataset, position=0, disable=index!=0)):
             # vitime = time.time()
@@ -68,8 +70,8 @@ def evaluation_process(index, nprocs, config, output_dir):
 
             if video_name not in time_frames:
                 continue
-            total_time = 0
-            total_frames = 0
+            #total_time = 0
+            #total_frames = 0
             #print(video_name, len(video)) 
             for sample in tqdm(video, position=1, disable=index!=0):
                 # Load metadata
@@ -124,7 +126,7 @@ if __name__ == "__main__":
 
     config = json.load(open(args.config_path, 'r'))
 
-    nprocs = 3
-    torch.multiprocessing.spawn(evaluation_process, args=(nprocs, config, args.output_path), nprocs=nprocs)
-
+    #nprocs = 3
+    #torch.multiprocessing.spawn(evaluation_process, args=(nprocs, config, args.output_path), nprocs=nprocs)
+    evaluation_process(0,0,config, args.output_path)
     

@@ -1,8 +1,10 @@
 import json
 import argparse
 
+import torch
 from fastsam import FastSAM, FastSAMPrompt
-from ultralytics.yolo.utils.torch_utils import get_flops
+
+from fvcore.nn import FlopCountAnalysis
 
 
 def get_model(model_config):
@@ -20,6 +22,7 @@ if __name__ == "__main__":
     config = json.load(open(args.config_path, 'r'))
 
     model = get_model(config['model'])
-    gflops = get_flops(model.model, imgsz=config["model"]["imgsz"]) / 2
-
-    print(f"GFlops: {gflops}")
+    
+    im = torch.randn(1,3,config['model']['imgsz'],config['model']['imgsz'])
+    gflops = FlopCountAnalysis(model.model, (im))
+    print(f"GFlops: {gflops.total()/1e9}")
